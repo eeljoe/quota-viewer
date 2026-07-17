@@ -1,38 +1,57 @@
 package fetcher
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/cookiejar"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 )
 
-// XfyunFetcher 通过 Cookie 抓取讯飞星辰 MaaS 额度页面并解析 HTML DOM。
-// 讯飞平台额度数据为服务端渲染,直接出现在 packageSubscription 页面 HTML 中。
+// XfyunFetcher 通过 Cookie 调用讯飞星辰 MaaS 额度 JSON API。
+// 端点: GET https://maas.xfyun.cn/api/v1/gpt-finetune/coding-plan/list
+// 认证: Cookie 头
+// Referer: https://maas.xfyun.cn/packageSubscription
 type XfyunFetcher struct {
 	cookie string
-	apiURL string // HTML 页面地址
+	apiURL string
 }
 
 func NewXfyunFetcher(cookie string, apiURL string) *XfyunFetcher {
 	if apiURL == "" {
-		apiURL = "https://maas.xfyun.cn/packageSubscription"
+		apiURL = "https://maas.xfyun.cn/api/v1/gpt-finetune/coding-plan/list"
 	}
 	return &XfyunFetcher{cookie: cookie, apiURL: apiURL}
 }
 
-// usage-used / usage-total / usage-unit 的取值用非贪婪匹配,避免跨标签贪婪。
-var (
-	xfyunUsedRe   = regexp.MustCompile(`class="usage-used"[^>]*>\s*([\d,]+)\s*<`)
-	xfyunTotalRe  = regexp.MustCompile(`class="usage-total"[^>]*>\s*([\d,]+)\s*<`)
-	xfyunUnitRe   = regexp.MustCompile(`class="usage-unit"[^>]*>\s*([^<]+?)\s*<`)
-	xfyunNameRe   = regexp.MustCompile(`class="package-name"[^>]*>\s*([^<]+?)\s*<`)
-	xfyunWidthRe  = regexp.MustCompile(`width:\s*([\d.]+)`)
-)
+// xfyunResponse 对应 /coding-plan/list 的 JSON 响应。
+type xfyunResponse struct {
+	Code int          `json:"code"`
+	Data xfyunPageData `json:"data"`
+}
+
+type xfyunPageData struct {
+	Page int           `json:"page"`
+	Rows []xfyunPlanRow `json:"rows"`
+}
+
+type xfyunPlanRow struct {
+	AppID             string              `json:"appId"`
+	CodingPlanUsageDTO xfyunCodingPlanDTO `json:"codingPlanUsageDTO"`
+	ExpiresAt         string              `json:"expiresAt"`
+	ID                int64               `json:"id"`
+}
+
+// xfyunCodingPlanDTO 包含 5 小时窗口、周窗口、套餐总量的用量与限额。
+type xfyunCodingPlanDTO struct {
+	RP5hUsage     float64 `json:"rp5hUsage"`
+	RP5hLimit     float64 `json:"rp5hLimit"`
+	RPwUsage      float64 `json:"rpwUsage"`
+	RPwLimit      float64 `json:"rpwLimit"`
+	PackageUsage  float64 `json:"packageUsage"`
+	PackageLimit  float64 `json:"packageLimit"`
+	PackageLeft   float64 `json:"packageLeft"`
+}
 
 func (x *XfyunFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
@@ -62,8 +81,8 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 	}
 
 	req.Header.Set("Cookie", x.cookie)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Referer", "https://maas.xfyun.cn/")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Referer", "https://maas.xfyun.cn/packageSubscription")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -81,68 +100,35 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		result.Error = fmt.Sprintf("读取响应失败: %v", err)
+	var body xfyunResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		result.Error = fmt.Sprintf("解析响应失败: %v", err)
 		return result
 	}
 
-	html := string(body)
-
-	usedMatch := xfyunUsedRe.FindStringSubmatch(html)
-	totalMatch := xfyunTotalRe.FindStringSubmatch(html)
-
-	if len(usedMatch) < 2 || len(totalMatch) < 2 {
-		result.Error = "HTML 中未找到 usage-used/usage-total,页面结构可能已变更"
+	if body.Code != 0 {
+		result.Error = fmt.Sprintf("接口返回错误码: %d", body.Code)
 		return result
 	}
 
-	used, err := parseXfyunNumber(usedMatch[1])
-	if err != nil {
-		result.Error = fmt.Sprintf("解析 used 失败: %v", err)
-		return result
-	}
-	total, err := parseXfyunNumber(totalMatch[1])
-	if err != nil {
-		result.Error = fmt.Sprintf("解析 total 失败: %v", err)
+	if len(body.Data.Rows) == 0 {
+		result.Error = "响应中未找到套餐数据"
 		return result
 	}
 
+	// 取第一条套餐;优先使用 5 小时窗口用量(最紧迫)
+	row := body.Data.Rows[0]
+	dto := row.CodingPlanUsageDTO
+
+	used := dto.RP5hUsage
+	limit := dto.RP5hLimit
 	result.Used = used
-	result.Total = total
-	if total > 0 {
-		result.Percent = used / total * 100
+	result.Total = limit
+	if limit > 0 {
+		result.Percent = used / limit * 100
 	}
-
-	// 单位与套餐名(可选)
-	unit := "次"
-	if m := xfyunUnitRe.FindStringSubmatch(html); len(m) >= 2 {
-		unit = strings.TrimSpace(m[1])
-	}
-	name := ""
-	if m := xfyunNameRe.FindStringSubmatch(html); len(m) >= 2 {
-		name = strings.TrimSpace(m[1])
-	}
-
-	// 进度条宽度作为百分比交叉校验(可选,不覆盖主结果)
-	if m := xfyunWidthRe.FindStringSubmatch(html); len(m) >= 2 {
-		if v, err := strconv.ParseFloat(m[1], 64); err == nil && v > 0 && v <= 1 && result.Percent == 0 {
-			result.Percent = v * 100
-		}
-	}
-
-	if name != "" {
-		result.Remaining = fmt.Sprintf("%s: %.0f / %.0f %s", name, used, total, unit)
-	} else {
-		result.Remaining = fmt.Sprintf("%.0f / %.0f %s", used, total, unit)
-	}
+	result.Remaining = fmt.Sprintf("%.0f / %.0f 次 (5小时)", used, limit)
+	result.ResetAt = row.ExpiresAt
 
 	return result
-}
-
-// parseXfyunNumber 解析可能含逗号的数字(如 "1,017")。
-func parseXfyunNumber(s string) (float64, error) {
-	s = strings.ReplaceAll(s, ",", "")
-	s = strings.TrimSpace(s)
-	return strconv.ParseFloat(s, 64)
 }

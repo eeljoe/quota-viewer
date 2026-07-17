@@ -26,7 +26,7 @@ func TestMiMoFetcher_401_ReturnsCookieExpired(t *testing.T) {
 
 	f := NewMiMoFetcher("session=abc", server.URL)
 	result := f.Fetch()
-	if result.Error != "Cookie 已过期,请更新" {
+	if !strings.Contains(result.Error, "Cookie 已过期") {
 		t.Errorf("expected 'Cookie 已过期', got '%s'", result.Error)
 	}
 }
@@ -40,30 +40,30 @@ func TestMiMoFetcher_302_ReturnsCookieExpired(t *testing.T) {
 
 	f := NewMiMoFetcher("session=abc", server.URL)
 	result := f.Fetch()
-	if result.Error != "Cookie 已过期,请更新" {
+	if !strings.Contains(result.Error, "Cookie 已过期") {
 		t.Errorf("expected 'Cookie 已过期', got '%s'", result.Error)
 	}
 }
 
-func TestMiMoFetcher_HTMLResponse_ParsesUsage(t *testing.T) {
-	html := `<!DOCTYPE html>
-<html>
-<body>
-	<div class="Part1_usageContainer__bc0f900c">
-		<span>8,239,030,362 / 38,000,000,000</span>
-		<div class="Part1_usagePercent__bc0f900c">已使用 22.0%</div>
-	</div>
-</body>
-</html>`
-
+func TestMiMoFetcher_JSONResponse_CreditsFields_ParsesUsage(t *testing.T) {
+	// 响应字段名尚未确认,使用常见命名 usedCredits/totalCredits
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 验证 Accept header 是 text/html 而非 application/json
+		// 验证 Accept header 是 application/json
 		accept := r.Header.Get("Accept")
-		if accept == "application/json" {
-			t.Error("expected Accept to be text/html, not application/json")
+		if accept != "application/json" {
+			t.Errorf("expected Accept 'application/json', got '%s'", accept)
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
+		// 验证 Referer
+		ref := r.Header.Get("Referer")
+		if ref != "https://platform.xiaomimimo.com/console/plan-manage" {
+			t.Errorf("expected Referer 'https://platform.xiaomimimo.com/console/plan-manage', got '%s'", ref)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"usedCredits": 8239030362,
+			"totalCredits": 38000000000,
+			"resetTime": "2026-07-21T00:00:00Z"
+		}`))
 	}))
 	defer server.Close()
 
@@ -78,25 +78,26 @@ func TestMiMoFetcher_HTMLResponse_ParsesUsage(t *testing.T) {
 	if result.Total != 38000000000 {
 		t.Errorf("expected Total=38000000000, got %f", result.Total)
 	}
-	// 优先采用显式百分比 22.0%
-	if result.Percent < 21.9 || result.Percent > 22.1 {
-		t.Errorf("expected ~22.0%%, got %f%%", result.Percent)
+	// 8239030362/38000000000 ≈ 21.68%
+	if result.Percent < 21.6 || result.Percent > 21.7 {
+		t.Errorf("expected ~21.68%%, got %f%%", result.Percent)
 	}
 	if !strings.Contains(result.Remaining, "Credits") {
 		t.Errorf("expected 'Credits' in Remaining, got '%s'", result.Remaining)
 	}
+	if result.ResetAt != "2026-07-21T00:00:00Z" {
+		t.Errorf("expected ResetAt '2026-07-21T00:00:00Z', got '%s'", result.ResetAt)
+	}
 }
 
-func TestMiMoFetcher_HTMLResponse_DerivesPercentWhenAbsent(t *testing.T) {
-	// 没有 "已使用 X%" 时,应从 used/total 计算
-	html := `<!DOCTYPE html>
-<html><body>
-	<div>8,000,000,000 / 40,000,000,000</div>
-</body></html>`
-
+func TestMiMoFetcher_JSONResponse_StringNumbers_ParsesUsage(t *testing.T) {
+	// 部分接口数值以字符串返回,应同样可解析
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"creditsUsed": "8000000000",
+			"creditsTotal": "40000000000"
+		}`))
 	}))
 	defer server.Close()
 
@@ -117,16 +118,11 @@ func TestMiMoFetcher_HTMLResponse_DerivesPercentWhenAbsent(t *testing.T) {
 	}
 }
 
-func TestMiMoFetcher_HTMLPercentOnly_Fallback(t *testing.T) {
-	// 只有百分比没有 used/total 时,应回退到仅百分比
-	html := `<!DOCTYPE html>
-<html><body>
-	<div class="usage">已使用 35.5%</div>
-</body></html>`
-
+func TestMiMoFetcher_JSONResponse_UsedTotalFields_ParsesUsage(t *testing.T) {
+	// 另一种常见字段命名 used/total
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"used": 300, "total": 1000}`))
 	}))
 	defer server.Close()
 
@@ -135,27 +131,27 @@ func TestMiMoFetcher_HTMLPercentOnly_Fallback(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Percent < 35.4 || result.Percent > 35.6 {
-		t.Errorf("expected ~35.5%%, got %f%%", result.Percent)
+	if result.Used != 300 {
+		t.Errorf("expected Used=300, got %f", result.Used)
 	}
-	if !strings.Contains(result.Remaining, "35.5") {
-		t.Errorf("expected percent in Remaining, got '%s'", result.Remaining)
+	if result.Total != 1000 {
+		t.Errorf("expected Total=1000, got %f", result.Total)
+	}
+	if result.Percent < 29.9 || result.Percent > 30.1 {
+		t.Errorf("expected ~30%%, got %f%%", result.Percent)
 	}
 }
 
-func TestMiMoFetcher_HTMLNoData_ReturnsError(t *testing.T) {
-	html := `<!DOCTYPE html>
-<html><body><div>no quota data here</div></body></html>`
-
+func TestMiMoFetcher_JSONNoUsageData_ReturnsError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"message": "no quota data here"}`))
 	}))
 	defer server.Close()
 
 	f := NewMiMoFetcher("session=abc", server.URL)
 	result := f.Fetch()
 	if result.Error == "" {
-		t.Error("expected error when HTML has no quota data")
+		t.Error("expected error when JSON has no usage data")
 	}
 }

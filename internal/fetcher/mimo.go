@@ -1,18 +1,17 @@
 package fetcher
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/cookiejar"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 )
 
-// MiMoFetcher 通过 Cookie 抓取小米 MiMo 额度页面并解析 HTML DOM。
-// 小米 MiMo 平台额度数据为服务端渲染,直接出现在 plan-manage 页面 HTML 中。
+// MiMoFetcher 通过 Cookie 调用小米 MiMo 额度 JSON API。
+// 端点: GET https://platform.xiaomimimo.com/api/v1/tokenPlan/usage
+// 认证: Cookie 头(需包含 httponly cookie,前端 document.cookie 取不到)
+// Referer: https://platform.xiaomimimo.com/console/plan-manage
 type MiMoFetcher struct {
 	cookie string
 	apiURL string
@@ -20,16 +19,10 @@ type MiMoFetcher struct {
 
 func NewMiMoFetcher(cookie string, apiURL string) *MiMoFetcher {
 	if apiURL == "" {
-		apiURL = "https://platform.xiaomimimo.com/console/plan-manage"
+		apiURL = "https://platform.xiaomimimo.com/api/v1/tokenPlan/usage"
 	}
 	return &MiMoFetcher{cookie: cookie, apiURL: apiURL}
 }
-
-// "8,239,030,362 / 38,000,000,000" 形式的已用/总量。
-var mimoUsedTotalRe = regexp.MustCompile(`([\d,]+)\s*/\s*([\d,]+)`)
-
-// "已使用 22.0%" 形式的百分比。
-var mimoPercentRe = regexp.MustCompile(`已使用\s*([\d.]+)%`)
 
 func (m *MiMoFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
@@ -58,8 +51,8 @@ func (m *MiMoFetcher) Fetch() QuotaResult {
 	}
 
 	req.Header.Set("Cookie", m.cookie)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Referer", "https://platform.xiaomimimo.com/")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Referer", "https://platform.xiaomimimo.com/console/plan-manage")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -68,8 +61,12 @@ func (m *MiMoFetcher) Fetch() QuotaResult {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 401 || resp.StatusCode == 302 {
-		result.Error = "Cookie 已过期,请更新"
+	if resp.StatusCode == 401 {
+		result.Error = "Cookie 已过期或不足(需包含 httponly cookie),请更新"
+		return result
+	}
+	if resp.StatusCode == 302 {
+		result.Error = "Cookie 已过期或不足(需包含 httponly cookie),请更新"
 		return result
 	}
 	if resp.StatusCode != 200 {
@@ -77,41 +74,23 @@ func (m *MiMoFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		result.Error = fmt.Sprintf("读取响应失败: %v", err)
+	// 响应字段名尚未确认,使用通用 JSON 解析后按常见字段名尝试提取。
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		result.Error = fmt.Sprintf("解析响应失败: %v", err)
 		return result
 	}
 
-	html := string(body)
+	// 在响应中递归查找 used/total 配对(字段名未知,尝试常见命名)。
+	usedFields := []string{"usedCredits", "creditsUsed", "used", "used_tokens", "usedTokens", "consumed", "consumedCredits"}
+	totalFields := []string{"totalCredits", "creditsTotal", "total", "total_tokens", "totalTokens", "limit", "creditsLimit"}
 
-	// 页面可能有多处 "数字 / 数字" 形式;优先匹配较大的 Credits 数值。
-	// 取第一个匹配到的 used/total 组合。
-	var used, total float64
-	parsed := false
-	for _, m := range mimoUsedTotalRe.FindAllStringSubmatch(html, -1) {
-		u, errU := parseMimoNumber(m[1])
-		t, errT := parseMimoNumber(m[2])
-		if errU != nil || errT != nil {
-			continue
-		}
-		// 选取总量 > 0 且数值较大的一组(Credits 量级通常在上亿)
-		if t > 0 && t > total {
-			used, total = u, t
-			parsed = true
-		}
-	}
+	used, hasUsed := mimoFindNumber(raw, usedFields)
+	total, hasTotal := mimoFindNumber(raw, totalFields)
 
-	if !parsed {
-		// 回退:只匹配百分比
-		if pm := mimoPercentRe.FindStringSubmatch(html); len(pm) >= 2 {
-			if p, err := strconv.ParseFloat(pm[1], 64); err == nil {
-				result.Percent = p
-				result.Remaining = fmt.Sprintf("已使用 %.1f%% Credits", p)
-				return result
-			}
-		}
-		result.Error = "HTML 中未找到 used/total 或百分比,页面结构可能已变更"
+	if !hasUsed || !hasTotal {
+		// 仅找到 used 或百分比时也尽量给出信息
+		result.Error = "响应中未找到 used/total 用量字段,响应结构可能已变更"
 		return result
 	}
 
@@ -120,22 +99,58 @@ func (m *MiMoFetcher) Fetch() QuotaResult {
 	if total > 0 {
 		result.Percent = used / total * 100
 	}
+	result.Remaining = fmt.Sprintf("%.0f / %.0f Credits", used, total)
 
-	// 若 HTML 中也有显式百分比且与计算值偏差较大,优先用显式值
-	if pm := mimoPercentRe.FindStringSubmatch(html); len(pm) >= 2 {
-		if p, err := strconv.ParseFloat(pm[1], 64); err == nil {
-			result.Percent = p
+	// 重置时间(若存在)
+	for _, k := range []string{"resetTime", "resetAt", "reset_at", "expiresAt", "expires_at"} {
+		if v, ok := mimoFindString(raw, k); ok {
+			result.ResetAt = v
+			break
 		}
 	}
-
-	result.Remaining = fmt.Sprintf("%.0f / %.0f Credits", used, total)
 
 	return result
 }
 
-// parseMimoNumber 解析可能含逗号的数字(如 "8,239,030,362")。
-func parseMimoNumber(s string) (float64, error) {
-	s = strings.ReplaceAll(s, ",", "")
-	s = strings.TrimSpace(s)
-	return strconv.ParseFloat(s, 64)
+// mimoFindNumber 在 JSON 根对象中查找第一个能解析为数值的字段(按给定候选名顺序)。
+// 支持数值与字符串形式的数字。不递归到子对象。
+func mimoFindNumber(raw map[string]json.RawMessage, candidates []string) (float64, bool) {
+	for _, key := range candidates {
+		val, ok := raw[key]
+		if !ok {
+			continue
+		}
+		// 先尝试直接解析为 number
+		var f float64
+		if err := json.Unmarshal(val, &f); err == nil {
+			return f, true
+		}
+		// 再尝试字符串形式
+		var s string
+		if err := json.Unmarshal(val, &s); err == nil {
+			if f, err := parseFloat(s); err == nil {
+				return f, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// mimoFindString 在 JSON 根对象中查找字符串字段。
+func mimoFindString(raw map[string]json.RawMessage, key string) (string, bool) {
+	val, ok := raw[key]
+	if !ok {
+		return "", false
+	}
+	var s string
+	if err := json.Unmarshal(val, &s); err == nil {
+		return s, true
+	}
+	return "", false
+}
+
+func parseFloat(s string) (float64, error) {
+	var f float64
+	_, err := fmt.Sscanf(s, "%f", &f)
+	return f, err
 }

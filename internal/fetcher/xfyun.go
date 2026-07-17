@@ -116,18 +116,18 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 取第一条套餐;优先使用 5 小时窗口用量(最紧迫)
+	// 取第一条套餐;展示套餐总量
 	row := body.Data.Rows[0]
 	dto := row.CodingPlanUsageDTO
 
-	used := dto.RP5hUsage
-	limit := dto.RP5hLimit
+	used := dto.PackageUsage
+	limit := dto.PackageLimit
 	result.Used = used
 	result.Total = limit
 	if limit > 0 {
 		result.Percent = used / limit * 100
 	}
-	result.Remaining = fmt.Sprintf("%.0f / %.0f 次 (5小时)", used, limit)
+	result.Remaining = fmt.Sprintf("%.0f / %.0f 次 (总量)", used, limit)
 	result.ResetAt = row.ExpiresAt
 
 	return result

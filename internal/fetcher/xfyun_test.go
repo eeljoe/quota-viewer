@@ -49,17 +49,15 @@ func TestXfyunFetcher_302_ReturnsCookieExpired(t *testing.T) {
 	}
 }
 
-func TestXfyunFetcher_JSONResponse_ParsesRP5h(t *testing.T) {
+func TestXfyunFetcher_JSONResponse_ParsesPackageTotal(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 验证 Accept header 是 application/json
 		accept := r.Header.Get("Accept")
 		if accept != "application/json" {
 			t.Errorf("expected Accept 'application/json', got '%s'", accept)
 		}
-		// 验证 Referer
 		ref := r.Header.Get("Referer")
 		if ref != "https://maas.xfyun.cn/packageSubscription" {
-			t.Errorf("expected Referer 'https://maas.xfyun.cn/packageSubscription', got '%s'", ref)
+			t.Errorf("expected Referer, got '%s'", ref)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{
@@ -92,28 +90,20 @@ func TestXfyunFetcher_JSONResponse_ParsesRP5h(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	// 优先使用 5 小时窗口:768 / 6000
-	if result.Used != 768 {
-		t.Errorf("expected Used=768 (rp5h), got %f", result.Used)
+	if result.Used != 3300.8 {
+		t.Errorf("expected Used=3300.8 (package), got %f", result.Used)
 	}
-	if result.Total != 6000 {
-		t.Errorf("expected Total=6000 (rp5h), got %f", result.Total)
+	if result.Total != 270000 {
+		t.Errorf("expected Total=270000 (package), got %f", result.Total)
 	}
-	// 768/6000 = 12.8%
-	if result.Percent < 12.7 || result.Percent > 12.9 {
-		t.Errorf("expected ~12.8%%, got %f%%", result.Percent)
+	if result.Percent < 1.1 || result.Percent > 1.3 {
+		t.Errorf("expected ~1.2%%, got %f%%", result.Percent)
 	}
-	if !strings.Contains(result.Remaining, "768") {
-		t.Errorf("expected used in Remaining, got '%s'", result.Remaining)
-	}
-	if !strings.Contains(result.Remaining, "6000") {
-		t.Errorf("expected limit in Remaining, got '%s'", result.Remaining)
-	}
-	if !strings.Contains(result.Remaining, "5小时") {
-		t.Errorf("expected '5小时' in Remaining, got '%s'", result.Remaining)
+	if !strings.Contains(result.Remaining, "总量") {
+		t.Errorf("expected '总量' in Remaining, got '%s'", result.Remaining)
 	}
 	if result.ResetAt != "2026-10-16 10:07:39" {
-		t.Errorf("expected ResetAt '2026-10-16 10:07:39', got '%s'", result.ResetAt)
+		t.Errorf("expected ResetAt, got '%s'", result.ResetAt)
 	}
 }
 

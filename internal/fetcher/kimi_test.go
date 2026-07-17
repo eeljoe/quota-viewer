@@ -3,6 +3,7 @@ package fetcher
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -17,14 +18,12 @@ func TestKimiFetcher_EmptyKey_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestKimiFetcher_NestedResponse_ParsesUsage(t *testing.T) {
+func TestKimiFetcher_NestedResponse_Parses5hWindow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 验证 Authorization header
 		auth := r.Header.Get("Authorization")
 		if auth != "Bearer sk-kimi-test" {
 			t.Errorf("expected 'Bearer sk-kimi-test', got '%s'", auth)
 		}
-		// 验证 User-Agent
 		ua := r.Header.Get("User-Agent")
 		if ua != "KimiCLI/1.6" {
 			t.Errorf("expected User-Agent 'KimiCLI/1.6', got '%s'", ua)
@@ -34,7 +33,7 @@ func TestKimiFetcher_NestedResponse_ParsesUsage(t *testing.T) {
 		w.Write([]byte(`{
 			"user": {"userId": "cr98n7kudu67tmbt5gq0", "region": "REGION_CN", "membership": {"level": "LEVEL_INTERMEDIATE"}},
 			"usage": {"limit": "100", "used": "75", "remaining": "25", "resetTime": "2026-07-18T13:13:12.634389Z"},
-			"limits": [{"window": {"duration": 300, "timeUnit": "TIME_UNIT_MINUTE"}, "detail": {"limit": "100", "remaining": "100", "resetTime": "2026-07-17T16:13:12.634389Z"}}],
+			"limits": [{"window": {"duration": 300, "timeUnit": "TIME_UNIT_MINUTE"}, "detail": {"limit": "100", "remaining": "25", "resetTime": "2026-07-17T16:13:12.634389Z"}}],
 			"totalQuota": {"limit": "100", "remaining": "99"},
 			"parallel": {"limit": "20"},
 			"authentication": {"method": "METHOD_API_KEY"}
@@ -47,21 +46,21 @@ func TestKimiFetcher_NestedResponse_ParsesUsage(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
+	// 5h window: limit=100, remaining=25 → used=75
 	if result.Used != 75 {
-		t.Errorf("expected Used=75, got %f", result.Used)
+		t.Errorf("expected Used=75 (5h window), got %f", result.Used)
 	}
 	if result.Total != 100 {
-		t.Errorf("expected Total=100, got %f", result.Total)
+		t.Errorf("expected Total=100 (5h window), got %f", result.Total)
 	}
-	// 75/100 = 75%
 	if result.Percent < 74.9 || result.Percent > 75.1 {
 		t.Errorf("expected ~75%%, got %f%%", result.Percent)
 	}
-	if result.Remaining != "75 / 100" {
-		t.Errorf("expected Remaining '75 / 100', got '%s'", result.Remaining)
+	if !strings.Contains(result.Remaining, "5小时") {
+		t.Errorf("expected '5小时' in Remaining, got '%s'", result.Remaining)
 	}
-	if result.ResetAt != "2026-07-18T13:13:12.634389Z" {
-		t.Errorf("expected ResetAt '2026-07-18T13:13:12.634389Z', got '%s'", result.ResetAt)
+	if result.ResetAt != "2026-07-17T16:13:12.634389Z" {
+		t.Errorf("expected 5h reset time, got '%s'", result.ResetAt)
 	}
 }
 

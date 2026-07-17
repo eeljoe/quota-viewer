@@ -67,6 +67,39 @@ func TestXfyunFetcher_ValidResponse_ParsesData(t *testing.T) {
 	}
 }
 
+func TestXfyunFetcher_TotalAndRemainingWithoutUsed_DerivesUsed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"code": 0,
+			"data": {
+				"total": 18000,
+				"remaining": 13000,
+				"resetTime": "2026-07-21T08:00:00Z"
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	f := NewXfyunFetcher("test=cookie", server.URL)
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Errorf("unexpected error: %s", result.Error)
+	}
+	if result.Used != 5000 {
+		t.Errorf("expected Used=5000 (total-remaining), got %f", result.Used)
+	}
+	if result.Total != 18000 {
+		t.Errorf("expected Total=18000, got %f", result.Total)
+	}
+	if result.Percent < 27.7 || result.Percent > 27.8 {
+		t.Errorf("expected ~27.78%%, got %f%%", result.Percent)
+	}
+	if result.ResetAt != "2026-07-21T08:00:00Z" {
+		t.Errorf("expected reset time, got '%s'", result.ResetAt)
+	}
+}
+
 func TestXfyunFetcher_ArrayData_ParsesFirst(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

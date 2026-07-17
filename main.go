@@ -28,6 +28,7 @@ func main() {
 		DisableResize:       true,
 		WindowStartState:    options.Normal,
 		OnStartup:           app.OnStartup,
+		OnShutdown:          app.OnShutdown,
 		Bind: []interface{}{
 			app,
 		},

@@ -17,28 +17,71 @@ func TestKimiFetcher_EmptyKey_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestKimiFetcher_ValidResponse_ParsesUsage(t *testing.T) {
+func TestKimiFetcher_NestedResponse_ParsesUsage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 验证 Authorization header
 		auth := r.Header.Get("Authorization")
 		if auth != "Bearer sk-kimi-test" {
 			t.Errorf("expected 'Bearer sk-kimi-test', got '%s'", auth)
 		}
+		// 验证 User-Agent
+		ua := r.Header.Get("User-Agent")
+		if ua != "KimiCLI/1.6" {
+			t.Errorf("expected User-Agent 'KimiCLI/1.6', got '%s'", ua)
+		}
 
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"user": {"userId": "cr98n7kudu67tmbt5gq0", "region": "REGION_CN", "membership": {"level": "LEVEL_INTERMEDIATE"}},
+			"usage": {"limit": "100", "used": "75", "remaining": "25", "resetTime": "2026-07-18T13:13:12.634389Z"},
+			"limits": [{"window": {"duration": 300, "timeUnit": "TIME_UNIT_MINUTE"}, "detail": {"limit": "100", "remaining": "100", "resetTime": "2026-07-17T16:13:12.634389Z"}}],
+			"totalQuota": {"limit": "100", "remaining": "99"},
+			"parallel": {"limit": "20"},
+			"authentication": {"method": "METHOD_API_KEY"}
+		}`))
+	}))
+	defer server.Close()
+
+	f := &KimiFetcher{apiKey: "sk-kimi-test", apiURL: server.URL}
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Used != 75 {
+		t.Errorf("expected Used=75, got %f", result.Used)
+	}
+	if result.Total != 100 {
+		t.Errorf("expected Total=100, got %f", result.Total)
+	}
+	// 75/100 = 75%
+	if result.Percent < 74.9 || result.Percent > 75.1 {
+		t.Errorf("expected ~75%%, got %f%%", result.Percent)
+	}
+	if result.Remaining != "75 / 100" {
+		t.Errorf("expected Remaining '75 / 100', got '%s'", result.Remaining)
+	}
+	if result.ResetAt != "2026-07-18T13:13:12.634389Z" {
+		t.Errorf("expected ResetAt '2026-07-18T13:13:12.634389Z', got '%s'", result.ResetAt)
+	}
+}
+
+func TestKimiFetcher_LegacyArrayResponse_StillParses(t *testing.T) {
+	// 兼容旧版 {"data":[{model_name:"all",...}]} 响应
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{
 			"data": [
 				{
 					"model_name": "all",
-					"used": 300000000,
-					"limit": 1000000000,
-					"remaining": 700000000,
+					"used": 300,
+					"limit": 1000,
+					"remaining": 700,
 					"reset_at": "2026-07-21T00:00:00Z"
 				},
 				{
 					"model_name": "kimi-k2-0905",
-					"used": 50000000,
-					"limit": 200000000,
+					"used": 50,
+					"limit": 200,
 					"reset_at": "2026-07-21T00:00:00Z"
 				}
 			]
@@ -46,9 +89,24 @@ func TestKimiFetcher_ValidResponse_ParsesUsage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// 临时替换 URL(通过构造自定义请求来测试)
-	// 由于 URL 硬编码,我们测试 401 和空 key 场景
-	// 完整的端到端测试在集成阶段做
+	f := &KimiFetcher{apiKey: "sk-kimi-test", apiURL: server.URL}
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Used != 300 {
+		t.Errorf("expected Used=300, got %f", result.Used)
+	}
+	if result.Total != 1000 {
+		t.Errorf("expected Total=1000, got %f", result.Total)
+	}
+	// 300/1000 = 30%
+	if result.Percent < 29.9 || result.Percent > 30.1 {
+		t.Errorf("expected ~30%%, got %f%%", result.Percent)
+	}
+	if result.ResetAt != "2026-07-21T00:00:00Z" {
+		t.Errorf("expected ResetAt '2026-07-21T00:00:00Z', got '%s'", result.ResetAt)
+	}
 }
 
 func TestKimiFetcher_Unauthorized_ReturnsError(t *testing.T) {
@@ -58,8 +116,23 @@ func TestKimiFetcher_Unauthorized_ReturnsError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// 验证 401 场景的错误消息
-	// 注意:由于 URL 硬编码为 api.kimi.com,单元测试主要覆盖空 key 路径
-	// 401 路径在集成测试中覆盖
-	_ = server // 保持 server 引用
+	f := &KimiFetcher{apiKey: "sk-kimi-bad", apiURL: server.URL}
+	result := f.Fetch()
+	if result.Error == "" {
+		t.Fatal("expected error for 401")
+	}
+}
+
+func TestKimiFetcher_EmptyUsage_ReturnsError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	f := &KimiFetcher{apiKey: "sk-kimi-test", apiURL: server.URL}
+	result := f.Fetch()
+	if result.Error == "" {
+		t.Error("expected error when response has no usage data")
+	}
 }

@@ -127,7 +127,23 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 主路径:嵌套 usage 对象(limit/used 为字符串)
+	// 优先:5 小时窗口(limits[0].detail)
+	if len(body.Limits) > 0 && body.Limits[0].Detail.Limit != "" {
+		d := body.Limits[0].Detail
+		remaining, _ := kimiParseStringFloat(d.Remaining)
+		limit, _ := kimiParseStringFloat(d.Limit)
+		used := limit - remaining
+		result.Used = used
+		result.Total = limit
+		if limit > 0 {
+			result.Percent = used / limit * 100
+		}
+		result.Remaining = fmt.Sprintf("%.0f / %.0f (5小时)", used, limit)
+		result.ResetAt = d.ResetTime
+		return result
+	}
+
+	// 兜底:周额度 usage 对象
 	if body.Usage.Limit != "" || body.Usage.Used != "" {
 		used, _ := kimiParseStringFloat(body.Usage.Used)
 		limit, _ := kimiParseStringFloat(body.Usage.Limit)

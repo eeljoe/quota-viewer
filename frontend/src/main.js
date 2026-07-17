@@ -22,11 +22,13 @@ function togglePanel() {
     if (isExpanded) {
         ball.classList.add("hidden");
         panel.classList.remove("hidden");
+        window.go.main.App.SetWindowSize(340, 260);
         // 展开时若数据超过 3 分钟则刷新
         refreshIfNeeded();
     } else {
         panel.classList.add("hidden");
         ball.classList.remove("hidden");
+        window.go.main.App.SetWindowSize(60, 60);
     }
 }
 
@@ -105,12 +107,14 @@ function updateDots(results) {
 document.getElementById("btn-settings").addEventListener("click", () => {
     document.getElementById("panel").classList.add("hidden");
     document.getElementById("settings").classList.remove("hidden");
+    window.go.main.App.SetWindowSize(340, 480);
     loadConfig();
 });
 
 document.getElementById("btn-close-settings").addEventListener("click", () => {
     document.getElementById("settings").classList.add("hidden");
     document.getElementById("ball").classList.remove("hidden");
+    window.go.main.App.SetWindowSize(60, 60);
     isExpanded = false;
 });
 

@@ -63,6 +63,11 @@ func (t *TrayHandler) onReady() {
 	systray.SetTitle("QV")
 	systray.SetTooltip("Quota Viewer")
 
+	// 双击托盘图标:切换悬浮球显示/隐藏
+	systray.SetOnDClick(func(menu systray.IMenu) {
+		wailsruntime.EventsEmit(t.ctx, "tray:toggle")
+	})
+
 	// 刷新
 	mRefresh := systray.AddMenuItem("刷新", "刷新配额")
 	mRefresh.Click(func() {

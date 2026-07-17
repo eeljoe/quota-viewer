@@ -1,35 +1,38 @@
 package fetcher
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 )
 
-// XfyunFetcher 通过 Cookie 抓取讯飞星辰 MaaS 额度。
+// XfyunFetcher 通过 Cookie 抓取讯飞星辰 MaaS 额度页面并解析 HTML DOM。
+// 讯飞平台额度数据为服务端渲染,直接出现在 packageSubscription 页面 HTML 中。
 type XfyunFetcher struct {
 	cookie string
-	apiURL string // 额度 XHR 接口地址,首次需 F12 确认
+	apiURL string // HTML 页面地址
 }
 
 func NewXfyunFetcher(cookie string, apiURL string) *XfyunFetcher {
-	// 默认 URL,待 F12 确认后更新
 	if apiURL == "" {
-		apiURL = "https://maas.xfyun.cn/api/packageSubscription"
+		apiURL = "https://maas.xfyun.cn/packageSubscription"
 	}
 	return &XfyunFetcher{cookie: cookie, apiURL: apiURL}
 }
 
-// xfyunRawResponse 是通用的响应结构,字段名按实抓结果调整。
-// 常见模式: { "data": { "used": X, "total": Y, "resetTime": "..." } }
-// 或: { "data": [{ "name": "...", "used": X, "surplus": Y }] }
-type xfyunRawResponse struct {
-	Data json.RawMessage `json:"data"`
-	Code int             `json:"code"`
-}
+// usage-used / usage-total / usage-unit 的取值用非贪婪匹配,避免跨标签贪婪。
+var (
+	xfyunUsedRe   = regexp.MustCompile(`class="usage-used"[^>]*>\s*([\d,]+)\s*<`)
+	xfyunTotalRe  = regexp.MustCompile(`class="usage-total"[^>]*>\s*([\d,]+)\s*<`)
+	xfyunUnitRe   = regexp.MustCompile(`class="usage-unit"[^>]*>\s*([^<]+?)\s*<`)
+	xfyunNameRe   = regexp.MustCompile(`class="package-name"[^>]*>\s*([^<]+?)\s*<`)
+	xfyunWidthRe  = regexp.MustCompile(`width:\s*([\d.]+)`)
+)
 
 func (x *XfyunFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
@@ -46,7 +49,7 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Jar:     jar,
-		// 讯飞 401/302 时不自动跟随到登录页
+		// Cookie 过期时讯飞会 302 跳转到登录页,不自动跟随
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -58,10 +61,9 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 设置 Cookie header
 	req.Header.Set("Cookie", x.cookie)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Referer", "https://maas.xfyun.cn/packageSubscription")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Referer", "https://maas.xfyun.cn/")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -85,100 +87,62 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 解析通用结构
-	var raw xfyunRawResponse
-	if err := json.Unmarshal(body, &raw); err != nil {
-		// 可能不是标准 JSON,保存原始文本
-		result.Remaining = string(body[:min(len(body), 200)])
-		result.Error = "响应格式未识别(需 F12 确认实际接口)"
+	html := string(body)
+
+	usedMatch := xfyunUsedRe.FindStringSubmatch(html)
+	totalMatch := xfyunTotalRe.FindStringSubmatch(html)
+
+	if len(usedMatch) < 2 || len(totalMatch) < 2 {
+		result.Error = "HTML 中未找到 usage-used/usage-total,页面结构可能已变更"
 		return result
 	}
 
-	// 尝试解析 data 为对象
-	var dataMap map[string]interface{}
-	if err := json.Unmarshal(raw.Data, &dataMap); err == nil {
-		result = parseXfyunDataMap(result, dataMap)
+	used, err := parseXfyunNumber(usedMatch[1])
+	if err != nil {
+		result.Error = fmt.Sprintf("解析 used 失败: %v", err)
+		return result
+	}
+	total, err := parseXfyunNumber(totalMatch[1])
+	if err != nil {
+		result.Error = fmt.Sprintf("解析 total 失败: %v", err)
 		return result
 	}
 
-	// 尝试解析 data 为数组
-	var dataArray []map[string]interface{}
-	if err := json.Unmarshal(raw.Data, &dataArray); err == nil && len(dataArray) > 0 {
-		result = parseXfyunDataMap(result, dataArray[0])
-		return result
-	}
-
-	result.Error = "无法解析额度数据(需 F12 确认实际字段)"
-	return result
-}
-
-// parseXfyunDataMap 从 data 对象中提取用量信息。
-// 字段名按常见命名尝试,实际需根据 F12 抓包结果调整。
-func parseXfyunDataMap(result QuotaResult, m map[string]interface{}) QuotaResult {
-	used := getFloat(m, "used", "usage", "usedAmount", "consume")
-	total := getFloat(m, "total", "limit", "totalAmount", "quota")
-	remaining := getFloat(m, "remaining", "surplus", "left")
-	resetAt := getString(m, "resetTime", "reset_at", "resetAt", "expireTime", "expireTimeStr")
-
-	if used > 0 && total > 0 {
-		result.Total = total
-		result.Used = used
+	result.Used = used
+	result.Total = total
+	if total > 0 {
 		result.Percent = used / total * 100
-		result.Remaining = fmt.Sprintf("%.0f / %.0f", used, total)
-	} else if remaining > 0 && total > 0 {
-		result.Total = total
-		result.Used = total - remaining
-		result.Percent = result.Used / total * 100
-		result.Remaining = fmt.Sprintf("%.0f / %.0f", result.Used, total)
-	} else {
-		// 无数值,尝试取文本描述
-		desc := getString(m, "desc", "description", "remaining", "surplusText")
-		if desc != "" {
-			result.Remaining = desc
-		} else {
-			result.Error = "未找到用量字段(需 F12 确认实际字段名)"
+	}
+
+	// 单位与套餐名(可选)
+	unit := "次"
+	if m := xfyunUnitRe.FindStringSubmatch(html); len(m) >= 2 {
+		unit = strings.TrimSpace(m[1])
+	}
+	name := ""
+	if m := xfyunNameRe.FindStringSubmatch(html); len(m) >= 2 {
+		name = strings.TrimSpace(m[1])
+	}
+
+	// 进度条宽度作为百分比交叉校验(可选,不覆盖主结果)
+	if m := xfyunWidthRe.FindStringSubmatch(html); len(m) >= 2 {
+		if v, err := strconv.ParseFloat(m[1], 64); err == nil && v > 0 && v <= 1 && result.Percent == 0 {
+			result.Percent = v * 100
 		}
 	}
 
-	result.ResetAt = resetAt
+	if name != "" {
+		result.Remaining = fmt.Sprintf("%s: %.0f / %.0f %s", name, used, total, unit)
+	} else {
+		result.Remaining = fmt.Sprintf("%.0f / %.0f %s", used, total, unit)
+	}
+
 	return result
 }
 
-func getFloat(m map[string]interface{}, keys ...string) float64 {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			switch n := v.(type) {
-			case float64:
-				return n
-			case int:
-				return float64(n)
-			case int64:
-				return float64(n)
-			case string:
-				var f float64
-				if _, err := fmt.Sscanf(n, "%f", &f); err == nil {
-					return f
-				}
-			}
-		}
-	}
-	return 0
-}
-
-func getString(m map[string]interface{}, keys ...string) string {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			if s, ok := v.(string); ok {
-				return s
-			}
-		}
-	}
-	return ""
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+// parseXfyunNumber 解析可能含逗号的数字(如 "1,017")。
+func parseXfyunNumber(s string) (float64, error) {
+	s = strings.ReplaceAll(s, ",", "")
+	s = strings.TrimSpace(s)
+	return strconv.ParseFloat(s, 64)
 }

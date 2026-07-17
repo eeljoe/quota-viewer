@@ -163,6 +163,11 @@ func (a *App) SaveBallPosition(x, y int) error {
 	return config.Save(a.cfg)
 }
 
+// SetWindowSize 由前端调用,切换收起/展开尺寸。
+func (a *App) SetWindowSize(w, h int) {
+	wailsruntime.WindowSetSize(a.ctx, w, h)
+}
+
 // fetchAll 并发调用三个 fetcher。
 func (a *App) fetchAll() []fetcher.QuotaResult {
 	a.mu.Lock()

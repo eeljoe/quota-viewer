@@ -38,6 +38,11 @@ func (a *App) OnStartup(ctx context.Context) {
 	a.ctx = ctx
 	a.visible.Store(true)
 
+	// 恢复悬浮球位置(配置中 BallX/BallY >= 0 时生效)
+	if a.cfg.BallX >= 0 && a.cfg.BallY >= 0 {
+		wailsruntime.WindowSetPosition(ctx, a.cfg.BallX, a.cfg.BallY)
+	}
+
 	// 设置系统托盘菜单(刷新/显示隐藏/打开配置/退出)
 	a.tray = tray.New(ctx)
 	a.tray.Start()

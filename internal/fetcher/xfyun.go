@@ -120,7 +120,7 @@ func parseXfyunDataMap(result QuotaResult, m map[string]interface{}) QuotaResult
 	remaining := getFloat(m, "remaining", "surplus", "left")
 	resetAt := getString(m, "resetTime", "reset_at", "resetAt", "expireTime", "expireTimeStr")
 
-	if total > 0 {
+	if used > 0 && total > 0 {
 		result.Total = total
 		result.Used = used
 		result.Percent = used / total * 100

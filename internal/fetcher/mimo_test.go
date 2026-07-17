@@ -60,9 +60,17 @@ func TestMiMoFetcher_JSONResponse_CreditsFields_ParsesUsage(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{
-			"usedCredits": 8239030362,
-			"totalCredits": 38000000000,
-			"resetTime": "2026-07-21T00:00:00Z"
+			"code": 0,
+			"message": "",
+			"data": {
+				"usage": {
+					"percent": 0.22,
+					"items": [
+						{"name": "plan_total_token", "used": 8331114938, "limit": 38000000000, "percent": 0.22},
+						{"name": "compensation_total_token", "used": 0, "limit": 0, "percent": 0}
+					]
+				}
+			}
 		}`))
 	}))
 	defer server.Close()
@@ -72,31 +80,33 @@ func TestMiMoFetcher_JSONResponse_CreditsFields_ParsesUsage(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Used != 8239030362 {
-		t.Errorf("expected Used=8239030362, got %f", result.Used)
+	if result.Used != 8331114938 {
+		t.Errorf("expected Used=8331114938, got %f", result.Used)
 	}
 	if result.Total != 38000000000 {
 		t.Errorf("expected Total=38000000000, got %f", result.Total)
 	}
-	// 8239030362/38000000000 ≈ 21.68%
-	if result.Percent < 21.6 || result.Percent > 21.7 {
-		t.Errorf("expected ~21.68%%, got %f%%", result.Percent)
+	// 8331114938/38000000000 ≈ 21.9%
+	if result.Percent < 21.8 || result.Percent > 22.0 {
+		t.Errorf("expected ~21.9%%, got %f%%", result.Percent)
 	}
 	if !strings.Contains(result.Remaining, "Credits") {
 		t.Errorf("expected 'Credits' in Remaining, got '%s'", result.Remaining)
 	}
-	if result.ResetAt != "2026-07-21T00:00:00Z" {
-		t.Errorf("expected ResetAt '2026-07-21T00:00:00Z', got '%s'", result.ResetAt)
-	}
 }
 
-func TestMiMoFetcher_JSONResponse_StringNumbers_ParsesUsage(t *testing.T) {
-	// 部分接口数值以字符串返回,应同样可解析
+func TestMiMoFetcher_JSONResponse_MonthUsage_FallbackPercent(t *testing.T) {
+	// 当 items 为空时,用顶层 percent 兜底
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{
-			"creditsUsed": "8000000000",
-			"creditsTotal": "40000000000"
+			"code": 0,
+			"data": {
+				"usage": {
+					"percent": 0.35,
+					"items": []
+				}
+			}
 		}`))
 	}))
 	defer server.Close()
@@ -106,46 +116,15 @@ func TestMiMoFetcher_JSONResponse_StringNumbers_ParsesUsage(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Used != 8000000000 {
-		t.Errorf("expected Used=8000000000, got %f", result.Used)
-	}
-	if result.Total != 40000000000 {
-		t.Errorf("expected Total=40000000000, got %f", result.Total)
-	}
-	// 8B/40B = 20%
-	if result.Percent < 19.9 || result.Percent > 20.1 {
-		t.Errorf("expected ~20.0%%, got %f%%", result.Percent)
-	}
-}
-
-func TestMiMoFetcher_JSONResponse_UsedTotalFields_ParsesUsage(t *testing.T) {
-	// 另一种常见字段命名 used/total
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"used": 300, "total": 1000}`))
-	}))
-	defer server.Close()
-
-	f := NewMiMoFetcher("session=abc", server.URL)
-	result := f.Fetch()
-	if result.Error != "" {
-		t.Fatalf("unexpected error: %s", result.Error)
-	}
-	if result.Used != 300 {
-		t.Errorf("expected Used=300, got %f", result.Used)
-	}
-	if result.Total != 1000 {
-		t.Errorf("expected Total=1000, got %f", result.Total)
-	}
-	if result.Percent < 29.9 || result.Percent > 30.1 {
-		t.Errorf("expected ~30%%, got %f%%", result.Percent)
+	if result.Percent < 34.9 || result.Percent > 35.1 {
+		t.Errorf("expected ~35%%, got %f%%", result.Percent)
 	}
 }
 
 func TestMiMoFetcher_JSONNoUsageData_ReturnsError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message": "no quota data here"}`))
+		w.Write([]byte(`{"code":0,"data":{"usage":{"percent":0,"items":[]}}}`))
 	}))
 	defer server.Close()
 

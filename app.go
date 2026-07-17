@@ -21,7 +21,10 @@ type App struct {
 }
 
 func NewApp() *App {
-	cfg, _ := config.Load()
+	cfg, err := config.Load()
+	if err != nil || cfg == nil {
+		cfg = &config.Config{RefreshIntervalMin: 15, BallX: -1, BallY: -1}
+	}
 	return &App{
 		cfg: cfg,
 	}

@@ -7,9 +7,58 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- 收起态:悬浮球 -->
     <div id="ball" class="ball">
-        <span class="ball-text">Q</span>
+        <div class="dot" id="dot-kimi"></div>
+        <div class="dot" id="dot-xfyun"></div>
+        <div class="dot" id="dot-mimo"></div>
     </div>
+
+    <!-- 展开态:详情面板 -->
+    <div id="panel" class="panel hidden">
+        <div class="panel-header" --wails-draggable="drag">
+            <span>额度详情</span>
+            <button id="btn-settings" class="icon-btn">⚙</button>
+        </div>
+        <div id="quota-list" class="quota-list"></div>
+        <div class="panel-footer">
+            <span id="last-updated" class="muted"></span>
+            <button id="btn-refresh" class="btn">刷新</button>
+        </div>
+    </div>
+
+    <!-- 配置面板 -->
+    <div id="settings" class="settings hidden">
+        <div class="panel-header" --wails-draggable="drag">
+            <span>配置</span>
+            <button id="btn-close-settings" class="icon-btn">✕</button>
+        </div>
+        <div class="settings-body">
+            <div class="form-group">
+                <label>Kimi API Key</label>
+                <input type="password" id="input-kimi" placeholder="sk-kimi-xxx">
+                <button class="btn-sm" data-test="kimi">测试</button>
+            </div>
+            <div class="form-group">
+                <label>讯飞 Cookie</label>
+                <textarea id="input-xfyun" placeholder="从浏览器 F12 复制 Cookie" rows="2"></textarea>
+                <button class="btn-sm" data-test="xfyun">测试</button>
+                <button class="btn-sm" data-open="https://maas.xfyun.cn/packageSubscription">打开登录页</button>
+            </div>
+            <div class="form-group">
+                <label>MiMo Cookie</label>
+                <textarea id="input-mimo" placeholder="从浏览器 F12 复制 Cookie" rows="2"></textarea>
+                <button class="btn-sm" data-test="mimo">测试</button>
+                <button class="btn-sm" data-open="https://platform.xiaomimimo.com/console/plan-manage">打开登录页</button>
+            </div>
+            <div class="form-group">
+                <label>刷新间隔(分钟)</label>
+                <input type="number" id="input-interval" min="1" value="15">
+            </div>
+            <button id="btn-save-config" class="btn">保存</button>
+        </div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 </html>

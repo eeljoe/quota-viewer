@@ -15,6 +15,13 @@ document.getElementById("ball").addEventListener("click", () => {
     togglePanel();
 });
 
+// 收起按钮
+document.getElementById("btn-collapse").addEventListener("click", () => {
+    if (isExpanded) {
+        togglePanel();
+    }
+});
+
 function togglePanel() {
     isExpanded = !isExpanded;
     const ball = document.getElementById("ball");

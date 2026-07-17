@@ -74,83 +74,46 @@ func (m *MiMoFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 响应字段名尚未确认,使用通用 JSON 解析后按常见字段名尝试提取。
-	var raw map[string]json.RawMessage
+	// 响应结构: {"code":0,"data":{"usage":{"percent":0.22,"items":[{"name":"plan_total_token","used":8331114938,"limit":38000000000,"percent":0.22}]}}}
+	var raw struct {
+		Code int `json:"code"`
+		Data struct {
+			Usage struct {
+				Percent float64 `json:"percent"`
+				Items   []struct {
+					Name    string  `json:"name"`
+					Used    float64 `json:"used"`
+					Limit   float64 `json:"limit"`
+					Percent float64 `json:"percent"`
+				} `json:"items"`
+			} `json:"usage"`
+		} `json:"data"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		result.Error = fmt.Sprintf("解析响应失败: %v", err)
 		return result
 	}
 
-	// 在响应中递归查找 used/total 配对(字段名未知,尝试常见命名)。
-	usedFields := []string{"usedCredits", "creditsUsed", "used", "used_tokens", "usedTokens", "consumed", "consumedCredits"}
-	totalFields := []string{"totalCredits", "creditsTotal", "total", "total_tokens", "totalTokens", "limit", "creditsLimit"}
+	// 取 usage.items 中第一个有 used/limit 的条目
+	for _, item := range raw.Data.Usage.Items {
+		if item.Limit > 0 {
+			result.Used = item.Used
+			result.Total = item.Limit
+			result.Percent = item.Used / item.Limit * 100
+			result.Remaining = fmt.Sprintf("%.0f / %.0f Credits", item.Used, item.Limit)
+			return result
+		}
+	}
 
-	used, hasUsed := mimoFindNumber(raw, usedFields)
-	total, hasTotal := mimoFindNumber(raw, totalFields)
-
-	if !hasUsed || !hasTotal {
-		// 仅找到 used 或百分比时也尽量给出信息
-		result.Error = "响应中未找到 used/total 用量字段,响应结构可能已变更"
+	// 兜底:用顶层 percent
+	if raw.Data.Usage.Percent > 0 {
+		result.Percent = raw.Data.Usage.Percent * 100
+		result.Remaining = fmt.Sprintf("%.1f%%", raw.Data.Usage.Percent*100)
 		return result
 	}
 
-	result.Used = used
-	result.Total = total
-	if total > 0 {
-		result.Percent = used / total * 100
-	}
-	result.Remaining = fmt.Sprintf("%.0f / %.0f Credits", used, total)
-
-	// 重置时间(若存在)
-	for _, k := range []string{"resetTime", "resetAt", "reset_at", "expiresAt", "expires_at"} {
-		if v, ok := mimoFindString(raw, k); ok {
-			result.ResetAt = v
-			break
-		}
-	}
-
+	result.Error = "响应中未找到用量数据"
 	return result
 }
 
-// mimoFindNumber 在 JSON 根对象中查找第一个能解析为数值的字段(按给定候选名顺序)。
-// 支持数值与字符串形式的数字。不递归到子对象。
-func mimoFindNumber(raw map[string]json.RawMessage, candidates []string) (float64, bool) {
-	for _, key := range candidates {
-		val, ok := raw[key]
-		if !ok {
-			continue
-		}
-		// 先尝试直接解析为 number
-		var f float64
-		if err := json.Unmarshal(val, &f); err == nil {
-			return f, true
-		}
-		// 再尝试字符串形式
-		var s string
-		if err := json.Unmarshal(val, &s); err == nil {
-			if f, err := parseFloat(s); err == nil {
-				return f, true
-			}
-		}
-	}
-	return 0, false
-}
 
-// mimoFindString 在 JSON 根对象中查找字符串字段。
-func mimoFindString(raw map[string]json.RawMessage, key string) (string, bool) {
-	val, ok := raw[key]
-	if !ok {
-		return "", false
-	}
-	var s string
-	if err := json.Unmarshal(val, &s); err == nil {
-		return s, true
-	}
-	return "", false
-}
-
-func parseFloat(s string) (float64, error) {
-	var f float64
-	_, err := fmt.Sscanf(s, "%f", &f)
-	return f, err
-}

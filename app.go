@@ -9,15 +9,19 @@ import (
 
 	"quota-viewer/internal/config"
 	"quota-viewer/internal/fetcher"
+	"quota-viewer/internal/tray"
+	"sync/atomic"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
-	ctx   context.Context
-	cfg   *config.Config
-	mu    sync.Mutex
-	cache []fetcher.QuotaResult
+	ctx     context.Context
+	cfg     *config.Config
+	mu      sync.Mutex
+	cache   []fetcher.QuotaResult
+	tray    *tray.TrayHandler
+	visible atomic.Bool
 }
 
 func NewApp() *App {
@@ -32,9 +36,39 @@ func NewApp() *App {
 
 func (a *App) OnStartup(ctx context.Context) {
 	a.ctx = ctx
+	a.visible.Store(true)
+
+	// 设置系统托盘菜单(刷新/显示隐藏/打开配置/退出)
+	a.tray = tray.New(ctx)
+	a.tray.Start()
+
+	// 监听托盘事件并转发到对应行为
+	wailsruntime.EventsOn(ctx, "tray:refresh", func(...interface{}) {
+		a.Refresh()
+	})
+	wailsruntime.EventsOn(ctx, "tray:toggle", func(...interface{}) {
+		// Wails v2.12.0 无 WindowIsVisible,用本地可见性状态切换
+		if a.visible.Load() {
+			a.visible.Store(false)
+			wailsruntime.WindowHide(ctx)
+		} else {
+			a.visible.Store(true)
+			wailsruntime.WindowShow(ctx)
+		}
+	})
+	wailsruntime.EventsOn(ctx, "tray:settings", func(...interface{}) {
+		wailsruntime.EventsEmit(ctx, "ui:show-settings")
+	})
 
 	// 启动后台定时刷新
 	go a.startAutoRefresh()
+}
+
+// OnShutdown 在应用退出时清理托盘图标。
+func (a *App) OnShutdown(ctx context.Context) {
+	if a.tray != nil {
+		a.tray.Quit()
+	}
 }
 
 // Refresh 并发调用三个 fetcher,返回结果并推送事件到前端。

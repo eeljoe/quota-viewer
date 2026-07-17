@@ -1,0 +1,25 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 60px;
+    height: 60px;
+    background: transparent;
+    overflow: hidden;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+}
+.ball {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(40, 40, 50, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    --wails-draggable: drag;
+}
+.ball-text {
+    color: #7c83ff;
+    font-size: 24px;
+    font-weight: bold;
+    user-select: none;
+}

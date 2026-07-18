@@ -100,7 +100,7 @@ func (m *MiMoFetcher) Fetch() QuotaResult {
 			result.Used = item.Used
 			result.Total = item.Limit
 			result.Percent = item.Used / item.Limit * 100
-			result.Remaining = fmt.Sprintf("%.0f / %.0f Credits", item.Used, item.Limit)
+			result.Remaining = fmt.Sprintf("%s / %s Credits", formatNum(item.Used), formatNum(item.Limit))
 			return result
 		}
 	}

@@ -138,7 +138,7 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 		if limit > 0 {
 			result.Percent = used / limit * 100
 		}
-		result.Remaining = fmt.Sprintf("%.0f / %.0f (5小时)", used, limit)
+		result.Remaining = fmt.Sprintf("%s / %s (5小时)", formatNum(used), formatNum(limit))
 		result.ResetAt = d.ResetTime
 		return result
 	}
@@ -152,7 +152,7 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 		if limit > 0 {
 			result.Percent = used / limit * 100
 		}
-		result.Remaining = fmt.Sprintf("%.0f / %.0f", used, limit)
+		result.Remaining = fmt.Sprintf("%s / %s", formatNum(used), formatNum(limit))
 		result.ResetAt = body.Usage.ResetTime
 		return result
 	}
@@ -165,7 +165,7 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 			if item.Limit > 0 {
 				result.Percent = float64(item.Used) / float64(item.Limit) * 100
 			}
-			result.Remaining = fmt.Sprintf("%.0f / %.0f", float64(item.Used), float64(item.Limit))
+			result.Remaining = fmt.Sprintf("%s / %s", formatNum(float64(item.Used)), formatNum(float64(item.Limit)))
 			result.ResetAt = item.ResetAt
 			return result
 		}
@@ -177,7 +177,7 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 		if item.Limit > 0 {
 			result.Percent = float64(item.Used) / float64(item.Limit) * 100
 		}
-		result.Remaining = fmt.Sprintf("%.0f / %.0f", float64(item.Used), float64(item.Limit))
+		result.Remaining = fmt.Sprintf("%s / %s", formatNum(float64(item.Used)), formatNum(float64(item.Limit)))
 		result.ResetAt = item.ResetAt
 		return result
 	}

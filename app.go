@@ -22,6 +22,11 @@ type App struct {
 	cache   []fetcher.QuotaResult
 	tray    *tray.TrayHandler
 	visible atomic.Bool
+
+	// 展开/收起窗口状态:savedX/savedY 记录展开前悬浮球位置
+	expanded bool
+	savedX   int
+	savedY   int
 }
 
 func NewApp() *App {
@@ -37,6 +42,15 @@ func NewApp() *App {
 func (a *App) OnStartup(ctx context.Context) {
 	a.ctx = ctx
 	a.visible.Store(true)
+
+	// Windows 对 overlapped 窗口强制默认最小宽度(高 DPI 下实测约 262px 物理),
+	// 导致 60px 球窗被撑宽、球体偏左。安装子类覆盖 WM_GETMINMAXINFO,
+	// 并设为工具窗口(去任务栏按钮/缩略图),再把球窗规整到精确的 60x60。
+	setupWindowStyles("Quota Viewer")
+	wailsruntime.WindowSetMinSize(ctx, ballSize, ballSize)
+	wailsruntime.WindowSetSize(ctx, ballSize, ballSize)
+	// 样式切换后重申置顶,防止球窗被其它窗口盖住
+	wailsruntime.WindowSetAlwaysOnTop(ctx, true)
 
 	// 恢复悬浮球位置(配置中 BallX/BallY >= 0 时生效)
 	if a.cfg.BallX >= 0 && a.cfg.BallY >= 0 {
@@ -62,6 +76,9 @@ func (a *App) OnStartup(ctx context.Context) {
 		}
 	})
 	wailsruntime.EventsOn(ctx, "tray:settings", func(...interface{}) {
+		// 窗口被隐藏时先从托盘唤出,否则配置面板不可见
+		a.visible.Store(true)
+		wailsruntime.WindowShow(ctx)
 		wailsruntime.EventsEmit(ctx, "ui:show-settings")
 	})
 
@@ -117,10 +134,10 @@ func (a *App) SaveConfig(kimiKey, xfyunCookie, mimoCookie string, refreshMin int
 		a.cfg.KimiAPIKey = kimiKey
 	}
 	if xfyunCookie != "" {
-		a.cfg.XfyunCookie = xfyunCookie
+		a.cfg.XfyunCookie = config.NormalizeCookieInput(xfyunCookie)
 	}
 	if mimoCookie != "" {
-		a.cfg.MimoCookie = mimoCookie
+		a.cfg.MimoCookie = config.NormalizeCookieInput(mimoCookie)
 	}
 	if refreshMin > 0 {
 		a.cfg.RefreshIntervalMin = refreshMin
@@ -168,9 +185,105 @@ func (a *App) SaveBallPosition(x, y int) error {
 	return config.Save(a.cfg)
 }
 
-// SetWindowSize 由前端调用,切换收起/展开尺寸。
-func (a *App) SetWindowSize(w, h int) {
+// ballSize 是悬浮球(收起态)窗口边长,与前端 SIZES.ball 保持一致。
+const ballSize = 60
+
+// screenMargin 是展开后面板与屏幕边缘保留的间距。
+const screenMargin = 8
+
+// ExpandWindow 调整窗口尺寸并重新定位,保证面板完整落在当前屏幕内:
+// 默认从球的位置向右下展开,放不下则翻转到左上,最后整体钳制在屏幕内。
+// 首次展开时记录悬浮球位置,供 CollapseWindow 精确恢复。
+func (a *App) ExpandWindow(w, h int) {
+	a.mu.Lock()
+	if !a.expanded {
+		a.savedX, a.savedY = wailsruntime.WindowGetPosition(a.ctx)
+		a.expanded = true
+	}
+	x, y := a.savedX, a.savedY
+	a.mu.Unlock()
+
+	if nx, ny, ok := fitToScreen(a.ctx, x, y, w, h); ok {
+		x, y = nx, ny
+	}
 	wailsruntime.WindowSetSize(a.ctx, w, h)
+	wailsruntime.WindowSetPosition(a.ctx, x, y)
+}
+
+// CollapseWindow 收起为悬浮球,并恢复到展开前的位置。
+func (a *App) CollapseWindow() {
+	a.mu.Lock()
+	a.expanded = false
+	x, y := a.savedX, a.savedY
+	a.mu.Unlock()
+
+	wailsruntime.WindowSetSize(a.ctx, ballSize, ballSize)
+	wailsruntime.WindowSetPosition(a.ctx, x, y)
+}
+
+// fitToScreen 计算让 w×h(逻辑像素)窗口完整落在球所在屏幕内的位置。
+// Windows 下 WindowGetPosition 返回物理像素而 Screen.Size 是逻辑像素,
+// 直接用 Screen.Size 钳制会在 DPI 缩放 >100% 时失效,因此优先走
+// workAreaForPoint 的物理像素精确路径(含任务栏工作区)。
+// 返回的坐标为 WindowSetPosition 所需的工作区相对坐标。
+func fitToScreen(ctx context.Context, ballX, ballY, w, h int) (int, int, bool) {
+	// Windows 精确路径:物理像素,含 DPI 与任务栏
+	if wx, wy, ww, wh, dpi, ok := workAreaForPoint(ballX, ballY); ok && dpi > 0 {
+		pw := w * dpi / 96
+		ph := h * dpi / 96
+		ballPhys := ballSize * dpi / 96
+		margin := screenMargin * dpi / 96
+		ax, ay := anchoredPos(ballX, ballY, pw, ph, ballPhys, wx, wy, ww, wh, margin)
+		// WindowSetPosition(SetPos)期望相对工作区原点的坐标
+		return ax - wx, ay - wy, true
+	}
+
+	// 回退路径(非 Windows 或查询失败):Wails Screen 近似,逻辑坐标
+	screens, err := wailsruntime.ScreenGetAll(ctx)
+	if err != nil || len(screens) == 0 {
+		return 0, 0, false
+	}
+
+	// 优先取窗口当前所在屏,回退主屏,再回退第一块屏
+	cur := screens[0]
+	for _, s := range screens {
+		if s.IsCurrent {
+			cur = s
+			break
+		}
+		if s.IsPrimary {
+			cur = s
+		}
+	}
+	sw, sh := cur.Size.Width, cur.Size.Height
+	if sw <= 0 || sh <= 0 {
+		return 0, 0, false
+	}
+
+	// 球心必须在 (0,0,sw,sh) 坐标系内,否则说明多屏偏移,放弃钳制
+	cx, cy := ballX+ballSize/2, ballY+ballSize/2
+	if cx < 0 || cx > sw || cy < 0 || cy > sh {
+		return 0, 0, false
+	}
+
+	x, y := anchoredPos(ballX, ballY, w, h, ballSize, 0, 0, sw, sh, screenMargin)
+	return x, y, true
+}
+
+// anchoredPos 计算展开位置:默认从球的位置向右下展开,放不下则翻转到左上
+// (翻转时球边缘对齐面板边缘),最后整体钳制在矩形 (rx,ry,rw,rh) 内并保留边距。
+// 所有参数同一坐标系(调用方保证)。
+func anchoredPos(ballX, ballY, w, h, ballPhys, rx, ry, rw, rh, margin int) (int, int) {
+	x, y := ballX, ballY
+	if x+w > rx+rw-margin {
+		x = ballX + ballPhys - w // 向右放不下则向左展开,球右缘对齐面板右缘
+	}
+	if y+h > ry+rh-margin {
+		y = ballY + ballPhys - h // 向下放不下则向上展开
+	}
+	x = max(rx+margin, min(x, rx+rw-w-margin))
+	y = max(ry+margin, min(y, ry+rh-h-margin))
+	return x, y
 }
 
 // fetchAll 并发调用三个 fetcher。

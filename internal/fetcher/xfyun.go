@@ -127,7 +127,7 @@ func (x *XfyunFetcher) Fetch() QuotaResult {
 	if limit > 0 {
 		result.Percent = used / limit * 100
 	}
-	result.Remaining = fmt.Sprintf("%.0f / %.0f 次 (总量)", used, limit)
+	result.Remaining = fmt.Sprintf("%s / %s 次 (总量)", formatNum(used), formatNum(limit))
 	result.ResetAt = row.ExpiresAt
 
 	return result

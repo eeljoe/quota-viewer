@@ -5,62 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quota Viewer</title>
     
-  <script type="module" crossorigin src="/assets/index.18175e59.js"></script>
-  <link rel="stylesheet" href="/assets/index.3e241ea8.css">
+  <script type="module" crossorigin src="/assets/index.31f0cdcc.js"></script>
+  <link rel="stylesheet" href="/assets/index.905afe3a.css">
 </head>
 <body>
-    <!-- 收起态:悬浮球 -->
+    <!-- 收起态:悬浮球(三个平台缩写,颜色=该平台状态,悬停显示明细) -->
     <div id="ball" class="ball">
-        <div class="dot" id="dot-kimi"></div>
-        <div class="dot" id="dot-xfyun"></div>
-        <div class="dot" id="dot-mimo"></div>
+        <span class="ball-cell" id="cell-kimi">K</span>
+        <span class="ball-cell" id="cell-xfyun">讯</span>
+        <span class="ball-cell" id="cell-mimo">M</span>
     </div>
 
     <!-- 展开态:详情面板 -->
     <div id="panel" class="panel hidden">
-        <div class="panel-header" --wails-draggable="drag">
-            <button id="btn-collapse" class="icon-btn">⬅</button>
-            <span>额度详情</span>
-            <button id="btn-settings" class="icon-btn">⚙</button>
+        <div class="panel-header">
+            <button id="btn-collapse" class="icon-btn" title="收起">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/></svg>
+            </button>
+            <span class="panel-title">额度详情</span>
+            <button id="btn-settings" class="icon-btn" title="配置">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62-1,1.23-2,1.8-3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></svg>
+            </button>
         </div>
         <div id="quota-list" class="quota-list"></div>
         <div class="panel-footer">
             <span id="last-updated" class="muted"></span>
-            <button id="btn-refresh" class="btn">刷新</button>
+            <button id="btn-refresh" class="btn-ghost">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1,0-16H211.4L184.81,71.64l-.25-.24a80,80,0,1,0-1.67,114.78,8,8,0,0,1,11,11.63A95.44,95.44,0,0,1,128,224h-1.32A96,96,0,1,1,195.75,60L224,85.8V56a8,8,0,1,1,16,0Z"/></svg>
+                <span>刷新</span>
+            </button>
         </div>
     </div>
 
     <!-- 配置面板 -->
     <div id="settings" class="settings hidden">
-        <div class="panel-header" --wails-draggable="drag">
-            <span>配置</span>
-            <button id="btn-close-settings" class="icon-btn">✕</button>
+        <div class="panel-header">
+            <span class="panel-title">配置</span>
+            <button id="btn-close-settings" class="icon-btn" title="关闭">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg>
+            </button>
         </div>
         <div class="settings-body">
             <div class="form-group">
-                <label>Kimi API Key</label>
+                <label for="input-kimi">Kimi API Key</label>
                 <input type="password" id="input-kimi" placeholder="sk-kimi-xxx">
-                <button class="btn-sm" data-test="kimi">测试</button>
+                <div class="field-actions">
+                    <button class="btn-sm" data-test="kimi">测试</button>
+                </div>
             </div>
             <div class="form-group">
-                <label>讯飞 Cookie</label>
+                <label for="input-xfyun">讯飞 Cookie</label>
                 <textarea id="input-xfyun" placeholder="从浏览器 F12 复制 Cookie" rows="2"></textarea>
-                <button class="btn-sm" data-test="xfyun">测试</button>
-                <button class="btn-sm" data-open="https://maas.xfyun.cn/packageSubscription">打开登录页</button>
+                <div class="field-actions">
+                    <button class="btn-sm" data-test="xfyun">测试</button>
+                    <button class="btn-sm" data-open="https://maas.xfyun.cn/packageSubscription">打开登录页</button>
+                </div>
             </div>
             <div class="form-group">
-                <label>MiMo Cookie</label>
+                <label for="input-mimo">MiMo Cookie</label>
                 <textarea id="input-mimo" placeholder="从浏览器 F12 复制 Cookie" rows="2"></textarea>
-                <button class="btn-sm" data-test="mimo">测试</button>
-                <button class="btn-sm" data-open="https://platform.xiaomimimo.com/console/plan-manage">打开登录页</button>
+                <div class="field-actions">
+                    <button class="btn-sm" data-test="mimo">测试</button>
+                    <button class="btn-sm" data-open="https://platform.xiaomimimo.com/console/plan-manage">打开登录页</button>
+                </div>
             </div>
             <div class="form-group">
-                <label>刷新间隔(分钟)</label>
-                <input type="number" id="input-interval" min="1" value="15">
+                <label for="input-interval">刷新间隔(分钟)</label>
+                <input type="number" id="input-interval" class="input-narrow" min="1" value="15">
             </div>
-            <button id="btn-save-config" class="btn">保存</button>
+            <button id="btn-save-config" class="btn-primary">保存</button>
         </div>
     </div>
+
+    <!-- 轻提示(替代 alert) -->
+    <div id="toast" class="toast" role="status"></div>
 
     
 </body>

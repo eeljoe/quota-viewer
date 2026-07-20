@@ -27,6 +27,9 @@ var (
 	procGetMonitorInfoW  = winUser32.NewProc("GetMonitorInfoW")
 	procGetDpiForMonitor = winShcore.NewProc("GetDpiForMonitor")
 	procFindWindowW      = winUser32.NewProc("FindWindowW")
+	procGetWindowLongW   = winUser32.NewProc("GetWindowLongPtrW")
+	procSetWindowLongW   = winUser32.NewProc("SetWindowLongPtrW")
+	procSetWindowPos     = winUser32.NewProc("SetWindowPos")
 	procGetDpiForWindow  = winUser32.NewProc("GetDpiForWindow")
 	procSetWindowSub     = winComctl32.NewProc("SetWindowSubclass")
 	procDefSubclassProc  = winComctl32.NewProc("DefSubclassProc")
@@ -37,7 +40,19 @@ var (
 const (
 	monitorDefaultToNearest = 2
 	mdtEffectiveDPI         = 0
-	wmGetMinMaxInfo         = 0x0024
+
+	gwlExStyle = -20
+
+	// 工具窗口:不进任务栏、不出现在 Alt+Tab、没有任务栏缩略图(托盘应用标准做法)
+	wsExToolWindow = 0x00000080
+
+	wmGetMinMaxInfo = 0x0024
+
+	swpNoSize       = 0x0001
+	swpNoMove       = 0x0002
+	swpNoZOrder     = 0x0004
+	swpNoActivate   = 0x0010
+	swpFrameChanged = 0x0020
 )
 
 // minTrackSubclassProc 拦截 WM_GETMINMAXINFO:overlapped 窗口有系统默认最小宽度
@@ -60,8 +75,8 @@ func minTrackSubclassProc(hwnd uintptr, msg uint32, wparam uintptr, lparam unsaf
 	return ret
 }
 
-// setupWindowStyles 安装子类覆盖系统默认最小窗口宽度。
-// 返回 false 表示未找到窗口(调用方仅记录)。
+// setupWindowStyles 设置工具窗口样式(去任务栏/缩略图),并安装子类
+// 覆盖系统默认最小窗口宽度。返回 false 表示未找到窗口(调用方仅记录)。
 func setupWindowStyles(title string) bool {
 	titlePtr, err := syscall.UTF16PtrFromString(title)
 	if err != nil {
@@ -70,6 +85,15 @@ func setupWindowStyles(title string) bool {
 	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd == 0 {
 		return false
+	}
+
+	exStyleIdxV := int32(gwlExStyle) // 经变量转换,避免常量负数溢出 uintptr
+	exStyleIdx := uintptr(exStyleIdxV)
+	exStyle, _, _ := procGetWindowLongW.Call(hwnd, exStyleIdx)
+	if newEx := exStyle | wsExToolWindow; newEx != exStyle {
+		procSetWindowLongW.Call(hwnd, exStyleIdx, newEx)
+		procSetWindowPos.Call(hwnd, 0, 0, 0, 0, 0,
+			swpNoMove|swpNoSize|swpNoZOrder|swpNoActivate|swpFrameChanged)
 	}
 
 	subclassCB = syscall.NewCallback(minTrackSubclassProc)

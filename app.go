@@ -44,13 +44,11 @@ func (a *App) OnStartup(ctx context.Context) {
 	a.visible.Store(true)
 
 	// Windows 对 overlapped 窗口强制默认最小宽度(高 DPI 下实测约 262px 物理),
-	// 导致 60px 球窗被撑宽、球体偏左。安装子类覆盖 WM_GETMINMAXINFO,
-	// 并设为工具窗口(去任务栏按钮/缩略图),再把球窗规整到精确的 60x60。
+	// 导致 60px 球窗被撑宽。安装子类覆盖 WM_GETMINMAXINFO 把最小拖动尺寸
+	// 压到 ballSize 对应的物理像素。
 	setupWindowStyles("Quota Viewer")
 	wailsruntime.WindowSetMinSize(ctx, ballSize, ballSize)
 	wailsruntime.WindowSetSize(ctx, ballSize, ballSize)
-	// 样式切换后重申置顶,防止球窗被其它窗口盖住
-	wailsruntime.WindowSetAlwaysOnTop(ctx, true)
 
 	// 恢复悬浮球位置(配置中 BallX/BallY >= 0 时生效)
 	if a.cfg.BallX >= 0 && a.cfg.BallY >= 0 {

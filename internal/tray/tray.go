@@ -44,13 +44,15 @@ func iconBytes() []byte {
 }
 
 // Start 注册系统托盘并构建右键菜单。
-// 使用 RunWithExternalLoop,使托盘事件循环与 Wails 主循环共存:
-// 返回的 start 在托盘就绪后被调用以启动(在独立 goroutine 中的)消息泵。
+// Win32 铁律: HWND 必须在同一 OS 线程创建和调度消息。
+// 因此将 systray.Run (阻塞型)包裹在 runtime.LockOSThread() 的
+// goroutine 中,确保 Register 和 GetMessage 循环在同一线程执行。
 func (t *TrayHandler) Start() {
-	start, _ := systray.RunWithExternalLoop(t.onReady, t.onExit)
-	// 启动托盘原生消息泵(在 systray 内部的 goroutine 中运行,
-	// 不会阻塞 Wails 主线程)。
-	start()
+	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		systray.Run(t.onReady, t.onExit)
+	}()
 }
 
 // Quit 退出托盘。应在应用关闭时调用,以便清理托盘图标。

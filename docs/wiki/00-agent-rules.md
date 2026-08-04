@@ -37,9 +37,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "e60f844", "synced_at": "2026-08-04T05:31:55Z", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "2276ae8", "synced_at": "2026-08-04T14:30:00Z", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `e60f844`（2026-08-04 05:31），共 11 个文件。⚠️ 内容反映工作区当前状态（含未提交的 OpenCode Go 替换）。
+> **Wiki 同步状态**：最后同步于 `2276ae8`（2026-08-04 14:30），共 11 个文件。
 
 ## Wiki 文件索引
 

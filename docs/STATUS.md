@@ -17,7 +17,7 @@
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "e60f844", "branch": "master", "dirty": true, "timestamp": "2026-08-04T14:10:00Z"} -->
+<!-- git-meta: {"last_commit": "2276ae8", "branch": "master", "dirty": false, "timestamp": "2026-08-04T14:30:00Z"} -->
 
 - **日期**：2026-08-04 14:10
 - **会话摘要**：通用化升级完成——动态 Provider 配置（1-3 个可勾选）、恢复 MiMo、新增 DeepSeek、动态球格、开源准备（README/LICENSE）；测试全绿、exe 构建并冒烟通过，**工作区改动未提交**

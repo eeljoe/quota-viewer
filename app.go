@@ -32,7 +32,7 @@ type App struct {
 func NewApp() *App {
 	cfg, err := config.Load()
 	if err != nil || cfg == nil {
-		cfg = &config.Config{RefreshIntervalMin: 15, BallX: -1, BallY: -1}
+		cfg = config.Default()
 	}
 	return &App{
 		cfg: cfg,
@@ -110,39 +110,137 @@ func (a *App) Refresh() []fetcher.QuotaResult {
 	return results
 }
 
-// GetConfig 返回当前配置(Cookie/Key 做掩码)。
+// ProviderInput 是前端提交的 Provider 状态。
+// 凭证字段空字符串 = 不修改(避免掩码回写覆盖真实值)。
+type ProviderInput struct {
+	ID      string            `json:"id"`
+	Enabled bool              `json:"enabled"`
+	Creds   map[string]string `json:"creds"`
+}
+
+// GetConfig 返回当前配置(凭证做掩码)与全部 Provider 元数据。
 func (a *App) GetConfig() map[string]interface{} {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	// 当前配置索引
+	cur := map[string]config.ProviderConfig{}
+	for _, p := range a.cfg.Providers {
+		cur[p.ID] = p
+	}
+
+	providers := make([]map[string]interface{}, 0, len(fetcher.GetAll()))
+	for _, def := range fetcher.GetAll() {
+		pc, ok := cur[def.ID]
+		creds := map[string]string{}
+		if ok {
+			for k, v := range pc.Creds {
+				creds[k] = maskSecret(v)
+			}
+		}
+		fields := make([]map[string]string, 0, len(def.Fields))
+		for _, f := range def.Fields {
+			fields = append(fields, map[string]string{
+				"key": f.Key, "label": f.Label, "type": f.Type,
+			})
+		}
+		providers = append(providers, map[string]interface{}{
+			"id":        def.ID,
+			"name":      def.DisplayName,
+			"abbr":      def.Abbr,
+			"enabled":   ok && pc.Enabled,
+			"login_url": def.LoginURL,
+			"fields":    fields,
+			"creds":     creds,
+		})
+	}
+
 	return map[string]interface{}{
-		"kimi_api_key":         maskSecret(a.cfg.KimiAPIKey),
-		"xfyun_cookie":         maskSecret(a.cfg.XfyunCookie),
-		"mimo_cookie":          maskSecret(a.cfg.MimoCookie),
+		"providers":            providers,
 		"refresh_interval_min": a.cfg.RefreshIntervalMin,
 		"ball_x":               a.cfg.BallX,
 		"ball_y":               a.cfg.BallY,
-		"has_kimi_key":         a.cfg.KimiAPIKey != "",
-		"has_xfyun_cookie":     a.cfg.XfyunCookie != "",
-		"has_mimo_cookie":      a.cfg.MimoCookie != "",
 	}
 }
 
-// SaveConfig 保存凭证配置。
-func (a *App) SaveConfig(kimiKey, xfyunCookie, mimoCookie string, refreshMin int) error {
+// SaveConfig 保存 Provider 配置。最多 3 个启用、最少 1 个启用(后端钳制)。
+func (a *App) SaveConfig(providers []ProviderInput, refreshMin int) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	// 空字符串 = 不修改(避免掩码覆盖)
-	if kimiKey != "" {
-		a.cfg.KimiAPIKey = kimiKey
+	// 1) 钳制启用数量:0 个 → 全部启用(再由上限裁到前 3);超过 3 → 保留前 3
+	enabledCount := 0
+	for _, p := range providers {
+		if p.Enabled {
+			enabledCount++
+		}
 	}
-	if xfyunCookie != "" {
-		a.cfg.XfyunCookie = config.NormalizeCookieInput(xfyunCookie)
+	if enabledCount == 0 {
+		for i := range providers {
+			providers[i].Enabled = true
+		}
+		enabledCount = len(providers)
 	}
-	if mimoCookie != "" {
-		a.cfg.MimoCookie = config.NormalizeCookieInput(mimoCookie)
+	if enabledCount > 3 {
+		kept := 0
+		for i := range providers {
+			if providers[i].Enabled {
+				kept++
+				if kept > 3 {
+					providers[i].Enabled = false
+				}
+			}
+		}
 	}
+
+	// 2) 合并到配置(空凭证 = 不修改)
+	for _, in := range providers {
+		def, ok := fetcher.Get(in.ID)
+		if !ok {
+			continue // 未知 provider 忽略
+		}
+		idx := -1
+		for j := range a.cfg.Providers {
+			if a.cfg.Providers[j].ID == in.ID {
+				idx = j
+				break
+			}
+		}
+		if idx == -1 {
+			a.cfg.Providers = append(a.cfg.Providers, config.ProviderConfig{ID: in.ID})
+			idx = len(a.cfg.Providers) - 1
+		}
+		pc := &a.cfg.Providers[idx]
+		pc.Enabled = in.Enabled
+		if pc.Creds == nil {
+			pc.Creds = map[string]string{}
+		}
+		for _, f := range def.Fields {
+			if v, ok := in.Creds[f.Key]; ok && v != "" {
+				pc.Creds[f.Key] = config.NormalizeCookieInput(v)
+			}
+		}
+	}
+
+	// 3) 按注册表顺序重排(展示顺序固定)
+	ordered := make([]config.ProviderConfig, 0, len(fetcher.GetAll()))
+	seen := map[string]bool{}
+	for _, def := range fetcher.GetAll() {
+		for _, p := range a.cfg.Providers {
+			if p.ID == def.ID {
+				ordered = append(ordered, p)
+				seen[p.ID] = true
+				break
+			}
+		}
+	}
+	for _, p := range a.cfg.Providers {
+		if !seen[p.ID] {
+			ordered = append(ordered, p)
+		}
+	}
+	a.cfg.Providers = ordered
+
 	if refreshMin > 0 {
 		a.cfg.RefreshIntervalMin = refreshMin
 	}
@@ -152,23 +250,22 @@ func (a *App) SaveConfig(kimiKey, xfyunCookie, mimoCookie string, refreshMin int
 
 // TestConnection 测试单个平台连接是否可用。
 func (a *App) TestConnection(platform string) string {
-	a.mu.Lock()
-	cfg := *a.cfg
-	a.mu.Unlock()
-
-	var f fetcher.Fetcher
-	switch platform {
-	case "kimi":
-		f = fetcher.NewKimiFetcher(cfg.KimiAPIKey)
-	case "xfyun":
-		f = fetcher.NewXfyunFetcher(cfg.XfyunCookie, "")
-	case "mimo":
-		f = fetcher.NewMiMoFetcher(cfg.MimoCookie, "")
-	default:
+	def, ok := fetcher.Get(platform)
+	if !ok {
 		return "未知平台"
 	}
 
-	result := f.Fetch()
+	a.mu.Lock()
+	var creds map[string]string
+	for _, p := range a.cfg.Providers {
+		if p.ID == platform {
+			creds = p.Creds
+			break
+		}
+	}
+	a.mu.Unlock()
+
+	result := def.Build(creds).Fetch()
 	if result.Error != "" {
 		return "失败: " + result.Error
 	}
@@ -294,28 +391,42 @@ func anchoredPos(ballX, ballY, w, h, ballPhys, rx, ry, rw, rh, margin int) (int,
 	return x, y
 }
 
-// fetchAll 并发调用三个 fetcher。
+// fetchAll 并发抓取所有已启用的 Provider(最多 3 个),结果顺序 = 注册表顺序。
 func (a *App) fetchAll() []fetcher.QuotaResult {
 	a.mu.Lock()
 	cfg := *a.cfg
 	a.mu.Unlock()
 
-	var wg sync.WaitGroup
-	results := make([]fetcher.QuotaResult, 3)
+	enabled := make([]config.ProviderConfig, 0, 3)
+	for _, p := range cfg.Providers {
+		if p.Enabled {
+			enabled = append(enabled, p)
+			if len(enabled) == 3 {
+				break
+			}
+		}
+	}
 
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		results[0] = fetcher.NewKimiFetcher(cfg.KimiAPIKey).Fetch()
-	}()
-	go func() {
-		defer wg.Done()
-		results[1] = fetcher.NewXfyunFetcher(cfg.XfyunCookie, "").Fetch()
-	}()
-	go func() {
-		defer wg.Done()
-		results[2] = fetcher.NewMiMoFetcher(cfg.MimoCookie, "").Fetch()
-	}()
+	results := make([]fetcher.QuotaResult, len(enabled))
+	var wg sync.WaitGroup
+	for i, p := range enabled {
+		def, ok := fetcher.Get(p.ID)
+		if !ok {
+			results[i] = fetcher.QuotaResult{Platform: p.ID, Error: "未知平台"}
+			continue
+		}
+		wg.Add(1)
+		go func(i int, p config.ProviderConfig, def fetcher.ProviderDef) {
+			defer wg.Done()
+			r := def.Build(p.Creds).Fetch()
+			r.ID = def.ID
+			r.Abbr = def.Abbr
+			if r.Kind == "" {
+				r.Kind = fetcher.KindUsage
+			}
+			results[i] = r
+		}(i, p, def)
+	}
 	wg.Wait()
 
 	return results

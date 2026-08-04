@@ -2,6 +2,9 @@ export namespace fetcher {
 	
 	export class QuotaResult {
 	    platform: string;
+	    id: string;
+	    abbr: string;
+	    kind: string;
 	    used: number;
 	    total: number;
 	    percent: number;
@@ -18,6 +21,9 @@ export namespace fetcher {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.platform = source["platform"];
+	        this.id = source["id"];
+	        this.abbr = source["abbr"];
+	        this.kind = source["kind"];
 	        this.used = source["used"];
 	        this.total = source["total"];
 	        this.percent = source["percent"];
@@ -44,6 +50,27 @@ export namespace fetcher {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace main {
+	
+	export class ProviderInput {
+	    id: string;
+	    enabled: boolean;
+	    creds: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProviderInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.enabled = source["enabled"];
+	        this.creds = source["creds"];
+	    }
 	}
 
 }

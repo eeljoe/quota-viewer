@@ -10,6 +10,7 @@ const SIZES = {
 
 let currentView = "ball"; // ball | panel | settings
 let currentResults = [];
+let providerCards = []; // [{id, enabled: checkbox, fields: [{key, input}]}]
 
 // === 视图切换(统一入口,负责窗口尺寸与屏幕内定位) ===
 function setView(view) {
@@ -108,21 +109,30 @@ function renderResults(results) {
 
 function getStatusColor(r) {
     if (r.error) return "red";
+    // 余额型(如 DeepSeek)没有"已用百分比",有余额即为正常
+    if (r.kind === "balance") return "green";
     if (r.percent >= 90) return "red";
     if (r.percent >= 75) return "yellow";
     return "green";
 }
 
-const BALL_CELL_IDS = ["cell-kimi", "cell-xfyun", "cell-mimo"];
-
-// 球面三格对应三个平台,格字颜色=状态;悬停 tooltip 显示各平台明细
+// 球面格子 = 启用的 Provider 数量(1-3),flex 均分(1 个占满 / 2 个各半 / 3 个各 1/3);
+// 格字颜色=状态;悬停 tooltip 显示各平台明细
 function updateBall(results) {
-    results.forEach((r, i) => {
-        if (i > 2) return;
-        const cell = document.getElementById(BALL_CELL_IDS[i]);
-        if (cell) cell.className = "ball-cell " + getStatusColor(r);
+    const ball = document.getElementById("ball");
+    ball.querySelectorAll(".ball-cell").forEach((c) => c.remove());
+
+    results.forEach((r) => {
+        const cell = document.createElement("span");
+        cell.className = "ball-cell " + getStatusColor(r);
+        cell.textContent = r.abbr || r.platform.slice(0, 1);
+        ball.appendChild(cell);
     });
-    document.getElementById("ball").title = results
+
+    // 单格时放大字母占满整个球
+    ball.classList.toggle("single-cell", results.length === 1);
+
+    ball.title = results
         .map((r) => r.platform + ": " + (r.error || r.remaining || "未知"))
         .join("\n");
 }
@@ -140,9 +150,7 @@ document.getElementById("btn-close-settings").addEventListener("click", () => {
 async function loadConfig() {
     try {
         const cfg = await window.go.main.App.GetConfig();
-        document.getElementById("input-kimi").placeholder = cfg.kimi_api_key || "sk-kimi-xxx";
-        document.getElementById("input-xfyun").placeholder = cfg.xfyun_cookie || "从浏览器 F12 复制 Cookie";
-        document.getElementById("input-mimo").placeholder = cfg.mimo_cookie || "从浏览器 F12 复制 Cookie";
+        renderProviderList(cfg.providers || []);
         document.getElementById("input-interval").value = cfg.refresh_interval_min || 15;
     } catch (e) {
         console.error("loadConfig error:", e);
@@ -150,56 +158,146 @@ async function loadConfig() {
     }
 }
 
+// 收集当前 UI 上的 Provider 状态(保存/测试共用)
+function collectProviders() {
+    return providerCards.map((c) => {
+        const creds = {};
+        c.fields.forEach((f) => {
+            creds[f.key] = f.input.value;
+        });
+        return { id: c.id, enabled: c.enabled.checked, creds };
+    });
+}
+
+// 渲染 Provider 卡片列表(勾选 + 凭证字段动态生成)
+function renderProviderList(providers) {
+    const container = document.getElementById("provider-list");
+    container.innerHTML = "";
+    providerCards = [];
+
+    providers.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "provider-card" + (p.enabled ? "" : " disabled");
+        card.dataset.id = p.id;
+
+        // 头部:勾选框 + 名称 + 动作按钮
+        const head = document.createElement("div");
+        head.className = "provider-head";
+
+        const toggle = document.createElement("label");
+        toggle.className = "provider-toggle";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "provider-check";
+        cb.checked = !!p.enabled;
+        const name = document.createElement("span");
+        name.className = "provider-name";
+        name.textContent = p.name;
+        toggle.append(cb, name);
+
+        const actions = document.createElement("div");
+        actions.className = "provider-actions";
+        const testBtn = document.createElement("button");
+        testBtn.className = "btn-sm";
+        testBtn.dataset.test = p.id;
+        testBtn.textContent = "测试";
+        actions.appendChild(testBtn);
+        if (p.login_url) {
+            const loginBtn = document.createElement("button");
+            loginBtn.className = "btn-sm";
+            loginBtn.dataset.open = p.login_url;
+            loginBtn.textContent = "打开登录页";
+            actions.appendChild(loginBtn);
+        }
+
+        head.append(toggle, actions);
+        card.appendChild(head);
+
+        // 凭证字段(按注册表元数据生成,placeholder 显示掩码值)
+        const fieldsWrap = document.createElement("div");
+        fieldsWrap.className = "provider-fields";
+        const fields = [];
+        (p.fields || []).forEach((f) => {
+            const group = document.createElement("div");
+            group.className = "form-group";
+            const label = document.createElement("label");
+            label.textContent = f.label;
+            const input = document.createElement(f.type === "textarea" ? "textarea" : "input");
+            if (f.type === "password") input.type = "password";
+            if (f.type === "text") input.type = "text";
+            if (f.type === "textarea") input.rows = 2;
+            input.placeholder = (p.creds && p.creds[f.key]) || "";
+            group.append(label, input);
+            fieldsWrap.appendChild(group);
+            fields.push({ key: f.key, input });
+        });
+        card.appendChild(fieldsWrap);
+
+        // 勾选限制:最多 3 个、最少 1 个
+        cb.addEventListener("change", () => {
+            const enabledCount = providerCards.filter((c) => c.enabled.checked).length;
+            if (enabledCount > 3) {
+                cb.checked = false;
+                toast("最多展示 3 个 Provider", "error");
+                return;
+            }
+            if (enabledCount < 1) {
+                cb.checked = true;
+                toast("至少保留 1 个 Provider", "error");
+                return;
+            }
+            card.classList.toggle("disabled", !cb.checked);
+        });
+
+        container.appendChild(card);
+        providerCards.push({ id: p.id, enabled: cb, fields });
+    });
+}
+
 document.getElementById("btn-save-config").addEventListener("click", async () => {
-    const kimi = document.getElementById("input-kimi").value;
-    const xfyun = document.getElementById("input-xfyun").value;
-    const mimo = document.getElementById("input-mimo").value;
+    const providers = collectProviders();
     const interval = parseInt(document.getElementById("input-interval").value) || 15;
     try {
-        await window.go.main.App.SaveConfig(kimi, xfyun, mimo, interval);
+        await window.go.main.App.SaveConfig(providers, interval);
         // 清空输入框(已保存)
-        document.getElementById("input-kimi").value = "";
-        document.getElementById("input-xfyun").value = "";
-        document.getElementById("input-mimo").value = "";
+        providerCards.forEach((c) => c.fields.forEach((f) => {
+            f.input.value = "";
+        }));
         toast("已保存", "success");
+        await loadConfig(); // 重新拉取(placeholder 显示新掩码)
+        await refreshQuota(); // 立即刷新展示
     } catch (e) {
         console.error("saveConfig error:", e);
         toast("保存配置失败: " + e, "error");
     }
 });
 
-// 测试连接按钮
-document.querySelectorAll("[data-test]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-        const platform = btn.getAttribute("data-test");
-        // 先保存当前输入(如果有)
-        const kimi = document.getElementById("input-kimi").value;
-        const xfyun = document.getElementById("input-xfyun").value;
-        const mimo = document.getElementById("input-mimo").value;
+// 测试/打开登录页按钮(事件委托,兼容动态生成的按钮)
+document.addEventListener("click", async (e) => {
+    const testBtn = e.target.closest("[data-test]");
+    if (testBtn) {
+        const platform = testBtn.getAttribute("data-test");
+        // 先保存当前输入(刷新间隔不动),再测试
         try {
-            if (kimi || xfyun || mimo) {
-                await window.go.main.App.SaveConfig(kimi, xfyun, mimo, 0);
-            }
+            await window.go.main.App.SaveConfig(collectProviders(), 0);
             const result = await window.go.main.App.TestConnection(platform);
             toast(result, result.startsWith("成功") ? "success" : "error");
-        } catch (e) {
-            console.error("testConnection error:", e);
-            toast("测试连接失败: " + e, "error");
+        } catch (err) {
+            console.error("testConnection error:", err);
+            toast("测试连接失败: " + err, "error");
         }
-    });
-});
-
-// 打开登录页按钮
-document.querySelectorAll("[data-open]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-        const url = btn.getAttribute("data-open");
+        return;
+    }
+    const openBtn = e.target.closest("[data-open]");
+    if (openBtn) {
+        const url = openBtn.getAttribute("data-open");
         try {
             window.go.main.App.OpenLoginPage(url);
-        } catch (e) {
-            console.error("openLoginPage error:", e);
-            toast("打开登录页失败: " + e, "error");
+        } catch (err) {
+            console.error("openLoginPage error:", err);
+            toast("打开登录页失败: " + err, "error");
         }
-    });
+    }
 });
 
 // === Toast(替代 alert) ===

@@ -7,12 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 收起态:悬浮球(三个平台缩写,颜色=该平台状态,悬停显示明细) -->
-    <div id="ball" class="ball">
-        <span class="ball-cell" id="cell-kimi">K</span>
-        <span class="ball-cell" id="cell-xfyun">讯</span>
-        <span class="ball-cell" id="cell-mimo">M</span>
-    </div>
+    <!-- 收起态:悬浮球(1-3 格 Provider 缩写,颜色=状态,悬停显示明细) -->
+    <div id="ball" class="ball"><!-- 格子由 JS 按启用的 Provider 动态生成 --></div>
 
     <!-- 展开态:详情面板 -->
     <div id="panel" class="panel hidden">
@@ -44,29 +40,7 @@
             </button>
         </div>
         <div class="settings-body">
-            <div class="form-group">
-                <label for="input-kimi">Kimi API Key</label>
-                <input type="password" id="input-kimi" placeholder="sk-kimi-xxx">
-                <div class="field-actions">
-                    <button class="btn-sm" data-test="kimi">测试</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="input-xfyun">讯飞 Cookie</label>
-                <textarea id="input-xfyun" placeholder="从浏览器 F12 复制 Cookie" rows="2"></textarea>
-                <div class="field-actions">
-                    <button class="btn-sm" data-test="xfyun">测试</button>
-                    <button class="btn-sm" data-open="https://maas.xfyun.cn/packageSubscription">打开登录页</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="input-mimo">MiMo Cookie</label>
-                <textarea id="input-mimo" placeholder="从浏览器 F12 复制 Cookie" rows="2"></textarea>
-                <div class="field-actions">
-                    <button class="btn-sm" data-test="mimo">测试</button>
-                    <button class="btn-sm" data-open="https://platform.xiaomimimo.com/console/plan-manage">打开登录页</button>
-                </div>
-            </div>
+            <div id="provider-list"><!-- Provider 卡片由 JS 按注册表元数据动态生成 --></div>
             <div class="form-group">
                 <label for="input-interval">刷新间隔(分钟)</label>
                 <input type="number" id="input-interval" class="input-narrow" min="1" value="15">

@@ -66,9 +66,13 @@ Output: `build/bin/quota-viewer.exe`
 
 ## Adding a New Provider
 
-1. Add a new fetcher in `internal/fetcher/` (implement the `Fetcher` interface, `Fetch() QuotaResult`), with httptest tests
-2. Register it in `internal/fetcher/registry.go`: ID, display name, ball abbreviation, credential field definitions, `Build` factory
-3. The frontend config panel and ball cells adapt automatically — no UI code changes needed
+Quota Viewer uses a registry-driven architecture — adding a new provider requires only a fetcher implementation + a registry entry, with **zero frontend changes**.
+
+If you want your AI agent to add a new provider, copy and paste this to it:
+
+> Read `docs/ADDING_A_PROVIDER.md` and follow it to add a new provider for the platform `<name>`. The endpoint is `<URL>`, authentication is `<method>`, and it should display `<what to show>`.
+
+For manual steps, see [`docs/ADDING_A_PROVIDER.md`](docs/ADDING_A_PROVIDER.md).
 
 ## Disclaimer
 

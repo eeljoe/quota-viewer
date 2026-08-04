@@ -66,9 +66,13 @@ wails build
 
 ## 如何新增一个 Provider
 
-1. 在 `internal/fetcher/` 新增抓取器（实现 `Fetcher` 接口，`Fetch() QuotaResult`），带 httptest 测试
-2. 在 `internal/fetcher/registry.go` 注册：ID、显示名、球格缩写、凭证字段定义、`Build` 工厂
-3. 前端配置面板与球格自动适配，无需改动 UI 代码
+Quota Viewer 采用注册表驱动架构——新增 Provider 只需实现抓取器 + 注册一行代码，**前端零改动**。
+
+如果你想让 AI agent 新增一个 Provider，复制以下内容给它：
+
+> 阅读 `docs/ADDING_A_PROVIDER.md`，按照文档为 `<平台名>` 新增一个 Provider。端点是 `<URL>`，认证方式是 `<方式>`，展示内容是 `<展示什么>`。
+
+手动步骤详见 [`docs/ADDING_A_PROVIDER.md`](docs/ADDING_A_PROVIDER.md)。
 
 ## 免责声明
 

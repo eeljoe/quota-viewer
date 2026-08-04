@@ -1,0 +1,46 @@
+app.go
+ballSize
+cd frontend && npm run build
+deepseek
+frontend/dist/
+frontend/src/
+frontend/src/*
+frontend/src/main.js
+frontend/vite.config.js
+frontend/wailsjs/go/main/App.d.ts
+frontend/wailsjs/go/models.ts
+go test ./...
+go.mod
+id
+internal/config/
+internal/config/*.go
+internal/config/config.go
+internal/config/config_test.go
+internal/config/cookie.go
+internal/fetcher/
+internal/fetcher/*.go
+internal/fetcher/format.go
+internal/fetcher/kimi.go
+internal/fetcher/kimi_test.go
+internal/fetcher/opencode_go_test.go
+internal/fetcher/registry.go
+internal/fetcher/types.go
+internal/tray/
+internal/tray/assets/
+internal/tray/tray.go
+kimi
+kind
+main.go
+mdtEffectiveDPI
+mimo
+monitorDefaultToNearest
+opencode-go
+quota:update
+screenMargin
+ui:show-settings
+wails build
+wails dev
+wails.json
+workarea_other.go
+workarea_windows.go
+xfyun

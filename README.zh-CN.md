@@ -4,6 +4,9 @@
 
 桌面悬浮球 + AI 平台额度监控工具：实时显示各 AI 平台的 API 配额 / 余额剩余。
 
+![悬浮球](docs/screenshots/preview-1.png)
+![展开面板](docs/screenshots/preview-2.png)
+
 - **技术栈**: Go + Wails v2.12.0 + 原生 HTML/CSS/JS (Vite 打包)
 - **平台**: Windows 10+ (WebView2 运行时)
 

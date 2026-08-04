@@ -4,6 +4,9 @@
 
 A desktop floating ball + AI platform quota monitoring tool: displays API quota / balance remaining for various AI platforms in real time.
 
+![Floating Ball](docs/screenshots/preview-1.png)
+![Expanded Panel](docs/screenshots/preview-2.png)
+
 - **Tech Stack**: Go + Wails v2.12.0 + Vanilla HTML/CSS/JS (Vite bundling)
 - **Platform**: Windows 10+ (WebView2 Runtime)
 

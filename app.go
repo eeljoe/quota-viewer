@@ -53,8 +53,12 @@ func (a *App) OnStartup(ctx context.Context) {
 	wailsruntime.WindowSetAlwaysOnTop(ctx, true)
 
 	// 恢复悬浮球位置(配置中 BallX/BallY >= 0 时生效)
+	// BallX/BallY 来自 WindowGetPosition 返回的虚拟桌面绝对坐标,
+	// 需要 fitToScreen 转为显示器相对坐标后再传给 WindowSetPosition
 	if a.cfg.BallX >= 0 && a.cfg.BallY >= 0 {
-		wailsruntime.WindowSetPosition(ctx, a.cfg.BallX, a.cfg.BallY)
+		if nx, ny, ok := fitToScreen(ctx, a.cfg.BallX, a.cfg.BallY, ballSize, ballSize); ok {
+			wailsruntime.WindowSetPosition(ctx, nx, ny)
+		}
 	}
 
 	// 设置系统托盘菜单(刷新/显示隐藏/打开配置/退出)
@@ -217,6 +221,10 @@ func (a *App) CollapseWindow() {
 	x, y := a.savedX, a.savedY
 	a.mu.Unlock()
 
+	// 将绝对坐标转为显示器相对坐标,避免 WindowSetPosition 叠加工作区原点
+	if nx, ny, ok := fitToScreen(a.ctx, x, y, ballSize, ballSize); ok {
+		x, y = nx, ny
+	}
 	wailsruntime.WindowSetSize(a.ctx, ballSize, ballSize)
 	wailsruntime.WindowSetPosition(a.ctx, x, y)
 }

@@ -26,8 +26,8 @@ export function SaveBallPosition(arg1, arg2) {
   return window['go']['main']['App']['SaveBallPosition'](arg1, arg2);
 }
 
-export function SaveConfig(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['SaveConfig'](arg1, arg2, arg3, arg4);
+export function SaveConfig(arg1, arg2) {
+  return window['go']['main']['App']['SaveConfig'](arg1, arg2);
 }
 
 export function TestConnection(arg1) {

@@ -311,6 +311,46 @@ html, body {
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-primary:active { transform: translateY(1px); }
 
+/* === Provider 配置卡片 === */
+.provider-card {
+    margin-bottom: 14px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ctrl);
+    background: rgba(255, 255, 255, 0.03);
+    transition: opacity 0.15s ease;
+}
+.provider-card.disabled { opacity: 0.5; }
+.provider-card.disabled .provider-fields { display: none; }
+
+.provider-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.provider-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+.provider-check {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+.provider-name { font-size: 13px; font-weight: 600; }
+.provider-actions { display: flex; gap: 6px; }
+.provider-fields { margin-top: 8px; }
+.provider-fields .form-group { margin-bottom: 8px; }
+.provider-fields .form-group:last-child { margin-bottom: 0; }
+
+/* 单格球:字母放大占满整个球 */
+.ball.single-cell .ball-cell { font-size: 20px; }
+
 /* === Toast(替代 alert) === */
 .toast {
     position: absolute;

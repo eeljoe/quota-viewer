@@ -14,18 +14,18 @@
 > 7. **严禁在用户给出指示之前修改任何文件或代码**
 > 8. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-08-04 15:00`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`85e03e9` on `master`
-> 📊 累计会话数：3 次
+> 📍 最新章节位置：`## 会话记录：2026-08-04 23:02`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`b62e6d5` on `master`
+> 📊 累计会话数：4 次
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "85e03e9", "branch": "master", "dirty": false, "timestamp": "2026-08-04T15:00:00Z"} -->
+<!-- git-meta: {"last_commit": "b62e6d5", "branch": "master", "dirty": false, "timestamp": "2026-08-04T23:02:00Z"} -->
 
-- **日期**：2026-08-04 15:00
-- **会话摘要**：v1.0.0 开源发布——双语 README、干净构建、GitHub Release（含 exe 附件）；DeepSeek 多币种修复
+- **日期**：2026-08-04 23:02
+- **会话摘要**：新增 Agent 专用 Provider 添加指南文档（`docs/ADDING_A_PROVIDER.md`），双语 README 更新指向该文档
 
 ---
 
@@ -258,3 +258,44 @@
 - `frontend/src/index.html` / `main.js` / `style.css` - 动态球格 + 动态配置面板 UI
 - `frontend/wailsjs/` - Wails v2 前端绑定（构建生成）
 - `docs/wiki/05-fetching-platforms.md` - 新增 Provider 指南详情
+- `docs/ADDING_A_PROVIDER.md` - **Agent 专用**新增 Provider 完整指南（fetcher 实现 + 注册 + 测试 + 检查清单）
+
+---
+
+## 会话记录：2026-08-04 23:02
+
+> **会话摘要**：新增 Agent 专用 Provider 添加指南文档，双语 README 更新指向该文档并附 agent 指令模板
+> **Git**：`b62e6d5` on `master`（clean，已推送）
+
+### 本次完成
+- 创建 `docs/ADDING_A_PROVIDER.md`：面向 AI agent 的新增 Provider 完整指南，涵盖架构概述、Fetcher 实现（用量型/余额型/Cookie 类）、registry 注册、httptest 测试模板、验证步骤、检查清单、现有 Provider 速查表
+- 更新 `README.md`（英文）"Adding a New Provider" 部分：改为引导用户将文档路径 + 平台信息复制给 agent，附可复制指令模板
+- 更新 `README.zh-CN.md`（中文）"如何新增一个 Provider" 部分：同上，中文版指令模板
+- 提交 `b62e6d5` 并推送到远程
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 文档放在 `docs/` 而非 `docs/wiki/` | wiki 面向 agent 日常查阅，本文档是用户主动提供给 agent 的专题指南，独立文件更合适 | 放 wiki 06 或新编号 |
+| README 中附可复制 agent 指令模板 | 用户只需填空 `<平台名>` `<URL>` `<认证方式>` `<展示内容>` 即可让 agent 自主完成 | 仅放文档链接，agent 自己读 |
+| 文档用中文撰写 | 项目为中文开发者项目，代码注释也全中文，保持一致 | 英文（但与代码注释风格不符） |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `docs/ADDING_A_PROVIDER.md` | Agent 专用新增 Provider 完整指南（343 行） |
+| 修改 | `README.md` | "Adding a New Provider" 改为 agent 指令模板 + 文档链接 |
+| 修改 | `README.zh-CN.md` | "如何新增一个 Provider" 改为 agent 指令模板 + 文档链接 |
+| 修改 | `docs/STATUS.md` | 本文件 |
+
+> 本次变更（从 85e03e9 到 b62e6d5）：+432/-39 行，4 个文件
+
+### 未完成 & 下一步
+- 无明确待办——项目已交付开源
+- 可选方向：Release 推广 / 新 Provider 扩展 / Wails 版本升级 / 用户反馈迭代
+
+### 关键上下文
+- **Agent 指南文档**：`docs/ADDING_A_PROVIDER.md`——用户想让 agent 新增 Provider 时，在 README 中复制指令模板填空即可
+- **指令模板格式**（中文）：`阅读 docs/ADDING_A_PROVIDER.md，按照文档为 <平台名> 新增一个 Provider。端点是 <URL>，认证方式是 <方式>，展示内容是 <展示什么>`
+- **GitHub 仓库**：https://github.com/eeljoe/quota-viewer（公开，已推送至 b62e6d5）
+- Wiki 指针状态：`docs/wiki/` 11 个文件，`.covered-files` 46 项，synced_commit `85e03e9`（本次未改动 wiki）

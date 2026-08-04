@@ -2,35 +2,40 @@
 
 > **⚠️ 新会话阅读指南（必读）**
 >
-> 本文档不长，按以下顺序阅读：
+> 本文档较长，**不要通读全文**。按以下顺序阅读：
 >
 > 1. 阅读下方「上下文摘要（TL;DR）」快速了解项目状态
-> 2. 阅读下方「项目概况」
-> 3. 阅读最新一条「会话记录」章节，重点看「未完成 & 下一步」
-> 4. 给用户一份简短进度汇报（3-5 句话）：当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项
-> 5. **严禁在用户给出指示之前修改任何文件或代码**
+> 2. 阅读下方「项目概况」了解项目基本信息
+> 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
+> 4. **直接跳到最新一条「会话记录：2026-08-04 14:10」章节**（用标题搜索定位，不要假设在文件末尾）
+>    - 重点看「未完成 & 下一步」和「关键上下文」
+> 5. 如果最新章节引用了更早的内容，再按需回溯
+> 6. 给用户一份简短进度汇报（3-5句话）：当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项
+> 7. **严禁在用户给出指示之前修改任何文件或代码**
+> 8. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-08-04 14:10`（文档末尾）
-> 📊 累计会话数：2 次
+> 📍 最新章节位置：`## 会话记录：2026-08-04 15:00`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`85e03e9` on `master`
+> 📊 累计会话数：3 次
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "2276ae8", "branch": "master", "dirty": false, "timestamp": "2026-08-04T14:30:00Z"} -->
+<!-- git-meta: {"last_commit": "85e03e9", "branch": "master", "dirty": false, "timestamp": "2026-08-04T15:00:00Z"} -->
 
-- **日期**：2026-08-04 14:10
-- **会话摘要**：通用化升级完成——动态 Provider 配置（1-3 个可勾选）、恢复 MiMo、新增 DeepSeek、动态球格、开源准备（README/LICENSE）；测试全绿、exe 构建并冒烟通过，**工作区改动未提交**
+- **日期**：2026-08-04 15:00
+- **会话摘要**：v1.0.0 开源发布——双语 README、干净构建、GitHub Release（含 exe 附件）；DeepSeek 多币种修复
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**通用化升级代码完成**——五平台注册表（Kimi/讯飞/OpenCode Go/MiMo/DeepSeek）、动态配置（最多 3 最少 1）、旧配置自动迁移、动态球格；`go test ./...` 全绿，exe 启动冒烟通过
-- **当前唯一目标**：用户冒烟验证 UI 效果 → 确认提交策略（拆 commit）
-- 下一步：提交全部改动（建议按提交序列拆分）；真实凭据冒烟；开源发布前再核对 README
-- 注意事项：工作区 dirty（会话前遗留 15 项 + 本次升级约 30 项变更），**提交前先与用户确认拆分策略**
+- 当前阶段：**v1.0.0 已开源发布**——GitHub 仓库 eeljoe/quota-viewer + Release v1.0.0（含 exe 下载）
+- **当前唯一目标**：无明确待办；项目已交付，等待用户后续指示
+- 下一步：可选——Release 推广 / 新 Provider 扩展 / 用户反馈迭代
+- 注意事项：工作区干净（全部已提交并推送）；无阻塞项
 
 ---
 
@@ -61,38 +66,27 @@
 ### ✅ 已完成（本次升级会话）
 - **fetcher 注册表**：`registry.go`（ProviderDef + 凭证字段定义 + Build 工厂，5 个 Provider 固定顺序）；`QuotaResult` 扩展 `ID/Abbr/Kind`（usage/balance）
 - **恢复 MiMo**：`mimo.go` + `mimo_test.go`（从 git 历史恢复，httptest 全过）
-- **新增 DeepSeek**：`deepseek.go` + 测试（`GET https://api.deepseek.com/user/balance`，余额型）
+- **新增 DeepSeek**：`deepseek.go` + 测试（`GET https://api.deepseek.com/user/balance`，余额型，多币种自动选非零）
 - **配置模型 v2**：`Config.Providers []ProviderConfig` 动态结构；旧扁平格式（含 mimo_cookie）Load 时自动迁移并回写；默认启用 kimi/xfyun/opencode-go；钳制最多 3 个
 - **app.go 动态编排**：`SaveConfig([]ProviderInput, int)` 新契约、GetConfig 返回全部 Provider 元数据（fields/掩码 creds/login_url）、fetchAll 按启用列表 1-3 并发、TestConnection 走注册表
 - **前端**：球格动态重建（1 个占满放大/2 个各半/3 个各 1/3）、配置面板按注册表元数据动态生成（勾选 1-3 限制 + 测试 + 打开登录页）、余额型恒绿
-- **构建验证**：`go test ./...` 全绿；`npm run build` 成功；`wails build` 成功（绑定含 ProviderInput）；exe 启动冒烟通过（WebView2 正常，无崩溃）
-- **开源准备**：README 重写（支持平台表/新增 Provider 指南/免责声明）、LICENSE（MIT）、git 历史凭证扫描 0 命中
+- **构建验证**：`go test ./...` 全绿；`npm run build` 成功；`wails build` 成功；exe 启动冒烟通过
+- **开源发布**：7 commit 拆分提交并推送 → GitHub 仓库 eeljoe/quota-viewer 创建 → 双语 README（英文默认 + 简体中文）→ Release v1.0.0（含 exe 附件）
+- **凭证安全**：git 历史全量扫描 0 命中；exe 二进制扫描 0 命中；config.json 在 `%APPDATA%` 不在仓库
 - **wiki 同步**：00/01/02/03/05/07/08/09 已更新至五平台动态模型，`.covered-files` 重新生成（46 项）
 
 ### 🔄 进行中
-- 工作区大量未提交变更（会话前遗留 15 项 + 本次升级改动），待用户确认拆分提交策略
+- 无
 
 ### 📋 待办
-- 用户真实凭据冒烟（勾选 1/2/3 个 Provider、球格布局、DeepSeek 余额显示）
-- 提交全部改动（建议序列见「未完成 & 下一步」）
-- 开源发布前：确认 LICENSE 名称/作者、检查 build/ 资源（appicon 等）、可选 GitHub 初始化
+- 无明确待办；项目已交付开源
 
 ---
 
 ## 未完成 & 下一步
 
-1. **用户冒烟**：运行 `build/bin/quota-viewer.exe` 验证 UI（球格 1/2/3 布局、配置面板勾选限制、各平台测试按钮、DeepSeek 余额）
-2. **提交**（遵循小步提交 + Conventional Commits，建议序列）：
-   - `feat: OpenCode Go 替换 MiMo 抓取器`（会话前遗留，已确认工作正常）
-   - `fix: 修复多显示器下窗口定位坐标换算`（会话前遗留，fitToScreen）
-   - `feat: 引入 fetcher 注册表并新增 DeepSeek 余额抓取`（registry + QuotaResult 扩展 + deepseek + mimo 恢复?——mimo 恢复属注册表引入，按实现顺序归入此或上一步，提交时再定）
-   - `refactor: 配置模型改为动态 Provider 列表并支持旧配置迁移`
-   - `refactor: app.go 动态编排 Provider 抓取与配置契约`
-   - `feat: 前端动态球格与 Provider 配置面板`
-   - `docs: 重写 README 并添加 MIT 许可证`
-   - `docs: 同步 wiki 与 STATUS`
-   - ⚠️ 注意：mimo.go 曾在 HEAD 被删除，本次恢复；会话前遗留的 mimo.go 删除已 staged，提交时需 `git restore --staged` 处理
-3. **开源发布**：git remote 初始化（可选）、GitHub 仓库创建、发布说明
+1. **无明确待办**——项目已交付开源（GitHub 仓库 + Release v1.0.0）
+2. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代 / Wails 版本升级（CLI 2.13.0 vs go.mod 2.12.0）
 
 ---
 
@@ -190,6 +184,54 @@
 ### 关键上下文
 - 新增 Provider 的完整路径：`internal/fetcher/` 新抓取器（Fetcher 接口 + baseURL 注入 + 测试）→ `registry.go` 注册（id/显示名/缩写/字段/Build）→ 前端自动适配
 - Provider id 契约：kimi / xfyun / opencode-go / mimo / deepseek（config 存储、TestConnection、前端绑定共用）
+
+---
+
+## 会话记录：2026-08-04 15:00
+
+> **会话摘要**：v1.0.0 开源发布——双语 README、DeepSeek 多币种修复、干净构建、GitHub Release
+> **Git**：`85e03e9` on `master`（clean）
+
+### 本次完成
+- DeepSeek 多币种修复：用户截图显示 USD $0.00 + CNY ¥247.51，原代码取 `balance_infos[0]` 会错误显示 $0.00；改为自动遍历取首个非零余额币种（CNY→¥ / USD→$），新增多币种测试用例（上会话遗留）
+- 用户确认升级效果"很完美"，7 个 commit 拆分提交（c28aeb7 ~ 99527d9）并推送到 master
+- GitHub 仓库创建：`eeljoe/quota-viewer`（公开，MIT，gh CLI 创建 + push）
+- 双语 README：英文 `README.md`（默认）+ 中文 `README.zh-CN.md`，顶部语言切换链接
+- 干净构建 exe：清理旧产物后重新 `wails build`，二进制扫描 0 凭证命中
+- 凭证安全全量排查：git 历史 0 命中、exe 二进制 0 命中、config.json 不在仓库内（`%APPDATA%/quota-viewer/`）、远端文件树扫描无敏感文件
+- GitHub Release v1.0.0：tag v1.0.0 + exe 附件（10.78 MB）+ 中英双语 Release Notes
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| DeepSeek 取首个非零余额币种 | 用户真实场景 USD 0.00 + CNY 247.51，取 [0] 会显示 $0.00 | 取最后一个 / 显示全部 |
+| 英文 README 为默认 | 开源项目国际化默认英文 | 中文默认 |
+| Release v1.0.0 | 首个开源稳定版本，功能完整 | 0.x（不必要，已验证） |
+| gh CLI 创建仓库 | 已认证，一条命令完成 create + push | 手动 GitHub Web 创建 |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/deepseek.go` | 多币种自动选非零余额 + currencySymbol 函数 |
+| 修改 | `internal/fetcher/deepseek_test.go` | 新增多币种测试用例 |
+| 修改 | `README.md` | 重写为英文默认版（原中文移至 zh-CN） |
+| 新增 | `README.zh-CN.md` | 简体中文版 README |
+| 修改 | `docs/wiki/05-fetching-platforms.md` | DeepSeek 多币种描述同步 |
+| 修改 | `docs/STATUS.md` | 本文件 |
+
+> 本次变更（从 99527d9 到 85e03e9）：+200/-50 行，6 个文件
+
+### 未完成 & 下一步
+- 无明确待办——项目已交付开源
+- 可选方向：Release 推广 / 新 Provider 扩展 / Wails 版本升级
+
+### 关键上下文
+- **GitHub 仓库**：https://github.com/eeljoe/quota-viewer（公开）
+- **Release v1.0.0**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.0.0（含 exe 下载）
+- **凭证安全确认**：全量排查 git 历史 + exe 二进制 + 远端文件树，0 泄漏；用户真实配置在 `%APPDATA%/quota-viewer/config.json`（仓库外）
+- **DeepSeek 余额型**：`Kind="balance"`，前端恒绿；`balance_infos` 数组取首个非零余额币种
+- **新增 Provider 路径**：fetcher 实现 → registry.go 注册 → 前端自动适配（README 有英文指南）
+- Wiki 指针状态：`docs/wiki/` 11 个文件，`.covered-files` 46 项，synced_commit `85e03e9`
 
 ---
 

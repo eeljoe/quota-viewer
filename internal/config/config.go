@@ -19,6 +19,7 @@ type ProviderConfig struct {
 	ID      string            `json:"id"`
 	Enabled bool              `json:"enabled"`
 	Creds   map[string]string `json:"creds,omitempty"`
+	Budget  float64           `json:"budget,omitempty"` // 余额型 Provider 的预算总量(0 = 未设)
 }
 
 // AllProviderIDs 全部已知 Provider id(与 fetcher 注册表一致,顺序 = 展示顺序)。

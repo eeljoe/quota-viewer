@@ -12,6 +12,7 @@ type ProviderDef struct {
 	ID          string
 	DisplayName string
 	Abbr        string // 球格缩写
+	Kind        string // KindUsage | KindBalance
 	LoginURL    string // 打开登录页按钮 URL(空 = 不显示按钮)
 	Fields      []CredentialField
 	Build       func(creds map[string]string) Fetcher
@@ -23,6 +24,7 @@ var registry = []ProviderDef{
 		ID:          "kimi",
 		DisplayName: "Kimi",
 		Abbr:        "K",
+		Kind:        KindUsage,
 		Fields: []CredentialField{
 			{Key: "api_key", Label: "API Key", Type: "password"},
 		},
@@ -34,6 +36,7 @@ var registry = []ProviderDef{
 		ID:          "xfyun",
 		DisplayName: "讯飞星辰",
 		Abbr:        "讯",
+		Kind:        KindUsage,
 		LoginURL:    "https://maas.xfyun.cn/packageSubscription",
 		Fields: []CredentialField{
 			{Key: "cookie", Label: "Cookie(浏览器 F12 复制)", Type: "textarea"},
@@ -46,6 +49,7 @@ var registry = []ProviderDef{
 		ID:          "opencode-go",
 		DisplayName: "OpenCode Go",
 		Abbr:        "Go",
+		Kind:        KindUsage,
 		LoginURL:    "https://opencode.ai",
 		Fields: []CredentialField{
 			{Key: "workspace_id", Label: "Workspace ID", Type: "text"},
@@ -59,6 +63,7 @@ var registry = []ProviderDef{
 		ID:          "mimo",
 		DisplayName: "小米 MiMo",
 		Abbr:        "M",
+		Kind:        KindUsage,
 		LoginURL:    "https://platform.xiaomimimo.com/console/plan-manage",
 		Fields: []CredentialField{
 			{Key: "cookie", Label: "Cookie(浏览器 F12 复制)", Type: "textarea"},
@@ -71,6 +76,7 @@ var registry = []ProviderDef{
 		ID:          "deepseek",
 		DisplayName: "DeepSeek",
 		Abbr:        "D",
+		Kind:        KindBalance,
 		LoginURL:    "https://platform.deepseek.com",
 		Fields: []CredentialField{
 			{Key: "api_key", Label: "API Key", Type: "password"},

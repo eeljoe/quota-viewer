@@ -65,7 +65,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "xfyun", Enabled: false},
 			{ID: "opencode-go", Enabled: true, Creds: map[string]string{"workspace_id": "w1", "session_token": "s1"}},
 			{ID: "mimo", Enabled: false},
-			{ID: "deepseek", Enabled: true, Creds: map[string]string{"api_key": "d1"}},
+			{ID: "deepseek", Enabled: true, Creds: map[string]string{"api_key": "d1"}, Budget: 500.00},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -99,6 +99,9 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			if p.Creds[k] != v {
 				t.Errorf("Providers[%d].Creds[%s] mismatch: got %s, want %s", i, k, p.Creds[k], v)
 			}
+		}
+		if p.Budget != o.Budget {
+			t.Errorf("Providers[%d].Budget mismatch: got %f, want %f", i, p.Budget, o.Budget)
 		}
 	}
 	if loaded.RefreshIntervalMin != 30 {

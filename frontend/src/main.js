@@ -4,7 +4,7 @@
 // 各视图窗口尺寸,与 Go 侧 ballSize 常量保持一致
 const SIZES = {
     ball: [60, 60],
-    panel: [340, 260],
+    panel: [340, 310],
     settings: [340, 480],
 };
 
@@ -86,6 +86,9 @@ function renderResults(results) {
         const item = document.createElement("div");
         item.className = "quota-item" + (r.error ? " error" : "");
         item.style.animationDelay = idx * 45 + "ms";
+        const resetHtml = (r.reset_at && !r.error)
+            ? `<div class="quota-reset" data-reset-at="${r.reset_at}">${formatCountdown(r.reset_at)}</div>`
+            : "";
         item.innerHTML = `
             <div class="quota-item-header">
                 <span class="quota-platform"><i class="status-dot ${color}"></i>${r.platform}</span>
@@ -94,6 +97,7 @@ function renderResults(results) {
             <div class="progress-bar">
                 <div class="progress-fill ${color}" style="width: ${r.error ? 100 : percent}%"></div>
             </div>
+            ${resetHtml}
         `;
         list.appendChild(item);
     });
@@ -107,9 +111,36 @@ function renderResults(results) {
     document.getElementById("last-updated").textContent = "更新于 " + now.toLocaleTimeString("zh-CN");
 }
 
+// === 倒计时 ===
+function formatCountdown(isoStr) {
+    const target = new Date(isoStr);
+    if (isNaN(target.getTime())) return "";
+    const diff = target - Date.now();
+    if (diff <= 0) return "已过期";
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    if (hours > 0) return `距下次刷新: ${hours}时${mins}分`;
+    return `距下次刷新: ${mins}分`;
+}
+
+function updateCountdowns() {
+    document.querySelectorAll(".quota-reset").forEach((el) => {
+        const resetAt = el.getAttribute("data-reset-at");
+        const text = formatCountdown(resetAt);
+        if (text) el.textContent = text;
+    });
+}
+
+setInterval(updateCountdowns, 30000);
+
 function getStatusColor(r) {
     if (r.error) return "red";
-    // 余额型(如 DeepSeek)没有"已用百分比",有余额即为正常
+    // 余额型(如 DeepSeek):设了预算后按消耗百分比走颜色,未设预算恒绿
+    if (r.kind === "balance" && r.percent > 0) {
+        if (r.percent >= 90) return "red";
+        if (r.percent >= 75) return "yellow";
+        return "green";
+    }
     if (r.kind === "balance") return "green";
     if (r.percent >= 90) return "red";
     if (r.percent >= 75) return "yellow";
@@ -165,7 +196,8 @@ function collectProviders() {
         c.fields.forEach((f) => {
             creds[f.key] = f.input.value;
         });
-        return { id: c.id, enabled: c.enabled.checked, creds };
+        const budget = c.budget ? parseFloat(c.budget.value) || 0 : 0;
+        return { id: c.id, enabled: c.enabled.checked, creds, budget };
     });
 }
 
@@ -233,6 +265,23 @@ function renderProviderList(providers) {
         });
         card.appendChild(fieldsWrap);
 
+        // 余额型 Provider 增加预算输入框
+        let budgetInput = null;
+        if (p.kind === "balance") {
+            const budgetGroup = document.createElement("div");
+            budgetGroup.className = "form-group";
+            const budgetLabel = document.createElement("label");
+            budgetLabel.textContent = "预算(用于进度条计算)";
+            budgetInput = document.createElement("input");
+            budgetInput.type = "number";
+            budgetInput.min = "0";
+            budgetInput.step = "0.01";
+            budgetInput.placeholder = "设为 0 则不计算进度条";
+            if (p.budget > 0) budgetInput.value = p.budget;
+            budgetGroup.append(budgetLabel, budgetInput);
+            fieldsWrap.appendChild(budgetGroup);
+        }
+
         // 勾选限制:最多 3 个、最少 1 个
         cb.addEventListener("change", () => {
             const enabledCount = providerCards.filter((c) => c.enabled.checked).length;
@@ -250,7 +299,7 @@ function renderProviderList(providers) {
         });
 
         container.appendChild(card);
-        providerCards.push({ id: p.id, enabled: cb, fields });
+        providerCards.push({ id: p.id, enabled: cb, fields, budget: budgetInput });
     });
 }
 

@@ -8,6 +8,8 @@ export namespace fetcher {
 	    used: number;
 	    total: number;
 	    percent: number;
+	    balance: number;
+	    currency: string;
 	    remaining: string;
 	    reset_at: string;
 	    // Go type: time
@@ -27,6 +29,8 @@ export namespace fetcher {
 	        this.used = source["used"];
 	        this.total = source["total"];
 	        this.percent = source["percent"];
+	        this.balance = source["balance"];
+	        this.currency = source["currency"];
 	        this.remaining = source["remaining"];
 	        this.reset_at = source["reset_at"];
 	        this.last_updated = this.convertValues(source["last_updated"], null);
@@ -60,6 +64,7 @@ export namespace main {
 	    id: string;
 	    enabled: boolean;
 	    creds: Record<string, string>;
+	    budget: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProviderInput(source);
@@ -70,6 +75,7 @@ export namespace main {
 	        this.id = source["id"];
 	        this.enabled = source["enabled"];
 	        this.creds = source["creds"];
+	        this.budget = source["budget"];
 	    }
 	}
 

@@ -48,6 +48,12 @@ func TestDeepSeekFetcher_BalanceOK_ParsesRemaining(t *testing.T) {
 	if result.Percent != 0 {
 		t.Errorf("expected Percent=0 for balance kind, got %f", result.Percent)
 	}
+	if result.Balance != 110.00 {
+		t.Errorf("expected Balance=110.00, got %f", result.Balance)
+	}
+	if result.Currency != "CNY" {
+		t.Errorf("expected Currency=CNY, got %s", result.Currency)
+	}
 }
 
 func TestDeepSeekFetcher_401_ReturnsInvalidKey(t *testing.T) {
@@ -122,5 +128,73 @@ func TestDeepSeekFetcher_ZeroBalance_ReturnsError(t *testing.T) {
 	result := f.Fetch()
 	if result.Error == "" {
 		t.Error("expected error when total_balance is 0")
+	}
+}
+
+func TestApplyBudget_NormalCalc(t *testing.T) {
+	r := QuotaResult{Kind: KindBalance, Balance: 150, Currency: "CNY", Remaining: "原始"}
+	ApplyBudget(&r, 500)
+	if r.Used != 350 {
+		t.Errorf("expected Used=350, got %f", r.Used)
+	}
+	if r.Total != 500 {
+		t.Errorf("expected Total=500, got %f", r.Total)
+	}
+	if r.Percent < 69.9 || r.Percent > 70.1 {
+		t.Errorf("expected ~70%%, got %f", r.Percent)
+	}
+	if !strings.Contains(r.Remaining, "150.00") || !strings.Contains(r.Remaining, "500.00") || !strings.Contains(r.Remaining, "预算") {
+		t.Errorf("expected budget Remaining, got %s", r.Remaining)
+	}
+}
+
+func TestApplyBudget_ZeroBudget_UsesDefault(t *testing.T) {
+	r := QuotaResult{Kind: KindBalance, Balance: 150, Currency: "CNY", Remaining: "原始", Percent: 0}
+	ApplyBudget(&r, 0)
+	// budget=0 → 使用默认 300: Used=300-150=150, Percent=50%
+	if r.Used != 150 {
+		t.Errorf("expected Used=150 (default budget 300), got %f", r.Used)
+	}
+	if r.Total != 300 {
+		t.Errorf("expected Total=300 (default), got %f", r.Total)
+	}
+	if r.Percent < 49.9 || r.Percent > 50.1 {
+		t.Errorf("expected ~50%%, got %f", r.Percent)
+	}
+	if !strings.Contains(r.Remaining, "预算") {
+		t.Errorf("expected budget Remaining, got %s", r.Remaining)
+	}
+}
+
+func TestApplyBudget_BalanceExceedsBudget_ClampsUsed(t *testing.T) {
+	r := QuotaResult{Kind: KindBalance, Balance: 600, Currency: "CNY", Remaining: "原始"}
+	ApplyBudget(&r, 500)
+	if r.Used != 0 {
+		t.Errorf("expected Used=0 when balance>budget, got %f", r.Used)
+	}
+	if r.Percent != 0 {
+		t.Errorf("expected Percent=0, got %f", r.Percent)
+	}
+}
+
+func TestApplyBudget_UsageKind_NoOp(t *testing.T) {
+	r := QuotaResult{Kind: KindUsage, Balance: 100, Currency: "CNY", Percent: 50, Remaining: "原始"}
+	ApplyBudget(&r, 500)
+	if r.Percent != 50 {
+		t.Errorf("expected Percent unchanged for usage kind, got %f", r.Percent)
+	}
+	if r.Remaining != "原始" {
+		t.Errorf("expected Remaining unchanged for usage kind, got %s", r.Remaining)
+	}
+}
+
+func TestApplyBudget_ErrorResult_NoOp(t *testing.T) {
+	r := QuotaResult{Kind: KindBalance, Balance: 100, Currency: "CNY", Error: "出错了"}
+	ApplyBudget(&r, 500)
+	if r.Percent != 0 {
+		t.Errorf("expected Percent=0 for error result, got %f", r.Percent)
+	}
+	if r.Used != 0 {
+		t.Errorf("expected Used=0 for error result, got %f", r.Used)
 	}
 }

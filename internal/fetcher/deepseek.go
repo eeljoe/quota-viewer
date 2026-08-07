@@ -108,6 +108,9 @@ func (d *DeepSeekFetcher) Fetch() QuotaResult {
 		return result
 	}
 
+	totalBalance, _ := strconv.ParseFloat(best.TotalBalance, 64)
+	result.Balance = totalBalance
+	result.Currency = best.Currency
 	result.Remaining = fmt.Sprintf("余额 %s%s (%s)", currencySymbol(best.Currency), best.TotalBalance, best.Currency)
 	return result
 }

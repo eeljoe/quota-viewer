@@ -116,6 +116,7 @@ type ProviderInput struct {
 	ID      string            `json:"id"`
 	Enabled bool              `json:"enabled"`
 	Creds   map[string]string `json:"creds"`
+	Budget  float64           `json:"budget"`
 }
 
 // GetConfig 返回当前配置(凭证做掩码)与全部 Provider 元数据。
@@ -148,10 +149,12 @@ func (a *App) GetConfig() map[string]interface{} {
 			"id":        def.ID,
 			"name":      def.DisplayName,
 			"abbr":      def.Abbr,
+			"kind":      def.Kind,
 			"enabled":   ok && pc.Enabled,
 			"login_url": def.LoginURL,
 			"fields":    fields,
 			"creds":     creds,
+			"budget":    pc.Budget,
 		})
 	}
 
@@ -212,6 +215,7 @@ func (a *App) SaveConfig(providers []ProviderInput, refreshMin int) error {
 		}
 		pc := &a.cfg.Providers[idx]
 		pc.Enabled = in.Enabled
+		pc.Budget = in.Budget
 		if pc.Creds == nil {
 			pc.Creds = map[string]string{}
 		}
@@ -424,6 +428,7 @@ func (a *App) fetchAll() []fetcher.QuotaResult {
 			if r.Kind == "" {
 				r.Kind = fetcher.KindUsage
 			}
+			fetcher.ApplyBudget(&r, p.Budget)
 			results[i] = r
 		}(i, p, def)
 	}

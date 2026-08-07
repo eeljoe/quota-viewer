@@ -206,6 +206,14 @@ html, body {
 .progress-fill.yellow { background: linear-gradient(90deg, var(--yellow), var(--yellow-soft)); }
 .progress-fill.red { background: linear-gradient(90deg, var(--red), var(--red-soft)); }
 
+/* === 倒计时行 === */
+.quota-reset {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+}
+
 /* === 面板底部 === */
 .panel-footer {
     display: flex;

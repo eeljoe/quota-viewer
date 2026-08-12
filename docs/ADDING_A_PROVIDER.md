@@ -341,3 +341,8 @@ wails build
 | `opencode-go` | OpenCode Go | Go | Workspace ID + Session Token | usage | `opencode_go.go` |
 | `mimo` | 小米 MiMo | M | Cookie | usage | `mimo.go` |
 | `deepseek` | DeepSeek | D | API Key (Bearer) | balance | `deepseek.go` |
+| `ollama` | Ollama | O | Browser session Cookie | usage | `ollama.go` |
+
+### Ollama Cloud 特殊说明
+
+Ollama Cloud 当前没有公开的 quota API。`ollama.go` 请求 `GET https://ollama.com/settings`，解析页面中的 `Session usage`（5 小时窗口）作为 `QuotaResult.Percent`，并将 `Weekly usage` 作为辅助信息写入 `Remaining`。重置时间从对应 HTML 元素的 `data-time` 属性读取；页面未登录、结构变化或 Cookie 失效时返回错误。注册表字段使用 `textarea`，用户可在 Ollama 设置页登录后复制包含 `wos-session` 或 `__Secure-session` 的 Cookie，或直接粘贴浏览器的 “Copy as PowerShell” 内容。

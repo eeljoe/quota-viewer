@@ -32,7 +32,8 @@ type ProviderConfig struct {
     {"id": "xfyun", "enabled": true},
     {"id": "opencode-go", "enabled": true},
     {"id": "mimo", "enabled": false},
-    {"id": "deepseek", "enabled": false}
+    {"id": "deepseek", "enabled": false},
+    {"id": "ollama", "enabled": false}
   ],
   "refresh_interval_min": 15,
   "ball_x": -1,
@@ -43,7 +44,7 @@ type ProviderConfig struct {
 ### 常量
 
 ```go
-var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek"}
+var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama"}
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启用前三个
 ```
 
@@ -56,6 +57,7 @@ var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启�
 - 旧字段全空 → 默认启用前三个
 - 迁移后立即回写新格式（`_ = Save(cfg)`，失败静默）
 - 4 个以上有值 → 钳制：按注册表顺序保留前 3 个 enabled，其余凭证保留但关闭
+- 已有 v2 配置缺少新 Provider 时，`ensureKnownProviders` 在 Load 时追加默认关闭的条目并回写，保留用户原有启用状态与凭证
 
 ### 存储位置
 

@@ -66,6 +66,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "opencode-go", Enabled: true, Creds: map[string]string{"workspace_id": "w1", "session_token": "s1"}},
 			{ID: "mimo", Enabled: false},
 			{ID: "deepseek", Enabled: true, Creds: map[string]string{"api_key": "d1"}, Budget: 500.00},
+			{ID: "ollama", Enabled: false, Creds: map[string]string{"cookie": "wos-session=o1"}},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -124,6 +125,36 @@ func TestSave_CreatesDirectory(t *testing.T) {
 	err := Save(cfg)
 	if err != nil {
 		t.Fatalf("Save() should create directory, got error: %v", err)
+	}
+}
+
+func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
+	writeConfig(t, `{
+	  "providers": [
+	    {"id":"kimi","enabled":true,"creds":{"api_key":"k"}},
+	    {"id":"xfyun","enabled":false},
+	    {"id":"opencode-go","enabled":true},
+	    {"id":"mimo","enabled":false},
+	    {"id":"deepseek","enabled":false}
+	  ],
+	  "refresh_interval_min": 15,
+	  "ball_x": -1,
+	  "ball_y": -1
+	}`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	if len(cfg.Providers) != len(AllProviderIDs) {
+		t.Fatalf("expected %d providers after migration, got %d", len(AllProviderIDs), len(cfg.Providers))
+	}
+	last := cfg.Providers[len(cfg.Providers)-1]
+	if last.ID != "ollama" || last.Enabled {
+		t.Errorf("expected disabled ollama appended, got %+v", last)
+	}
+	if cfg.Providers[0].Creds["api_key"] != "k" {
+		t.Errorf("existing credentials should be preserved: %+v", cfg.Providers[0])
 	}
 }
 

@@ -85,6 +85,19 @@ var registry = []ProviderDef{
 			return NewDeepSeekFetcher(creds["api_key"])
 		},
 	},
+	{
+		ID:          "ollama",
+		DisplayName: "Ollama",
+		Abbr:        "O",
+		Kind:        KindUsage,
+		LoginURL:    "https://ollama.com/settings",
+		Fields: []CredentialField{
+			{Key: "cookie", Label: "Cookie(登录 ollama.com 后复制)", Type: "textarea"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewOllamaFetcher(creds["cookie"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

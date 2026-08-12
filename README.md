@@ -30,6 +30,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 | OpenCode Go | Workspace ID + Session Token | Rolling window quota percentage |
 | Xiaomi MiMo | Cookie | Package token usage |
 | DeepSeek | API Key (`sk-...`) | Account balance (balance type) |
+| Ollama | Browser session Cookie | Cloud 5-hour Session usage / weekly usage (settings page) |
 
 > Tip: For Cookie-based providers, you can paste the entire "Copy as PowerShell" script from your browser's F12 → Network tab, and it will be automatically parsed into a Cookie header on save.
 

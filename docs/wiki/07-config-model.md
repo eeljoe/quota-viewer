@@ -20,6 +20,7 @@ type ProviderConfig struct {
     ID      string            `json:"id"`
     Enabled bool              `json:"enabled"`
     Creds   map[string]string `json:"creds,omitempty"` // 凭证 key 见注册表 Fields
+    Budget  float64           `json:"budget,omitempty"` // 余额型 Provider 预算总量(0 = 未设)
 }
 ```
 
@@ -32,7 +33,7 @@ type ProviderConfig struct {
     {"id": "xfyun", "enabled": true},
     {"id": "opencode-go", "enabled": true},
     {"id": "mimo", "enabled": false},
-    {"id": "deepseek", "enabled": false},
+    {"id": "deepseek", "enabled": false, "budget": 300},
     {"id": "ollama", "enabled": false}
   ],
   "refresh_interval_min": 15,
@@ -68,7 +69,7 @@ var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启�
 ### 凭证保护
 
 - `App.GetConfig()` 返回前对凭证做 `maskSecret` 掩码（前 4 + 后 4，长度 ≤8 显示 `****`）
-- `App.SaveConfig()` 空字符串凭证 = 不修改（防止掩码回写覆盖真实值）
+- `App.SaveConfig()` 空字符串凭证 = 不修改（防止掩码回写覆盖真实值）；Budget 每次原样写入（`budget<=0` 时 fetcher 用默认预算 300）
 - 配置 JSON 明文落盘（本工具定位为本地单用户工具）
 
 ### PowerShell Cookie 解析（cookie.go）

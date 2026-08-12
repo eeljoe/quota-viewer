@@ -44,6 +44,7 @@ type ProviderInput struct {
     ID      string            `json:"id"`
     Enabled bool              `json:"enabled"`
     Creds   map[string]string `json:"creds"` // 字段 key 见注册表 Fields;空串 = 不修改
+    Budget  float64           `json:"budget"`
 }
 ```
 
@@ -56,7 +57,9 @@ type ProviderInput struct {
       "id": "kimi",
       "name": "Kimi",
       "abbr": "K",
+      "kind": "usage",
       "enabled": true,
+      "budget": 0,
       "login_url": "",
       "fields": [{"key": "api_key", "label": "API Key", "type": "password"}],
       "creds": {"api_key": "sk-...xxxx"}
@@ -85,7 +88,8 @@ type ProviderInput struct {
 | 字段 | 说明 |
 |---|---|
 | `id` / `abbr` | provider id 与球格缩写（fetchAll 填充，前端零匹配） |
-| `kind` | `"usage"`（默认）/ `"balance"`（余额型，前端恒绿） |
+| `kind` | `"usage"`（默认）/ `"balance"`（余额型，按预算消耗百分比着色） |
+| `balance` / `currency` | 余额型原始余额数值与货币代码（ApplyBudget 换算前的原始值） |
 
 ### 前端调用示例
 

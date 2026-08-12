@@ -19,9 +19,10 @@
 
 | 类别 | 位置 | 模式 |
 |---|---|---|
-| 配置持久化 | `internal/config/config_test.go` | Load 默认值 / Save 往返 / 旧格式迁移（含 mimo_cookie 与 4 平台钳制） |
+| 配置持久化 | `internal/config/config_test.go` | Load 默认值 / Save 往返（含 Budget）/ 旧格式迁移（含 mimo_cookie 与 4 平台钳制）/ 新 Provider 追加迁移 |
 | 抓取器 | `internal/fetcher/*_test.go` | `net/http/httptest` 假服务 + baseURL 注入；成功/失败/异常 JSON 路径 |
 | 注册表 | `internal/fetcher/registry_test.go` | 6 个 Provider、顺序稳定、字段定义完整、Build 可执行不 panic |
+| 预算换算 | `internal/fetcher/deepseek_test.go` 的 TestApplyBudget_* | 5 个用例：正常换算/默认预算/超额钳制/用量型 no-op/错误结果 no-op |
 | 托盘 | 无测试 | 依赖 GUI，手工验证 |
 | 窗口定位 | 无测试 | 依赖真实显示器环境，手工验证（多屏/DPI 需实测） |
 | 前端 | 无测试 | 手工验证（当前无测试框架） |
@@ -32,6 +33,7 @@
 - 新平台抓取器必须带测试（现有 kimi/xfyun/opencode_go/mimo/deepseek/ollama 均有）
 - 新增 Provider 时 registry_test 自动校验定义完整性
 - 配置结构变更必须同步 config_test.go（含迁移用例）
+- 余额型 Provider 必须覆盖 ApplyBudget 用例（换算/钳制/no-op 路径）
 - 前端无测试框架——UI 改动以构建 + 手动冒烟为准
 
 ---

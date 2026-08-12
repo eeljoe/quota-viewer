@@ -6,18 +6,19 @@
 
 ## 核心内容
 
-行数基于 2026-08-04 升级后工作区状态。
+行数基于 2026-08-13(a59635f)工作区状态。
 
 | 模块 | 文件 | 行数 | 职责 |
 |---|---|---|---|
-| 应用编排 | `app.go` | 469 | 启动/刷新/动态配置/窗口定位/事件转发 |
+| 应用编排 | `app.go` | 474 | 启动/刷新/动态配置/窗口定位/事件转发 |
 | 入口 | `main.go` | 39 | Wails 运行时选项、embed 前端产物 |
 | Win32 辅助 | `workarea_windows.go` | 131 | 工作区查询、DPI、工具窗样式、最小宽度子类 |
 | Win32 桩 | `workarea_other.go` | 13 | 非 Windows 编译桩 |
-| 配置模型 | `internal/config/config.go` | 205 | 动态 Provider 列表、Load/Save、旧格式迁移 |
+| 配置模型 | `internal/config/config.go` | 227 | 动态 Provider 列表、Load/Save、旧格式迁移、新 Provider 追加 |
 | Cookie 解析 | `internal/config/cookie.go` | 47 | PowerShell Cookie 粘贴 → 请求头格式 |
-| 配置测试 | `internal/config/config_test.go` | 225 | Load 默认值、Save 往返、旧格式迁移用例 |
-| 统一类型 | `internal/fetcher/types.go` | 31 | QuotaResult(含 ID/Abbr/Kind)+ Fetcher 接口 |
+| 配置测试 | `internal/config/config_test.go` | 259 | Load 默认值、Save 往返(含 Budget)、旧格式迁移用例 |
+| 统一类型 | `internal/fetcher/types.go` | 33 | QuotaResult(含 ID/Abbr/Kind/Balance/Currency)+ Fetcher 接口 |
+| 预算换算 | `internal/fetcher/budget.go` | 27 | 余额型预算 → 消耗百分比(ApplyBudget,默认预算 300) |
 | Provider 注册表 | `internal/fetcher/registry.go` | 118 | 六平台元数据 + Build 工厂 |
 | 数字格式化 | `internal/fetcher/format.go` | 24 | 千分位 formatNum |
 | Kimi 抓取器 | `internal/fetcher/kimi.go` | 196 | Kimi 开放平台额度 API |
@@ -28,16 +29,16 @@
 | OpenCode 测试 | `internal/fetcher/opencode_go_test.go` | 317 | httptest 用例 |
 | MiMo 抓取器 | `internal/fetcher/mimo.go` | 117 | 小米 MiMo 额度 API(恢复) |
 | MiMo 测试 | `internal/fetcher/mimo_test.go` | 136 | httptest 用例(恢复) |
-| DeepSeek 抓取器 | `internal/fetcher/deepseek.go` | 106 | DeepSeek 账户余额(余额型) |
-| DeepSeek 测试 | `internal/fetcher/deepseek_test.go` | 98 | httptest 用例 |
+| DeepSeek 抓取器 | `internal/fetcher/deepseek.go` | 127 | DeepSeek 账户余额(余额型) |
+| DeepSeek 测试 | `internal/fetcher/deepseek_test.go` | 200 | httptest + ApplyBudget 用例 |
 | Ollama 抓取器 | `internal/fetcher/ollama.go` | 206 | Ollama Cloud settings HTML，5 小时 Session 主窗口 |
 | Ollama 测试 | `internal/fetcher/ollama_test.go` | 320 | httptest 用例（HTML/登录失效/0%/回退解析） |
 | 注册表测试 | `internal/fetcher/registry_test.go` | 62 | 注册表完整性（离线） |
 | 系统托盘 | `internal/tray/tray.go` | 104 | 托盘菜单 + 事件转发 + LockOSThread |
 | 托盘图标 | `internal/tray/assets/` | - | icon.ico / icon.png（embed） |
 | 前端 HTML | `frontend/src/index.html` | 57 | 悬浮球/面板/动态配置面板结构 |
-| 前端逻辑 | `frontend/src/main.js` | 338 | 视图状态机、动态球格、配置渲染、交互 |
-| 前端样式 | `frontend/src/style.css` | 390 | 设计令牌 + 深色玻璃质感 + Provider 卡片 |
+| 前端逻辑 | `frontend/src/main.js` | 387 | 视图状态机、动态球格、配置渲染、刷新倒计时 |
+| 前端样式 | `frontend/src/style.css` | 398 | 设计令牌 + 深色玻璃质感 + Provider 卡片 |
 | Vite 配置 | `frontend/vite.config.js` | 9 | 构建配置 |
 | 绑定 | `frontend/wailsjs/` | - | Wails 生成的前端绑定(构建生成) |
 

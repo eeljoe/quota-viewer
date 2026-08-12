@@ -1,4 +1,5 @@
 app.go
+balance
 ballSize
 cd frontend && npm run build
 deepseek
@@ -19,6 +20,7 @@ internal/config/config_test.go
 internal/config/cookie.go
 internal/fetcher/
 internal/fetcher/*.go
+internal/fetcher/budget.go
 internal/fetcher/format.go
 internal/fetcher/kimi.go
 internal/fetcher/kimi_test.go
@@ -34,6 +36,7 @@ main.go
 mdtEffectiveDPI
 mimo
 monitorDefaultToNearest
+ollama
 opencode-go
 quota:update
 screenMargin

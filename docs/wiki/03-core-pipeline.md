@@ -24,7 +24,7 @@ App.Refresh()                          [app.go:101]
          ├─ goroutine2: registry["xfyun"].Build(creds).Fetch()
          └─ goroutine3: registry["opencode-go"].Build(creds).Fetch()
      （sync.WaitGroup 并发,按启用顺序写 results[i])
-     → 每个结果补 ID/Abbr,Kind 默认 "usage"
+     → 补 ID/Abbr,Kind 空则补 "usage";余额型 ApplyBudget(r, p.Budget) 换算消耗百分比 [budget.go]
  └─ 加锁写 a.cache
  └─ EventsEmit("quota:update", results)   → 前端
 ```
@@ -36,8 +36,8 @@ App.Refresh()                          [app.go:101]
 ```
 监听 window.runtime.EventsOn("quota:update")
  └─ updateBall(results)     按结果数动态重建球格(1 格占满/2 格各半/3 格各 1/3)
-                            颜色: green / yellow / red;余额型(kind=balance)有余额即绿
- └─ updatePanel(results)    展开面板进度条 + 千分位数字 + 重置时间
+                            颜色: green / yellow / red;余额型按预算消耗百分比走阈值
+ └─ updatePanel(results)    展开面板进度条 + 千分位数字 + 重置时间 + 刷新倒计时
 状态: ball(收起) ⇄ panel(展开)，SIZES.ball=60
 ```
 
@@ -45,7 +45,7 @@ App.Refresh()                          [app.go:101]
 
 ```
 前端 保存按钮 → App.SaveConfig(providers, refreshMin)   [app.go]
-  providers: [{id, enabled, creds:{字段:输入值}}]
+  providers: [{id, enabled, creds:{字段:输入值}, budget}]
   → 后端钳制:0 个启用 → 全部启用;>3 → 保留前 3
   → 空字符串 creds = 不修改(避免掩码覆盖)
   → 所有凭证值过 NormalizeCookieInput(非 PS 格式原样返回)
@@ -75,7 +75,7 @@ App.Refresh()                          [app.go:101]
 |---|---|
 | `app.go` | 全部编排逻辑（Refresh/fetchAll/SaveConfig/TestConnection） |
 | `frontend/src/main.js` | 事件监听、视图状态机、渲染 |
-| `internal/fetcher/*.go` | Fetch() 实现 |
+| `internal/fetcher/*.go` | Fetch() 实现 + budget.go 预算换算 |
 | `internal/tray/tray.go` | 托盘事件发射点 |
 
 ---

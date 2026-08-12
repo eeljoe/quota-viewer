@@ -7,7 +7,7 @@
 ## 接手约束
 
 - **本项目是一个 Windows 桌面应用**（Wails v2 + WebView2），开发与测试在 Windows 上进行；`workarea_other.go` 仅是非 Windows 编译桩，不要依赖它做验证
-- **未提交工作区**：会话开始前遗留的 MiMo → OpenCode Go 替换 + fitToScreen 窗口定位修复尚未提交（见 STATUS.md），动工作区前先与用户确认提交策略
+- **Provider 扩展入口是注册表**：新增平台 = fetcher 实现 + `registry.go` 注册 + httptest 测试，前端零改动（详见 docs/ADDING_A_PROVIDER.md）
 - 修改前端后必须重新构建产物（`frontend/dist/` 被 Go embed，见 10-build-test-baseline.md）
 - 修改 Go 绑定的方法签名后必须同步 `frontend/wailsjs/`（`wails generate module` 或 `wails dev/build` 时自动生成）
 - 平台抓取器不得存储明文之外的凭证格式变化（配置项 JSON key 变更 = 破坏性变更，需迁移策略）
@@ -37,9 +37,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "2276ae8", "synced_at": "2026-08-04T14:30:00Z", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "a59635f", "synced_at": "2026-08-13T00:50:00Z", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `2276ae8`（2026-08-04 14:30），共 11 个文件。
+> **Wiki 同步状态**：最后同步于 `a59635f`（2026-08-13 00:50），共 11 个文件。
 
 ## Wiki 文件索引
 
@@ -65,7 +65,7 @@
 - `ballSize`/`screenMargin` 常量（app.go）与前端 `SIZES.ball` 的一致性——改了必须两边同步
 - `tray:refresh` / `tray:toggle` / `tray:settings` 事件名——托盘与 app.go 两端共用契约
 - `quota:update` / `ui:show-settings` 事件名——后端推给前端的契约
-- `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/remaining/reset_at/error）——前端渲染依赖
-- Provider id（kimi/xfyun/opencode-go/mimo/deepseek）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
+- `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/balance/currency/remaining/reset_at/error）——前端渲染依赖
+- Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
 - 展示上限 3 / 下限 1 个 Provider——前后端都钳制
 - 配置 JSON 结构（providers 数组）——已迁移用户配置兼容

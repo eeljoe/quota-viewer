@@ -23,7 +23,7 @@ type ProviderConfig struct {
 }
 
 // AllProviderIDs 全部已知 Provider id(与 fetcher 注册表一致,顺序 = 展示顺序)。
-var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek"}
+var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama"}
 
 // DefaultProviderIDs 默认启用的 Provider(与现状一致:Kimi/讯飞/OpenCode Go)。
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"}
@@ -122,12 +122,33 @@ func Load() (*Config, error) {
 	if cfg.RefreshIntervalMin <= 0 {
 		cfg.RefreshIntervalMin = 15
 	}
-	// 确保 providers 非空(防御:损坏文件)
+	// 确保 providers 非空(防御:损坏文件),并为已有 v2 配置补上新 Provider。
 	if len(cfg.Providers) == 0 {
 		cfg.Providers = Default().Providers
 	}
+	if ensureKnownProviders(cfg) {
+		_ = Save(cfg) // 新 Provider 迁移回写失败不阻塞启动
+	}
 
 	return cfg, nil
+}
+
+// ensureKnownProviders 给已有动态配置追加新注册的 Provider,默认关闭且不影响现有选择。
+func ensureKnownProviders(cfg *Config) bool {
+	seen := make(map[string]bool, len(cfg.Providers))
+	for _, p := range cfg.Providers {
+		seen[p.ID] = true
+	}
+
+	changed := false
+	for _, id := range AllProviderIDs {
+		if seen[id] {
+			continue
+		}
+		cfg.Providers = append(cfg.Providers, ProviderConfig{ID: id})
+		changed = true
+	}
+	return changed
 }
 
 // migrateFromLegacy 把旧版扁平配置迁移为 providers 结构。

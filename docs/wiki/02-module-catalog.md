@@ -18,7 +18,7 @@
 | Cookie 解析 | `internal/config/cookie.go` | 47 | PowerShell Cookie 粘贴 → 请求头格式 |
 | 配置测试 | `internal/config/config_test.go` | 225 | Load 默认值、Save 往返、旧格式迁移用例 |
 | 统一类型 | `internal/fetcher/types.go` | 31 | QuotaResult(含 ID/Abbr/Kind)+ Fetcher 接口 |
-| Provider 注册表 | `internal/fetcher/registry.go` | 99 | 五平台元数据 + Build 工厂 |
+| Provider 注册表 | `internal/fetcher/registry.go` | 118 | 六平台元数据 + Build 工厂 |
 | 数字格式化 | `internal/fetcher/format.go` | 24 | 千分位 formatNum |
 | Kimi 抓取器 | `internal/fetcher/kimi.go` | 196 | Kimi 开放平台额度 API |
 | Kimi 测试 | `internal/fetcher/kimi_test.go` | 137 | httptest 用例 |
@@ -30,7 +30,9 @@
 | MiMo 测试 | `internal/fetcher/mimo_test.go` | 136 | httptest 用例(恢复) |
 | DeepSeek 抓取器 | `internal/fetcher/deepseek.go` | 106 | DeepSeek 账户余额(余额型) |
 | DeepSeek 测试 | `internal/fetcher/deepseek_test.go` | 98 | httptest 用例 |
-| 注册表测试 | `internal/fetcher/registry_test.go` | 65 | 注册表完整性 |
+| Ollama 抓取器 | `internal/fetcher/ollama.go` | 206 | Ollama Cloud settings HTML，5 小时 Session 主窗口 |
+| Ollama 测试 | `internal/fetcher/ollama_test.go` | 320 | httptest 用例（HTML/登录失效/0%/回退解析） |
+| 注册表测试 | `internal/fetcher/registry_test.go` | 62 | 注册表完整性（离线） |
 | 系统托盘 | `internal/tray/tray.go` | 104 | 托盘菜单 + 事件转发 + LockOSThread |
 | 托盘图标 | `internal/tray/assets/` | - | icon.ico / icon.png（embed） |
 | 前端 HTML | `frontend/src/index.html` | 57 | 悬浮球/面板/动态配置面板结构 |

@@ -79,8 +79,8 @@ func Get(id string) (ProviderDef, bool)
 ### 测试模式
 
 全部用 `net/http/httptest` 起假服务，`baseURL` 指向假服务：
-- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` 覆盖成功/失败/异常 JSON 路径
-- `registry_test.go` 校验注册表完整性（5 个、顺序、字段定义、Build 可执行）
+- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` 覆盖成功/失败/异常响应路径
+- `registry_test.go` 校验注册表完整性（6 个、顺序、字段定义、Build 可执行；空凭证保持离线）
 
 ---
 
@@ -90,7 +90,7 @@ func Get(id string) (ProviderDef, bool)
 |---|---|
 | `internal/fetcher/types.go` | QuotaResult + Fetcher 接口 + Kind 常量（契约核心） |
 | `internal/fetcher/registry.go` | ProviderDef + 注册表（新增 Provider 的唯一入口） |
-| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` | 各平台实现 |
+| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` | 各平台实现 |
 | `internal/fetcher/format.go` | 千分位格式化 |
 
 ---

@@ -14,28 +14,28 @@
 > 7. **严禁在用户给出指示之前修改任何文件或代码**
 > 8. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-08-04 23:02`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`b62e6d5` on `master`
-> 📊 累计会话数：4 次
+> 📍 最新章节位置：`## 会话记录：2026-08-13 00:55`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`cc82c71` on `master`
+> 📊 累计会话数：6 次
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "b62e6d5", "branch": "master", "dirty": false, "timestamp": "2026-08-04T23:02:00Z"} -->
+<!-- git-meta: {"last_commit": "cc82c71", "branch": "master", "dirty": false, "timestamp": "2026-08-13T00:55:00Z"} -->
 
-- **日期**：2026-08-04 23:02
-- **会话摘要**：新增 Agent 专用 Provider 添加指南文档（`docs/ADDING_A_PROVIDER.md`），双语 README 更新指向该文档
+- **日期**：2026-08-13 00:55
+- **会话摘要**：新增 Ollama Cloud 额度监控 Provider（HTML 解析，无公开 quota API）+ 补齐 wiki 预算模块同步
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.0.0 已开源发布**——GitHub 仓库 eeljoe/quota-viewer + Release v1.0.0（含 exe 下载）
-- **当前唯一目标**：无明确待办；项目已交付，等待用户后续指示
-- 下一步：可选——Release 推广 / 新 Provider 扩展 / 用户反馈迭代
-- 注意事项：工作区干净（全部已提交并推送）；无阻塞项
+- 当前阶段：**v1.0.0 已开源 + 持续迭代**——六平台监控（+Ollama）；DeepSeek 余额型支持预算进度条；工作区干净
+- **当前唯一目标**：无明确待办；Ollama 待用户真实 Cookie 冒烟
+- 下一步：Ollama 真实账号冒烟验证（配置面板粘贴 Cookie → 测试连接 → 球格展示）；推送 master（本地领先远程 2 commit）
+- 注意事项：根目录遗留一张未跟踪截图副本 PNG（preview-2.png 的副本，可删除）；无阻塞项
 
 ---
 
@@ -46,61 +46,58 @@
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
 - **功能**：悬浮球（1-3 格动态，颜色=状态）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型）
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）
 
 ## 当前分支与最近提交
 
 - **分支**：master
-- **HEAD**：`e60f844`（工作区大量未提交改动）
+- **HEAD**：`cc82c71`（工作区干净，仅遗留 1 张未跟踪截图 PNG）
+- **远程**：origin/master 落后本地 2 个提交（a59635f / cc82c71 未推送）
 - **最近提交**：
-  - `e60f844` - fix: LockOSThread for tray message pump, replace RunWithExternalLoop with systray.Run
-  - `447e0cc` - chore: 回滚后重新构建前端产物与 wailsjs 绑定
-  - `a6b5e65` - Revert "fix: 移除 WS_EX_TOOLWINDOW,使窗口回到任务栏和 Alt+Tab"
-  - `6fcdb28` - fix: 移除 WS_EX_TOOLWINDOW,使窗口回到任务栏和 Alt+Tab
-  - `c5d8eeb` - docs: 更新 README 为真实项目文档
+  - `cc82c71` - docs: 同步 wiki 补齐预算换算模块与余额契约
+  - `a59635f` - feat: 新增 Ollama Cloud 额度监控 Provider
+  - `39aeaed` - feat: DeepSeek 余额预算进度条 + 展开面板刷新倒计时
+  - `22185dc` - docs: README 新增效果截图
+  - `df18b36` - docs: 更新 STATUS.md 追加会话4（Agent 指南文档）
 
 ---
 
 ## 当前任务进度
 
-### ✅ 已完成（本次升级会话）
-- **fetcher 注册表**：`registry.go`（ProviderDef + 凭证字段定义 + Build 工厂，5 个 Provider 固定顺序）；`QuotaResult` 扩展 `ID/Abbr/Kind`（usage/balance）
-- **恢复 MiMo**：`mimo.go` + `mimo_test.go`（从 git 历史恢复，httptest 全过）
-- **新增 DeepSeek**：`deepseek.go` + 测试（`GET https://api.deepseek.com/user/balance`，余额型，多币种自动选非零）
-- **配置模型 v2**：`Config.Providers []ProviderConfig` 动态结构；旧扁平格式（含 mimo_cookie）Load 时自动迁移并回写；默认启用 kimi/xfyun/opencode-go；钳制最多 3 个
-- **app.go 动态编排**：`SaveConfig([]ProviderInput, int)` 新契约、GetConfig 返回全部 Provider 元数据（fields/掩码 creds/login_url）、fetchAll 按启用列表 1-3 并发、TestConnection 走注册表
-- **前端**：球格动态重建（1 个占满放大/2 个各半/3 个各 1/3）、配置面板按注册表元数据动态生成（勾选 1-3 限制 + 测试 + 打开登录页）、余额型恒绿
-- **构建验证**：`go test ./...` 全绿；`npm run build` 成功；`wails build` 成功；exe 启动冒烟通过
-- **开源发布**：7 commit 拆分提交并推送 → GitHub 仓库 eeljoe/quota-viewer 创建 → 双语 README（英文默认 + 简体中文）→ Release v1.0.0（含 exe 附件）
-- **凭证安全**：git 历史全量扫描 0 命中；exe 二进制扫描 0 命中；config.json 在 `%APPDATA%` 不在仓库
-- **wiki 同步**：00/01/02/03/05/07/08/09 已更新至五平台动态模型，`.covered-files` 重新生成（46 项）
+### ✅ 已完成（截至 2026-08-13）
+- **六平台监控**：Kimi / 讯飞星辰 / OpenCode Go / MiMo / DeepSeek / Ollama——fetcher 注册表驱动，新增平台前端零改动
+- **DeepSeek 预算条**（8/7）：QuotaResult Balance/Currency + `budget.go` ApplyBudget + ProviderConfig.Budget + 前端预算输入/色阈值/刷新倒计时
+- **Ollama Provider**（8/13）：`ollama.go` HTML 解析 5 小时 Session 主窗口 + 周用量；14 个 httptest 用例；config 自动补全新 Provider（默认关闭）
+- **v1.0.0 开源发布**：GitHub eeljoe/quota-viewer + Release v1.0.0（exe 附件）
 
 ### 🔄 进行中
 - 无
 
 ### 📋 待办
-- 无明确待办；项目已交付开源
+- Ollama 真实账号冒烟（用户粘贴 Cookie → 测试连接 → 球格展示）
+- 推送 master（本地领先远程 2 commit）
 
 ---
 
 ## 未完成 & 下一步
 
-1. **无明确待办**——项目已交付开源（GitHub 仓库 + Release v1.0.0）
-2. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代 / Wails 版本升级（CLI 2.13.0 vs go.mod 2.12.0）
+1. **Ollama 真实账号冒烟**——用户在配置面板粘贴 Ollama Cookie → 测试连接 → 球格展示 5 小时用量
+2. **推送 master 到远程**——本地领先 2 个提交，确认后 `git push`
+3. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代 / Wails 版本升级（CLI 2.13.0 vs go.mod 2.12.0）
 
 ---
 
 ## 已知问题与注意事项
 
-- **提交复杂性**：工作区混合「会话前遗留（OpenCode 替换 + fitToScreen，其中 mimo.go 删除已 staged）」与「本次升级（mimo.go 恢复等）」；`git add -p` 或按文件粒度拆分，mimo.go 删除/恢复需先 `git restore --staged internal/fetcher/mimo.go`
 - Wails CLI 版本 v2.13.0 > go.mod 的 v2.12.0（构建警告，不阻塞；可选升级）
 - 前端行尾警告：dist/wailsjs 文件 LF→CRLF，git 会提示但不影响构建
-- 配置迁移已实现自动回写；用户旧配置（kimi/xfyun/opencode-go）会在首次启动时迁移——已由测试覆盖，但用户真实配置值得冒烟确认
-- 余额型（DeepSeek）无"用量百分比"，恒绿显示；取首个非零余额币种（CNY→¥ / USD→$），全部为 0 才报错
+- 根目录 `09314663d2975b947bfa75fcf46e4769.png` 是 `docs/screenshots/preview-2.png` 的未跟踪副本，可删除（未删，避免误删用户文件）
+- Ollama 依赖 ollama.com/settings 页面 HTML 结构（无公开 quota API），页面改版 → "页面结构可能已变化"错误，需更新 `ollama.go` 解析
+- 余额型（DeepSeek）经 ApplyBudget 按预算换算消耗百分比（默认预算 300）；取首个非零余额币种（CNY→¥ / USD→$），全部为 0 才报错
 
 ---
 
-## 本次会话文件变更（含会话前遗留，未提交）
+## 会话2文件变更记录（历史，已全部提交）
 
 | 操作 | 文件路径 | 说明 |
 |------|----------|------|
@@ -237,11 +234,11 @@
 
 ## Wiki
 
-- **位置**：`docs/wiki/`（已初始化 2026-08-04，本次升级后同步）
+- **位置**：`docs/wiki/`（已初始化 2026-08-04，2026-08-13 同步至 cc82c71）
 - **文件数**：11 个（00-agent-rules ~ 10-build-test-baseline，99 归档页预留）
 - **入口**：先读 `docs/wiki/00-agent-rules.md`（含索引与 wiki-meta 同步状态）
-- **缓存**：`docs/wiki/.covered-files`（46 项）
-- **未同步文件**：04-window-positioning、06-systray、10-build-test-baseline（本次未改动相关代码）
+- **缓存**：`docs/wiki/.covered-files`（49 项）
+- **未同步文件**：04-window-positioning、06-systray、10-build-test-baseline（近期未改动相关代码）
 
 ---
 
@@ -252,7 +249,7 @@
 - `workarea_windows.go` / `workarea_other.go` - Win32 工作区查询辅助（非 Windows 桩）
 - `internal/fetcher/registry.go` - **Provider 注册表（新增 Provider 的唯一入口）**
 - `internal/fetcher/types.go` - Fetcher 接口 / QuotaResult / Kind 常量
-- `internal/fetcher/{kimi,xfyun,opencode_go,mimo,deepseek}.go` - 五平台抓取器（均有测试）
+- `internal/fetcher/{kimi,xfyun,opencode_go,mimo,deepseek,ollama}.go` + `budget.go` - 六平台抓取器（均有测试）+ 余额型预算换算
 - `internal/config/config.go` + `cookie.go` - 动态 Provider 配置 + 旧格式迁移 + PowerShell Cookie 解析
 - `internal/tray/tray.go` - 系统托盘（systray.Run + LockOSThread）
 - `frontend/src/index.html` / `main.js` / `style.css` - 动态球格 + 动态配置面板 UI
@@ -299,3 +296,83 @@
 - **指令模板格式**（中文）：`阅读 docs/ADDING_A_PROVIDER.md，按照文档为 <平台名> 新增一个 Provider。端点是 <URL>，认证方式是 <方式>，展示内容是 <展示什么>`
 - **GitHub 仓库**：https://github.com/eeljoe/quota-viewer（公开，已推送至 b62e6d5）
 - Wiki 指针状态：`docs/wiki/` 11 个文件，`.covered-files` 46 项，synced_commit `85e03e9`（本次未改动 wiki）
+
+---
+
+## 会话记录：2026-08-07 16:37（补记）
+
+> **会话摘要**：DeepSeek 余额预算进度条 + 展开面板刷新倒计时 + README 效果截图（该会话当时未写入 STATUS，本次补记）
+> **Git**：`39aeaed` on `master`（clean）
+
+### 本次完成
+- `QuotaResult` 新增 `Balance/Currency` 字段，deepseek.go 填充原始余额与货币代码
+- 新增 `budget.go` ApplyBudget：余额型按预算换算消耗百分比（默认预算 300，余额超预算钳制为 0）
+- `ProviderDef` 新增 `Kind` 字段（usage/balance）；`ProviderConfig` 新增 `Budget` 字段
+- app.go fetchAll 传递 budget 并调用 ApplyBudget；配置面板对余额型显示预算输入框
+- 前端：展开面板进度条下方显示刷新倒计时（ResetAt 相对 now）；余额型状态色按消耗百分比走 yellow/red 阈值
+- 双语 README 更新新功能说明与效果截图（`docs/screenshots/preview-1/2.png`）
+- 测试：TestApplyBudget_* 5 个用例 + config Budget 往返
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 余额型引入"预算"换算消耗百分比 | 余额无用量语义，用户想看到"花了多少" | 余额恒绿（原方案） |
+| 默认预算 300 元 | 用户未设时的合理默认 | 无默认/强制填写 |
+| Kind 字段放 ProviderDef | 注册表一处标注，前端按类型渲染 | 各 fetcher 自报 |
+
+> 本次变更：2 个 commit（+213/-20 行，20 个文件，含截图二进制）
+
+### 关键上下文
+- budget 语义：已消耗 = 预算 - 余额；`Percent = 已消耗/预算*100`；Remaining 显示 `余额 / 预算`
+- 根目录遗留 `09314663d2975b947bfa75fcf46e4769.png` = preview-2.png 的副本（未跟踪）
+
+---
+
+## 会话记录：2026-08-13 00:55
+
+> **会话摘要**：新增 Ollama Cloud 额度监控 Provider（六平台收尾）+ 补齐 wiki 预算模块同步
+> **Git**：`cc82c71` on `master`（clean，本地领先远程 2 commit）
+
+### 本次完成
+- 接手上一会话遗留的 Ollama 半成品（ollama.go + 14 个测试 + registry 注册 + config 迁移），验证后提交
+- Ollama 抓取 `https://ollama.com/settings` 页面 HTML，解析 Session（5 小时）主窗口 + Weekly 周用量百分比（无公开 quota API，issue #15132）
+- config `ensureKnownProviders`：已有 v2 配置自动追加新 Provider（默认关闭，保留用户选择），测试覆盖
+- 注册表测试改为空凭证离线模式（避免 Build 测试发真实网络请求）
+- 验证：`go test -count=1 ./...` 全绿 / `npm run build` / `wails build` 成功；dist 重建产物与 HEAD 逐字节一致（仅文件名 hash 变化）已回退，不产生噪音提交
+- wiki 补同步：budget.go 模块、Balance/Currency、Kind/Budget 契约、ollama 平台行，`.covered-files` 重建（49 项）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| Ollama 用 HTML 解析而非 API | Ollama 无公开 quota API，只能解析 server-rendered 页面 | 放弃该平台 |
+| 主展示 5 小时 Session 窗口 | 用户最关心当前会话额度（驱动球色），周用量写入 Remaining 辅助 | 周窗口为主 |
+| 回退 dist/wailsjs 重建产物 | 内容与 HEAD 逐字节一致，仅文件名 hash 变化，提交纯噪音 | 提交新 hash 产物 |
+| 补记 8/7 会话 + 补齐 wiki | STATUS/wiki 与代码脱节，违反文档一致性 | 只记录本次会话 |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `internal/fetcher/ollama.go` | Ollama Cloud settings HTML 抓取（206 行） |
+| 新增 | `internal/fetcher/ollama_test.go` | 14 个 httptest 用例（320 行） |
+| 修改 | `internal/fetcher/registry.go` / `registry_test.go` | ollama 注册 + 测试改离线空凭证 |
+| 修改 | `internal/config/config.go` / `config_test.go` | AllProviderIDs + ensureKnownProviders |
+| 修改 | `README.md` / `README.zh-CN.md` | 支持平台表 +Ollama |
+| 修改 | `docs/ADDING_A_PROVIDER.md` | 速查表 +Ollama 特殊说明 |
+| 修改 | `docs/wiki/00~09` + `.covered-files` | 预算模块补同步 + ollama 条目 |
+
+> 本次变更：2 个 commit（+685/-57 行，26 个文件）
+
+### 未完成 & 下一步
+1. **Ollama 真实账号冒烟**——用户在配置面板粘贴 Ollama Cookie → 测试连接 → 球格展示 5 小时用量
+2. **推送 master 到远程**——本地领先 2 个提交（a59635f / cc82c71），确认后 `git push`
+
+### 已知问题 & 注意事项
+- Ollama 依赖 ollama.com/settings 页面结构，页面改版 → "页面结构可能已变化"错误，需更新解析
+- Cookie 失效判定：302 跳转 / 登录页 HTML 特征（form + "Sign in to Ollama"）
+- 根目录 `09314663d2975b947bfa75fcf46e4769.png` 为 preview-2.png 未跟踪副本，可删除（未删，避免误删用户文件）
+
+### 关键上下文
+- Ollama 注册表字段：`textarea` Cookie，登录 URL `https://ollama.com/settings`；用户在设置页登录后粘贴含 wos-session / __Secure-session 的 Cookie（支持 "Copy as PowerShell" 整段粘贴）
+- 新增 Provider 完整路径见 `docs/ADDING_A_PROVIDER.md`（注册表驱动，前端零改动）
+- Wiki 指针状态：`docs/wiki/` 11 文件，synced_commit `cc82c71`，`.covered-files` 49 项
+- GitHub 仓库：https://github.com/eeljoe/quota-viewer（公开，远程落后本地 2 commit）

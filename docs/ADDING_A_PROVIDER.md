@@ -342,7 +342,12 @@ wails build
 | `mimo` | 小米 MiMo | M | Cookie | usage | `mimo.go` |
 | `deepseek` | DeepSeek | D | API Key (Bearer) | balance | `deepseek.go` |
 | `ollama` | Ollama | O | Browser session Cookie | usage | `ollama.go` |
+| `command-code` | Command Code | C | API Key (Bearer, `user_...`) | usage | `commandcode.go` |
 
 ### Ollama Cloud 特殊说明
 
 Ollama Cloud 当前没有公开的 quota API。`ollama.go` 请求 `GET https://ollama.com/settings`，解析页面中的 `Session usage`（5 小时窗口）作为 `QuotaResult.Percent`，并将 `Weekly usage` 作为辅助信息写入 `Remaining`。重置时间从对应 HTML 元素的 `data-time` 属性读取；页面未登录、结构变化或 Cookie 失效时返回错误。注册表字段使用 `textarea`，用户可在 Ollama 设置页登录后复制包含 `wos-session` 或 `__Secure-session` 的 Cookie，或直接粘贴浏览器的 “Copy as PowerShell” 内容。
+
+### Command Code 特殊说明
+
+Command Code（commandcode.ai，AI 编码订阅）无公开额度查询 API。`commandcode.go` 逆向官方 CLI（npm 包 `command-code` 的 `dist/cli.mjs`），复用其私有路由：`GET https://api.commandcode.ai/alpha/whoami` 取 `orgId`，再 `GET /alpha/billing/credits`（团队用户带 `?orgId=`）取月度剩余 credits 与 5 小时/周滚动窗口。认证 `Authorization: Bearer <API Key>`；Key 在 Studio 生成（`user_...`），与官方 CLI 写入 `~/.commandcode/auth.json` 的 `apiKey` 相同——注册表 API Key 字段留空时自动读取该文件（用户已登录官方 CLI 则免填）。主展示 = 5 小时窗口用量（驱动球色），月度剩余与周窗口写入 `Remaining`，`ResetAt` 取 5 小时窗口的 `resetAt`（epoch 毫秒 → UTC ISO）。该接口为 CLI 内部路由，结构可能随 CLI 升级变化，失效时对照官方 cli.mjs 更新 `commandcode.go`。

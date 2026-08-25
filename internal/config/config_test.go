@@ -67,6 +67,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "mimo", Enabled: false},
 			{ID: "deepseek", Enabled: true, Creds: map[string]string{"api_key": "d1"}, Budget: 500.00},
 			{ID: "ollama", Enabled: false, Creds: map[string]string{"cookie": "wos-session=o1"}},
+			{ID: "command-code", Enabled: false},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -150,8 +151,14 @@ func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
 		t.Fatalf("expected %d providers after migration, got %d", len(AllProviderIDs), len(cfg.Providers))
 	}
 	last := cfg.Providers[len(cfg.Providers)-1]
-	if last.ID != "ollama" || last.Enabled {
-		t.Errorf("expected disabled ollama appended, got %+v", last)
+	if last.ID != "command-code" || last.Enabled {
+		t.Errorf("expected disabled command-code appended, got %+v", last)
+	}
+	// ollama 也应被补全且默认关闭
+	for _, p := range cfg.Providers {
+		if p.ID == "ollama" && p.Enabled {
+			t.Errorf("expected disabled ollama appended, got %+v", p)
+		}
 	}
 	if cfg.Providers[0].Creds["api_key"] != "k" {
 		t.Errorf("existing credentials should be preserved: %+v", cfg.Providers[0])

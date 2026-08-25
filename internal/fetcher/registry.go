@@ -98,6 +98,19 @@ var registry = []ProviderDef{
 			return NewOllamaFetcher(creds["cookie"])
 		},
 	},
+	{
+		ID:          "command-code",
+		DisplayName: "Command Code",
+		Abbr:        "C",
+		Kind:        KindUsage,
+		LoginURL:    "https://commandcode.ai/studio",
+		Fields: []CredentialField{
+			{Key: "api_key", Label: "API Key(留空自动读 ~/.commandcode/auth.json)", Type: "password"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewCommandCodeFetcher(creds["api_key"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

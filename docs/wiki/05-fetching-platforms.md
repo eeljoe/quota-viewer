@@ -68,11 +68,13 @@ func Get(id string) (ProviderDef, bool)
 | `mimo` | 小米 MiMo | M | cookie (textarea) | `https://platform.xiaomimimo.com/api/v1/tokenPlan/usage`, Cookie + Referer |
 | `deepseek` | DeepSeek | D | api_key (password) | `https://api.deepseek.com/user/balance`, Bearer |
 | `ollama` | Ollama | O | cookie (textarea) | `https://ollama.com/settings`, Cookie 头,HTML 解析(无公开 quota API) |
+| `command-code` | Command Code | C | api_key (password, 留空自动读 `~/.commandcode/auth.json`) | `https://api.commandcode.ai/alpha/*`, Bearer(CLI 私有路由) |
 
 - 每个 fetcher 的 `baseURL`/`apiURL` 可重写（构造时传空用默认）——测试通过该参数注入 httptest server
 - OpenCode Go 抓取的是 Dashboard 页面（SSR hydration + data-slot 双模式解析）
 - DeepSeek 是余额型：`Kind="balance"`，响应 `{"is_available":bool,"balance_infos":[{"currency","total_balance",...}]}`；取**第一条非零余额**的币种（如 USD $0.00 + CNY ¥247.51 → 显示 `余额 ¥247.51 (CNY)`）；`is_available=false` 或全部余额为 0 → Error；展示值经 ApplyBudget 按用户预算换算为消耗百分比（默认预算 300）
 - Ollama Cloud 无公开 quota API（issue #15132），抓取 `ollama.com/settings` 页 HTML 解析 Session(5 小时)与 Weekly 用量百分比（详见 ADDING_A_PROVIDER.md 特殊说明）
+- Command Code 无公开额度 API，`commandcode.go` 复用官方 CLI 的私有路由 `/alpha/whoami` + `/alpha/billing/credits`（Bearer 认证）；主展示 = 5 小时窗口用量，月度剩余/周窗口写入 `Remaining`，`ResetAt` 取 5 小时窗口 `resetAt`（epoch ms → UTC ISO）。结构随 CLI 升级可能变化，失效时对照官方 cli.mjs 更新
 - `format.go` 的 `formatNum` 做千分位展示格式化（仅内部使用）
 
 ### 预算换算（budget.go）
@@ -93,7 +95,7 @@ func Get(id string) (ProviderDef, bool)
 ### 测试模式
 
 全部用 `net/http/httptest` 起假服务，`baseURL` 指向假服务：
-- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` 覆盖成功/失败/异常响应路径
+- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` 覆盖成功/失败/异常响应路径
 - `registry_test.go` 校验注册表完整性（6 个、顺序、字段定义、Build 可执行；空凭证保持离线）
 
 ---
@@ -104,7 +106,7 @@ func Get(id string) (ProviderDef, bool)
 |---|---|
 | `internal/fetcher/types.go` | QuotaResult + Fetcher 接口 + Kind 常量（契约核心） |
 | `internal/fetcher/registry.go` | ProviderDef + 注册表（新增 Provider 的唯一入口） |
-| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` | 各平台实现 |
+| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` / `commandcode.go` | 各平台实现 |
 | `internal/fetcher/format.go` | 千分位格式化 |
 | `internal/fetcher/budget.go` | 余额型预算 → 消耗百分比换算(ApplyBudget) |
 

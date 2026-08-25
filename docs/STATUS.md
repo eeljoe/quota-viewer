@@ -16,7 +16,7 @@
 >
 > 📍 最新章节位置：`## 会话记录：2026-08-25 23:11`（搜索定位，可能不在文件末尾）
 > 🔖 对应 commit：`3f1df7b` on `master`（本会话 STATUS 更新待提交）
-> 📊 累计会话数：主文档 5 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📊 累计会话数：主文档 6 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 

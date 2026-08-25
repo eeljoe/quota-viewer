@@ -31,8 +31,8 @@ func NewOpenCodeGoFetcher(workspaceID string, sessionToken string) *OpenCodeGoFe
 
 // windowInfo 描述一个配额窗口。
 type windowInfo struct {
-	windowType   string // "rolling", "weekly", "monthly"
-	usagePercent int
+	windowType   string  // "rolling", "weekly", "monthly"
+	usagePercent float64 // OpenCode 页面返回浮点百分比(如 3.1)
 	resetInSec   int
 }
 
@@ -158,9 +158,9 @@ func (f *OpenCodeGoFetcher) Fetch() QuotaResult {
 		}
 	}
 
-	result.Percent = float64(best.usagePercent)
-	result.Remaining = fmt.Sprintf("%s · 已用 %d%% · 剩余 %d%%",
-		windowLabel(best.windowType), best.usagePercent, 100-best.usagePercent)
+	result.Percent = best.usagePercent
+	result.Remaining = fmt.Sprintf("%s · 已用 %s · 剩余 %s", windowLabel(best.windowType),
+		formatUsagePercent(best.usagePercent), formatUsagePercent(100-best.usagePercent))
 	result.ResetAt = time.Now().Add(time.Duration(best.resetInSec) * time.Second).Format(time.RFC3339)
 
 	return result
@@ -190,12 +190,12 @@ func parseSSRWindows(html string) []windowInfo {
 }
 
 // parseSSRFields 解析 SSR 窗口数据内部的 key=value 对。
-// 内部格式: usagePercent:7,resetInSec:18000 (顺序不固定)
-func parseSSRFields(inner string) (percent int, resetSec int) {
+// 内部格式: usagePercent:3.1,resetInSec:18000 (顺序不固定;usagePercent 为浮点)
+func parseSSRFields(inner string) (percent float64, resetSec int) {
 	for _, part := range strings.Split(inner, ",") {
 		part = strings.TrimSpace(part)
 		if strings.HasPrefix(part, "usagePercent:") {
-			percent, _ = strconv.Atoi(strings.TrimPrefix(part, "usagePercent:"))
+			percent, _ = strconv.ParseFloat(strings.TrimPrefix(part, "usagePercent:"), 64)
 		} else if strings.HasPrefix(part, "resetInSec:") {
 			resetSec, _ = strconv.Atoi(strings.TrimPrefix(part, "resetInSec:"))
 		}
@@ -225,9 +225,18 @@ func parseSlotWindows(html string) []windowInfo {
 		// data-slot 没有 resetInSec, 默认 0 表示未知
 		windows = append(windows, windowInfo{
 			windowType:   wt,
-			usagePercent: percent,
+			usagePercent: float64(percent),
 			resetInSec:   0,
 		})
 	}
 	return windows
+}
+
+// formatUsagePercent 把浮点百分比格式化为紧凑文本:整数值去小数(43 → "43%"),
+// 非整数保留一位小数(3.1 → "3.1%")。
+func formatUsagePercent(p float64) string {
+	if p == float64(int(p)) {
+		return fmt.Sprintf("%d%%", int(p))
+	}
+	return fmt.Sprintf("%.1f%%", p)
 }

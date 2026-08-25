@@ -71,10 +71,10 @@ func Get(id string) (ProviderDef, bool)
 | `command-code` | Command Code | C | api_key (password, 留空自动读 `~/.commandcode/auth.json`) | `https://api.commandcode.ai/alpha/*`, Bearer(CLI 私有路由) |
 
 - 每个 fetcher 的 `baseURL`/`apiURL` 可重写（构造时传空用默认）——测试通过该参数注入 httptest server
-- OpenCode Go 抓取的是 Dashboard 页面（SSR hydration + data-slot 双模式解析）
+- OpenCode Go 抓取的是 Dashboard 页面（SSR hydration + data-slot 双模式解析）；`usagePercent` 为浮点（如 `3.1`），解析用 ParseFloat
 - DeepSeek 是余额型：`Kind="balance"`，响应 `{"is_available":bool,"balance_infos":[{"currency","total_balance",...}]}`；取**第一条非零余额**的币种（如 USD $0.00 + CNY ¥247.51 → 显示 `余额 ¥247.51 (CNY)`）；`is_available=false` 或全部余额为 0 → Error；展示值经 ApplyBudget 按用户预算换算为消耗百分比（默认预算 300）
 - Ollama Cloud 无公开 quota API（issue #15132），抓取 `ollama.com/settings` 页 HTML 解析 Session(5 小时)与 Weekly 用量百分比（详见 ADDING_A_PROVIDER.md 特殊说明）
-- Command Code 无公开额度 API，`commandcode.go` 复用官方 CLI 的私有路由 `/alpha/whoami` + `/alpha/billing/credits`（Bearer 认证）；主展示 = 5 小时窗口用量，月度剩余/周窗口写入 `Remaining`，`ResetAt` 取 5 小时窗口 `resetAt`（epoch ms → UTC ISO）。结构随 CLI 升级可能变化，失效时对照官方 cli.mjs 更新
+- Command Code 无公开额度 API，`commandcode.go` 复用官方 CLI 的私有路由 `/alpha/whoami` + `/alpha/billing/credits`（Bearer 认证）；主展示 = 5 小时窗口用量，周窗口与剩余 credits 写入 `Remaining`，`ResetAt` 取 5 小时窗口 `resetAt`（epoch ms → UTC ISO）。结构随 CLI 升级可能变化，失效时对照官方 cli.mjs 更新
 - `format.go` 的 `formatNum` 做千分位展示格式化（仅内部使用）
 
 ### 预算换算（budget.go）

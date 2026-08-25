@@ -131,13 +131,15 @@ func (f *CommandCodeFetcher) Fetch() QuotaResult {
 		result.ResetAt = time.UnixMilli(five.ResetAt).UTC().Format(time.RFC3339)
 	}
 
-	remain := fmt.Sprintf("5小时 %.2f/%.2f 已用", five.Used, five.Cap)
+	// Remaining 只放进度条没有表达的辅助信息:周窗口与剩余 credits
+	// (5 小时窗口已由 Used/Percent/进度条展示,不再重复)。
+	var remain []string
 	if wk := cr.WindowLimits.Weekly; wk.Cap > 0 {
-		remain += fmt.Sprintf(" · 周 %.2f/%.2f", wk.Used, wk.Cap)
+		remain = append(remain, fmt.Sprintf("周 $%.2f/%.2f", wk.Used, wk.Cap))
 	}
 	total := cr.Credits.MonthlyCredits + cr.Credits.PurchasedCredits + cr.Credits.FreeCredits
-	remain += fmt.Sprintf(" · 余额 $%.2f", total)
-	result.Remaining = remain
+	remain = append(remain, fmt.Sprintf("余额 $%.2f", total))
+	result.Remaining = strings.Join(remain, " · ")
 
 	return result
 }

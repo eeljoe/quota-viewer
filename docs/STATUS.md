@@ -7,25 +7,25 @@
 > 1. 阅读下方「上下文摘要（TL;DR）」快速了解项目状态
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
-> 4. **直接跳到最新一条「会话记录：2026-08-25 12:13」章节**（用标题搜索定位，不要假设在文件末尾）
+> 4. **直接跳到最新一条「会话记录：2026-08-25 23:11」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 5. 如果最新章节引用了更早的内容，再按需回溯
 > 6. 给用户一份简短进度汇报（3-5句话）：当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项
 > 7. **严禁在用户给出指示之前修改任何文件或代码**
 > 8. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-08-25 12:13`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`d149d3d`（feat，本会话）+ 本次 docs 提交（待推送）
+> 📍 最新章节位置：`## 会话记录：2026-08-25 23:11`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`3f1df7b` on `master`（本会话 STATUS 更新待提交）
 > 📊 累计会话数：主文档 5 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "d149d3d", "branch": "master", "dirty": false, "timestamp": "2026-08-25T12:20:00+08:00"} -->
+<!-- git-meta: {"last_commit": "3f1df7b", "branch": "master", "dirty": true, "timestamp": "2026-08-25T23:11:00+08:00"} -->
 
-- **日期**：2026-08-25 12:13
-- **会话摘要**：新增 Command Code 额度监控 Provider（第七平台，逆向官方 CLI 私有 /alpha API）——实现 + 测试 + 真实账号冒烟通过；feat `d149d3d` 已提交（docs 提交见本次）
+- **日期**：2026-08-25 23:11
+- **会话摘要**：Command Code Provider 会话收尾——用户重启验证通过（OpenCode Go 浮点修复 + Command Code 展示精简均生效）；提交推送完成；STATUS 更新待提交
 
 ---
 
@@ -349,3 +349,31 @@
 - **OpenCode Go「未找到有效配额窗口」修复**：OpenCode 页面把 `usagePercent` 改成浮点（如 `3.1`），`opencode_go.go` 用 `strconv.Atoi` 解析失败 → 全被当 0 → 误报无有效窗口（真实数据 rolling 3.1 / weekly 43 / monthly 38.3）。改为 `ParseFloat` + `windowInfo.usagePercent` 改 `float64`，新增 2 个浮点用例；真实冒烟 Percent=43.5、`周窗口 · 已用 43.5% · 剩余 56.5%`
 - **Command Code Remaining 精简**：原 `5小时 x/x 已用 · 周… · 余额…` 三连串在 340px 面板 210px 区域被省略号截断成乱串、且「5小时 x/x」与进度条重复。去掉 5h 段，Remaining 改为 `周 $1.26/6.00 · 余额 $8.74`（实测）
 - `go test ./...` 全绿、`wails build` 成功（产物回退惯例）；wiki 05 同步浮点说明
+
+---
+
+## 会话记录：2026-08-25 23:11
+
+> **会话摘要**：用户重启验证通过——OpenCode Go 浮点修复生效（周窗口 43.5%）、Command Code 剩余文本可读；提交推送与 PNG 清理收尾；截图计划取消
+> **Git**：`3f1df7b` on `master`（dirty：本会话 STATUS 更新待提交）
+
+### 本次完成
+- （上会话遗留）**重启验证通过**：新 exe 打开后 opencode-go 重新勾选，球格正常——Go 显示周窗口 43.5%、Command Code 显示 5 小时窗口进度 + `周 $1.26/6.00 · 余额 $8.74`，不再截断堆叠
+- （上会话遗留）提交推送完成：`231657c`（fix）+ `3f1df7b`（docs）已推送 GitHub（`912c06a..3f1df7b`）
+- （上会话遗留）根目录截图副本 PNG 已删除（用户确认）
+- 截图计划取消（用户明确"截图就算了"）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 不截图记录 UI 效果 | 用户明确不需要，功能验证以实际使用为准 | 存 preview-3.png 到 docs/screenshots |
+
+### 未完成 & 下一步
+- 无明确待办；可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代 / Wails 版本升级（CLI 2.13.0 vs go.mod 2.12.0）
+
+### 关键上下文
+- **当前启用 Provider（球格 3 上限）**：`kimi` / `opencode-go` / `command-code`（ollama 在配置里保持 enabled=false——用户勾选 opencode-go 时被 3 上限钳出让位，凭证都还在，随时可换）
+- OpenCode Go 页面 `usagePercent` 已是浮点格式，解析逻辑用 ParseFloat（旧整数用例仍兼容）
+- Command Code Remaining 契约：只含辅助信息（周窗口 + 余额），5 小时窗口由进度条主展示
+- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项
+- GitHub 仓库：https://github.com/eeljoe/quota-viewer（已同步至 3f1df7b）

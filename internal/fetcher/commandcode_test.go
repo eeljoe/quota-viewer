@@ -113,10 +113,13 @@ func TestCommandCode_ValidResp_FormatsResult(t *testing.T) {
 	if result.Percent < 21.2 || result.Percent > 21.3 { // 0.6385129295 / 3 * 100
 		t.Errorf("expected Percent~21.28, got %f", result.Percent)
 	}
-	if !strings.Contains(result.Remaining, "5小时") ||
-		!strings.Contains(result.Remaining, "周") ||
+	if !strings.Contains(result.Remaining, "周") ||
 		!strings.Contains(result.Remaining, "余额 $9.36") {
 		t.Errorf("unexpected Remaining: '%s'", result.Remaining)
+	}
+	// Remaining 不应再重复 5 小时窗口(已由进度条表达)
+	if strings.Contains(result.Remaining, "5小时") {
+		t.Errorf("Remaining should not repeat 5-hour window, got '%s'", result.Remaining)
 	}
 	if result.ResetAt != "2026-08-25T07:45:12Z" {
 		t.Errorf("expected ResetAt='2026-08-25T07:45:12Z', got '%s'", result.ResetAt)

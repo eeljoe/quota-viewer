@@ -209,6 +209,60 @@ func TestOpenCodeGoFetcher_SSRData_ReversedFieldOrder(t *testing.T) {
 	}
 }
 
+// TestOpenCodeGoFetcher_SSRData_DecimalPercent 验证 usagePercent 浮点值(OpenCode 页面实际格式,如 3.1)能正确解析。
+func TestOpenCodeGoFetcher_SSRData_DecimalPercent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		html := `<script>
+  rollingUsage:$R[34]={status:"ok",resetInSec:11630,usagePercent:3.1,usage:36862966,limit:12000000},
+  weeklyUsage:$R[35]={status:"ok",resetInSec:467844,usagePercent:43,usage:1289220543,limit:3000000000},
+  monthlyUsage:$R[36]={status:"ok",resetInSec:1275137,usagePercent:38.3,usage:2300879983,limit:6000000000}
+</script>`
+		w.Write([]byte(html))
+	}))
+	defer server.Close()
+
+	f := NewOpenCodeGoFetcher("ws-1", "tok_abc")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	// 最高 = weekly 43(> rolling 3.1 > monthly 38.3)
+	if result.Percent != 43 {
+		t.Errorf("expected Percent=43 (weekly highest), got %f", result.Percent)
+	}
+	if !strings.Contains(result.Remaining, "周窗口") {
+		t.Errorf("expected '周窗口' in Remaining, got '%s'", result.Remaining)
+	}
+}
+
+// TestOpenCodeGoFetcher_SSRData_DecimalOnlyHighest 验证浮点窗口可被选中为最高值(rolling 3.1 高于 weekly 2)。
+func TestOpenCodeGoFetcher_SSRData_DecimalOnlyHighest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		html := `<script>
+  rollingUsage:$R[1]={usagePercent:3.1,resetInSec:18000}
+  weeklyUsage:$R[2]={usagePercent:2,resetInSec:540000}
+</script>`
+		w.Write([]byte(html))
+	}))
+	defer server.Close()
+
+	f := NewOpenCodeGoFetcher("ws-1", "tok_abc")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Percent != 3.1 {
+		t.Errorf("expected Percent=3.1 (rolling highest), got %f", result.Percent)
+	}
+	if !strings.Contains(result.Remaining, "5小时窗口") {
+		t.Errorf("expected '5小时窗口' in Remaining, got '%s'", result.Remaining)
+	}
+}
+
 // TestOpenCodeGoFetcher_DataSlot_Fallback 验证 SSR 匹配失败时回退到 data-slot HTML 解析。
 func TestOpenCodeGoFetcher_DataSlot_Fallback(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

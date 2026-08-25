@@ -23,7 +23,7 @@ type ProviderConfig struct {
 }
 
 // AllProviderIDs 全部已知 Provider id(与 fetcher 注册表一致,顺序 = 展示顺序)。
-var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama"}
+var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code"}
 
 // DefaultProviderIDs 默认启用的 Provider(与现状一致:Kimi/讯飞/OpenCode Go)。
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"}

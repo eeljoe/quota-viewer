@@ -31,6 +31,7 @@
 | 小米 MiMo | Cookie | 套餐 Token 用量 |
 | DeepSeek | API Key (`sk-...`) | 账户余额（余额型） |
 | Ollama | 浏览器会话 Cookie | Cloud 5 小时 Session 用量 / 周用量（设置页） |
+| Command Code | API Key (`user_...`,留空自动读 `~/.commandcode/auth.json`) | 5 小时 / 周滚动窗口用量 + 剩余 credits |
 
 > 提示：Cookie 类凭证支持在浏览器 F12 → 网络标签 → 复制请求头后，直接粘贴 "Copy as PowerShell" 格式的整段脚本，保存时自动解析为 Cookie 请求头。
 

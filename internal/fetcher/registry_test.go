@@ -2,12 +2,12 @@ package fetcher
 
 import "testing"
 
-func TestGetAll_ContainsSixProviders_InStableOrder(t *testing.T) {
+func TestGetAll_ContainsSevenProviders_InStableOrder(t *testing.T) {
 	all := GetAll()
-	if len(all) != 6 {
-		t.Fatalf("expected 6 providers, got %d", len(all))
+	if len(all) != 7 {
+		t.Fatalf("expected 7 providers, got %d", len(all))
 	}
-	want := []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama"}
+	want := []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code"}
 	for i, id := range want {
 		if all[i].ID != id {
 			t.Errorf("expected providers[%d].ID=%s, got %s", i, id, all[i].ID)
@@ -38,6 +38,8 @@ func TestGetAll_EachProvider_HasCompleteDefinition(t *testing.T) {
 }
 
 func TestGetAll_Build_ReturnsFetcherForEach(t *testing.T) {
+	// 隔离用户目录:任何 Provider 的空凭证 Build 都不应读取/访问真实用户凭证或网络。
+	t.Setenv("USERPROFILE", t.TempDir())
 	for _, d := range GetAll() {
 		// 使用空凭证：只验证 Build 可执行且 Fetch 不 panic，不访问真实网络。
 		f := d.Build(map[string]string{})

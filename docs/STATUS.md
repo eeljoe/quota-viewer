@@ -7,34 +7,34 @@
 > 1. 阅读下方「上下文摘要（TL;DR）」快速了解项目状态
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
-> 4. **直接跳到最新一条「会话记录：2026-08-13 01:33」章节**（用标题搜索定位，不要假设在文件末尾）
+> 4. **直接跳到最新一条「会话记录：2026-08-25 12:13」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 5. 如果最新章节引用了更早的内容，再按需回溯
 > 6. 给用户一份简短进度汇报（3-5句话）：当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项
 > 7. **严禁在用户给出指示之前修改任何文件或代码**
 > 8. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-08-13 01:33`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`9927e2e` on `master`
-> 📊 累计会话数：主文档 4 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-08-25 12:13`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`d149d3d`（feat，本会话）+ 本次 docs 提交（待推送）
+> 📊 累计会话数：主文档 5 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "9927e2e", "branch": "master", "dirty": false, "timestamp": "2026-08-13T01:33:00Z"} -->
+<!-- git-meta: {"last_commit": "d149d3d", "branch": "master", "dirty": false, "timestamp": "2026-08-25T12:20:00+08:00"} -->
 
-- **日期**：2026-08-13 01:33
-- **会话摘要**：Ollama 真实账号冒烟通过（PowerShell Cookie 整段粘贴 → 测试成功 → 球格展示 5 小时用量）；触发旧会话归档
+- **日期**：2026-08-25 12:13
+- **会话摘要**：新增 Command Code 额度监控 Provider（第七平台，逆向官方 CLI 私有 /alpha API）——实现 + 测试 + 真实账号冒烟通过；feat `d149d3d` 已提交（docs 提交见本次）
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.0.0 已开源 + 持续迭代**——六平台监控全部实测可用（Ollama 冒烟通过）；工作区干净
-- **当前唯一目标**：无明确待办
-- 下一步：推送 master（本地领先远程 3 commit）；可选——根目录 PNG 副本清理 / 新 Provider 扩展
+- 当前阶段：**v1.0.0 已开源 + 持续迭代**——七平台监控全部实测可用（Ollama、Command Code 真实账号冒烟通过）；工作区干净
+- **当前唯一目标**：docs（STATUS）提交后推送 master（本地领先远程 5 commit，含历史遗留 4 个）
+- 下一步：按项目习惯提交（feat + docs）后推送 master
 - 注意事项：根目录遗留一张未跟踪截图副本 PNG（preview-2.png 的副本，可删除）；无阻塞项
 
 ---
@@ -46,7 +46,7 @@
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
 - **功能**：悬浮球（1-3 格动态，颜色=状态）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）
 
 ## 当前分支与最近提交
 
@@ -64,24 +64,26 @@
 
 ## 当前任务进度
 
-### ✅ 已完成（截至 2026-08-13）
-- **六平台监控**：Kimi / 讯飞星辰 / OpenCode Go / MiMo / DeepSeek / Ollama——fetcher 注册表驱动，新增平台前端零改动
+### ✅ 已完成（截至 2026-08-25）
+- **七平台监控**：Kimi / 讯飞星辰 / OpenCode Go / MiMo / DeepSeek / Ollama / Command Code——fetcher 注册表驱动，新增平台前端零改动
 - **DeepSeek 预算条**（8/7）：QuotaResult Balance/Currency + `budget.go` ApplyBudget + ProviderConfig.Budget + 前端预算输入/色阈值/刷新倒计时
 - **Ollama Provider**（8/13）：`ollama.go` HTML 解析 5 小时 Session 主窗口 + 周用量；14 个 httptest 用例；config 自动补全新 Provider（默认关闭）；真实账号冒烟通过（8/13 01:33）
+- **Command Code Provider**（8/25）：`commandcode.go` 逆向官方 CLI 私有 `/alpha/*` API（whoami + billing/credits），Bearer API Key（留空自动读 `~/.commandcode/auth.json`）；5 小时窗口驱动球色 + 周/月剩余；8 个 httptest 用例；config 自动补全；真实账号冒烟通过（文档见 05 与 ADDING_A_PROVIDER 特殊说明）
 - **v1.0.0 开源发布**：GitHub eeljoe/quota-viewer + Release v1.0.0（exe 附件）
 
 ### 🔄 进行中
 - 无
 
 ### 📋 待办
-- 推送 master（本地领先远程 3 commit）
+- 提交本会话改动（Command Code Provider，feat + docs 两个 commit）
+- 推送 master（本地领先远程 4 commit，含历史遗留 3 个）
 - 根目录截图副本 PNG 清理（待用户确认）
 
 ---
 
 ## 未完成 & 下一步
 
-1. **推送 master 到远程**——本地领先 3 个提交（a59635f / cc82c71 / 9927e2e），确认后 `git push`
+1. **提交本会话改动**——Command Code Provider（代码/测试/文档），按项目习惯拆 feat + docs 两个 commit，之后**推送 master 到远程**（本地领先远程 4 commit，确认后 `git push`）
 2. 可选：根目录截图副本 PNG 删除（用户确认后）
 3. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代 / Wails 版本升级（CLI 2.13.0 vs go.mod 2.12.0）
 
@@ -93,6 +95,7 @@
 - 前端行尾警告：dist/wailsjs 文件 LF→CRLF，git 会提示但不影响构建
 - 根目录 `09314663d2975b947bfa75fcf46e4769.png` 是 `docs/screenshots/preview-2.png` 的未跟踪副本，可删除（未删，避免误删用户文件）
 - Ollama 依赖 ollama.com/settings 页面 HTML 结构（无公开 quota API），页面改版 → "页面结构可能已变化"错误，需更新 `ollama.go` 解析
+- Command Code 依赖官方 CLI 私有 `/alpha/*` API（无公开额度 API），CLI 升级可能改结构 → 需对照官方 cli.mjs 更新 `commandcode.go`；API Key 留空自动读 `~/.commandcode/auth.json`（与本机官方 CLI 复用同一凭证，Key 变更会同时影响两者）
 - 余额型（DeepSeek）经 ApplyBudget 按预算换算消耗百分比（默认预算 300）；取首个非零余额币种（CNY→¥ / USD→$），全部为 0 才报错
 
 ---
@@ -292,3 +295,52 @@
 - 无公开 quota API，抓的是 settings 页面 HTML；页面改版需更新 `ollama.go` 解析
 - Wiki 指针状态：`docs/wiki/` 12 文件（新增 99 归档页），`.covered-files` 49 项
 - GitHub 仓库：https://github.com/eeljoe/quota-viewer（公开，远程落后本地 3 commit，待推送）
+
+---
+
+## 会话记录：2026-08-25 12:13
+
+> **会话摘要**：新增 Command Code 额度监控 Provider（第七平台）——逆向官方 CLI 私有 /alpha API，实现 + 8 个 httptest 用例 + 真实账号冒烟通过；顺手加固注册表空凭证测试隔离用户目录
+> **Git**：`d149d3d`（feat）on `master`（本会话；docs 提交见本次）
+
+### 本次完成
+- 调研：从 `command-code` npm 包（v1.32.2）`dist/cli.mjs` 逆向出官方 CLI 的额度接口——`GET https://api.commandcode.ai/alpha/whoami`（取 orgId）+ `GET /alpha/billing/credits`（月度剩余 credits + 5 小时/周滚动窗口），认证 `Authorization: Bearer <API Key>`（`user_...`，Studio 生成，与 `~/.commandcode/auth.json` 的 apiKey 同源）
+- 新增 `internal/fetcher/commandcode.go`：主展示 = 5 小时窗口用量（驱动球色，与 Ollama 同构），月末剩余与周窗口写入 `Remaining`，`ResetAt` 取 5h 窗口 `resetAt`（epoch ms → UTC ISO）；API Key 留空自动读 `~/.commandcode/auth.json`（用户已登录官方 CLI 免填）
+- 注册到 registry（`command-code` / C / KindUsage）+ config `AllProviderIDs` 追加（ensureKnownProviders 自动补全新 Provider，默认关闭）
+- 测试：`commandcode_test.go` 8 个 httptest 用例（覆盖空 key、auth.json 自动读取、401、500、正常解析、org 用户带 orgId、结构缺失）；`registry_test.go` 改为 6→7 个并隔离 USERPROFILE（防止空凭证测试读到真实用户凭证/网络）
+- 验证：`go test -count=1 ./...` 全绿 / `go vet` 干净 / `wails build` 成功（2m13s，dist/wailsjs 重建产物与 HEAD 逐字节一致仅 hash 变，按惯例回退）；真实环境冒烟通过——`5小时 0.73/3.00 已用 · 周 0.73/6.00 · 余额 $9.27`（individual-go 计划真实数据）
+- README 双语平台表 / `docs/ADDING_A_PROVIDER.md` 速查表 + Command Code 特殊说明 / wiki 05 平台表与测试清单同步
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 复用官方 CLI 私有 `/alpha/*` 端点 | Command Code 无公开额度查询 API，CLI 是其唯一数据源 | 抓 Studio 页面 HTML（更脆） / 放弃该平台 |
+| 主展示用 5 小时窗口 | 与 Ollama 同构，短窗口耗尽即被限流，球色告警最有价值 | 月度 credits 消耗为主 |
+| API Key 留空自动读 `~/.commandcode/auth.json` | 用户本机已登录官方 CLI，复用同一凭证免填 | 仅手动填 Key |
+| 注册表测试隔离 USERPROFILE | 空凭证 Build 测试不能读真实凭证或发真实网络 | 单 Provider 特判 |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `internal/fetcher/commandcode.go` | Command Code 额度抓取器（/alpha 私有 API） |
+| 新增 | `internal/fetcher/commandcode_test.go` | 8 个 httptest 用例 |
+| 修改 | `internal/fetcher/registry.go` / `registry_test.go` | command-code 注册 + 测试 6→7 & 隔离 HOME |
+| 修改 | `internal/config/config.go` / `config_test.go` | AllProviderIDs +command-code |
+| 修改 | `README.md` / `README.zh-CN.md` | 支持平台表 +Command Code |
+| 修改 | `docs/ADDING_A_PROVIDER.md` | 速查表 + Command Code 特殊说明 |
+| 修改 | `docs/wiki/05-fetching-platforms.md` | 平台表 + 测试清单 + 关键文件 +Command Code |
+| 修改 | `docs/STATUS.md` | 本文件 |
+
+> 本次变更（未提交）：约 +430/-30 行，11 个文件
+
+### 未完成 & 下一步
+1. **提交并推送**——按项目习惯拆 feat（代码/测试/README/ADDING_A_PROVIDER/wiki）+ docs（STATUS）两个 commit，然后 `git push`（本地领先远程 4 commit）
+2. 可选：根目录截图副本 PNG 删除（待用户确认）
+3. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代
+
+### 关键上下文
+- Command Code 端点（逆向官方 cli.mjs，`dist/bundled` 常量 `or/sr/ir/lr`）：`https://api.commandcode.ai/alpha/{whoami,billing/credits,billing/subscriptions,usage/summary}`；credits 响应含 `credits.monthlyCredits/purchasedCredits/freeCredits` + `windowLimits.fiveHour/weekly{used,cap,resetAt(ms)}`
+- CLI 认证：优先 `COMMANDCODE_API_KEY` 环境变量，其次 `~/.commandcode/auth.json` 的 `apiKey`；authorization 头为 `Bearer <key>`
+- 用户账号现状：individual-go 计划（月度 credits、5h cap $3 / 周 $6），个人账号 org=null（credits 端不带 orgId 参数）
+- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项
+- GitHub 仓库：https://github.com/eeljoe/quota-viewer（公开，远程落后本地 4 commit，待推送）

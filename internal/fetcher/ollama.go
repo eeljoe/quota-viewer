@@ -120,12 +120,16 @@ func (f *OllamaFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 用户关心的是 Session(5 小时)窗口:它驱动悬浮球颜色和主进度条。
+	// Session(5 小时)窗口驱动 Used/ResetAt/Remaining 首项;
+	// Percent 取 5h 与周窗口中更紧张的一个,周额度耗尽时球色必须告警。
 	result.Used = session.percent
 	result.Percent = session.percent
 	result.ResetAt = session.resetAt
 	result.Remaining = fmt.Sprintf("5小时 %.1f%% 已用", session.percent)
 	if weekly.found {
+		if weekly.percent > result.Percent {
+			result.Percent = weekly.percent
+		}
 		result.Remaining += fmt.Sprintf(" · 周 %.1f%% 已用", weekly.percent)
 	}
 	return result

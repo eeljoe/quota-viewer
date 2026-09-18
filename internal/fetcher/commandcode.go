@@ -132,9 +132,13 @@ func (f *CommandCodeFetcher) Fetch() QuotaResult {
 	}
 
 	// Remaining 只放进度条没有表达的辅助信息:周窗口与剩余 credits
-	// (5 小时窗口已由 Used/Percent/进度条展示,不再重复)。
+	// (5 小时窗口已由 Used/进度条展示,不再重复)。
+	// Percent 取 5h 与周窗口中更紧张的一个,周额度耗尽时球色必须告警。
 	var remain []string
 	if wk := cr.WindowLimits.Weekly; wk.Cap > 0 {
+		if p := wk.Used / wk.Cap * 100; p > result.Percent {
+			result.Percent = p
+		}
 		remain = append(remain, fmt.Sprintf("周 $%.2f/%.2f", wk.Used, wk.Cap))
 	}
 	total := cr.Credits.MonthlyCredits + cr.Credits.PurchasedCredits + cr.Credits.FreeCredits

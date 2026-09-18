@@ -7,35 +7,35 @@
 > 1. 阅读下方「上下文摘要（TL;DR）」快速了解项目状态
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
-> 4. **直接跳到最新一条「会话记录：2026-08-25 23:11」章节**（用标题搜索定位，不要假设在文件末尾）
+> 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
+> 5. **直接跳到最新一条「会话记录：2026-09-19 01:16」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
-> 5. 如果最新章节引用了更早的内容，再按需回溯
-> 6. 给用户一份简短进度汇报（3-5句话）：当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项
-> 7. **严禁在用户给出指示之前修改任何文件或代码**
-> 8. 汇报后等待用户指示，不要主动开始执行任务
+> 6. 如果最新章节引用了更早的内容，再按需回溯
+> 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
+> 8. **严禁在用户给出指示之前修改任何文件或代码**
+> 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-08-25 23:11`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`3f1df7b` on `master`（本会话 STATUS 更新待提交）
-> 📊 累计会话数：主文档 6 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-09-19 01:16`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`7d4adcc` on `master`（本会话 STATUS/ROADMAP 更新待提交）
+> 📊 累计会话数：主文档 7 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "3f1df7b", "branch": "master", "dirty": true, "timestamp": "2026-08-25T23:11:00+08:00"} -->
+<!-- git-meta: {"last_commit": "7d4adcc", "branch": "master", "dirty": true, "timestamp": "2026-09-19T01:16:00+08:00"} -->
 
-- **日期**：2026-08-25 23:11
-- **会话摘要**：Command Code Provider 会话收尾——用户重启验证通过（OpenCode Go 浮点修复 + Command Code 展示精简均生效）；提交推送完成；STATUS 更新待提交
+- **日期**：2026-09-19 01:16
+- **会话摘要**：状态灯修复（周窗口耗尽告警 + 阈值 60/80/100 熄灭）发布 v1.1.1；修复已验证、已推送 GitHub
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.0.0 已开源 + 持续迭代**——七平台监控全部实测可用（Ollama、Command Code 真实账号冒烟通过）；工作区干净
-- **当前唯一目标**：docs（STATUS）提交后推送 master（本地领先远程 5 commit，含历史遗留 4 个）
-- 下一步：按项目习惯提交（feat + docs）后推送 master
-- 注意事项：根目录遗留一张未跟踪截图副本 PNG（preview-2.png 的副本，可删除）；无阻塞项
+- 当前阶段：**v1.1.1 已发布**（GitHub Release 附 exe）——七平台监控全部实测可用；状态灯契约升级为 60% 黄 / 80% 红 / 100% 熄灭，周窗口耗尽会告警
+- 下一步：无明确待办，计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+- 注意事项：wiki 有 4 文件漂移待 `/wiki-update`；无阻塞项
 
 ---
 
@@ -50,50 +50,47 @@
 
 ## 当前分支与最近提交
 
-- **分支**：master
-- **HEAD**：`9927e2e`（工作区干净，仅遗留 1 张未跟踪截图 PNG）
-- **远程**：origin/master 落后本地 3 个提交（a59635f / cc82c71 / 9927e2e 未推送）
+- **分支**：master（与远程同步）
+- **HEAD**：`7d4adcc`（fix：状态灯修复，已推送；本会话 docs 更新待提交）
 - **最近提交**：
-  - `9927e2e` - docs: 更新 STATUS 追加会话5补记与会话6(Ollama)
-  - `cc82c71` - docs: 同步 wiki 补齐预算换算模块与余额契约
-  - `a59635f` - feat: 新增 Ollama Cloud 额度监控 Provider
-  - `39aeaed` - feat: DeepSeek 余额预算进度条 + 展开面板刷新倒计时
-  - `22185dc` - docs: README 新增效果截图
+  - `7d4adcc` - fix: 修复悬浮球状态灯——周窗口耗尽不告警与阈值调整
+  - `f03e78a` - docs: 修正 STATUS 累计会话数(6 条)
+  - `231657c` - fix: 修复 OpenCode Go 浮点用量解析,精简 Command Code 剩余文本
+- **Release**：v1.1.1（2026-09-19，Latest，附 exe）← v1.1.0 ← v1.0.0
 
 ---
 
 ## 当前任务进度
 
-### ✅ 已完成（截至 2026-08-25）
+### ✅ 已完成（截至 2026-09-19）
 - **七平台监控**：Kimi / 讯飞星辰 / OpenCode Go / MiMo / DeepSeek / Ollama / Command Code——fetcher 注册表驱动，新增平台前端零改动
+- **状态灯契约**（9/19）：60% 黄 / 80% 红 / 100% 熄灭（off 暗灰）；ollama/commandcode 的 Percent 取 5h 与周窗口较紧张者；发布 v1.1.1
 - **DeepSeek 预算条**（8/7）：QuotaResult Balance/Currency + `budget.go` ApplyBudget + ProviderConfig.Budget + 前端预算输入/色阈值/刷新倒计时
 - **Ollama Provider**（8/13）：`ollama.go` HTML 解析 5 小时 Session 主窗口 + 周用量；14 个 httptest 用例；config 自动补全新 Provider（默认关闭）；真实账号冒烟通过（8/13 01:33）
-- **Command Code Provider**（8/25）：`commandcode.go` 逆向官方 CLI 私有 `/alpha/*` API（whoami + billing/credits），Bearer API Key（留空自动读 `~/.commandcode/auth.json`）；5 小时窗口驱动球色 + 周/月剩余；8 个 httptest 用例；config 自动补全；真实账号冒烟通过（文档见 05 与 ADDING_A_PROVIDER 特殊说明）
-- **v1.0.0 开源发布**：GitHub eeljoe/quota-viewer + Release v1.0.0（exe 附件）
+- **Command Code Provider**（8/25）：`commandcode.go` 逆向官方 CLI 私有 `/alpha/*` API（whoami + billing/credits），Bearer API Key（留空自动读 `~/.commandcode/auth.json`）；8 个 httptest 用例；真实账号冒烟通过
+- **开源发布**：GitHub eeljoe/quota-viewer，Release v1.0.0 / v1.1.0 / v1.1.1（均附 exe）
 
 ### 🔄 进行中
 - 无
 
 ### 📋 待办
-- 提交本会话改动（Command Code Provider，feat + docs 两个 commit）
-- 推送 master（本地领先远程 4 commit，含历史遗留 3 个）
-- 根目录截图副本 PNG 清理（待用户确认）
+- wiki 漂移同步（4 文件，`/wiki-update`）
+- 计划级事项见 `ROADMAP.md`
 
 ---
 
 ## 未完成 & 下一步
 
-1. **提交本会话改动**——Command Code Provider（代码/测试/文档），按项目习惯拆 feat + docs 两个 commit，之后**推送 master 到远程**（本地领先远程 4 commit，确认后 `git push`）
-2. 可选：根目录截图副本 PNG 删除（用户确认后）
-3. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代 / Wails 版本升级（CLI 2.13.0 vs go.mod 2.12.0）
+1. wiki 漂移同步（4 文件，`/wiki-update`）
+2. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
 ---
 
 ## 已知问题与注意事项
 
-- Wails CLI 版本 v2.13.0 > go.mod 的 v2.12.0（构建警告，不阻塞；可选升级）
+- Wails CLI 版本 v2.13.0 > go.mod 的 v2.12.0（构建警告，不阻塞；已入 ROADMAP Next）
 - 前端行尾警告：dist/wailsjs 文件 LF→CRLF，git 会提示但不影响构建
-- 根目录 `09314663d2975b947bfa75fcf46e4769.png` 是 `docs/screenshots/preview-2.png` 的未跟踪副本，可删除（未删，避免误删用户文件）
+- `build/bin/quota-viewer.exe~` 是运行中构建产生的旧 exe 改名残留，可删
 - Ollama 依赖 ollama.com/settings 页面 HTML 结构（无公开 quota API），页面改版 → "页面结构可能已变化"错误，需更新 `ollama.go` 解析
 - Command Code 依赖官方 CLI 私有 `/alpha/*` API（无公开额度 API），CLI 升级可能改结构 → 需对照官方 cli.mjs 更新 `commandcode.go`；API Key 留空自动读 `~/.commandcode/auth.json`（与本机官方 CLI 复用同一凭证，Key 变更会同时影响两者）
 - 余额型（DeepSeek）经 ApplyBudget 按预算换算消耗百分比（默认预算 300）；取首个非零余额币种（CNY→¥ / USD→$），全部为 0 才报错
@@ -377,3 +374,53 @@
 - Command Code Remaining 契约：只含辅助信息（周窗口 + 余额），5 小时窗口由进度条主展示
 - Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项
 - GitHub 仓库：https://github.com/eeljoe/quota-viewer（已同步至 3f1df7b）
+
+---
+
+## 会话记录：2026-09-19 01:16
+
+> **会话摘要**：修复悬浮球状态灯两处问题（周窗口耗尽不告警、阈值 75/90 过晚）并发布 Release v1.1.1
+> **Git**：`7d4adcc` on `master`（已推送；本会话 STATUS/ROADMAP 更新待提交）
+
+### 本次完成
+- **状态灯阈值调整**：75% 黄 / 90% 红 → **60% 黄 / 80% 红 / 100% 熄灭**（`main.js` getStatusColor 统一用量型与余额型预算条；`style.css` 新增 off 暗灰态：球格/圆点/进度条三处）
+- **周窗口耗尽不告警修复**：`ollama.go` / `commandcode.go` 的 `Percent` 改为取 5h 与周窗口中更紧张的一个（原仅 5h 窗口驱动球色，周 100% + 5h 0% 仍闪绿灯；Command Code 同构顺手同修）。`Used`/`ResetAt` 仍记 5h 窗口
+- 测试：新增 2 个回归用例（WeeklyExhausted，先红后绿复现症状），4 个既有 ollama 断言更新为 max 语义；`go test ./...` 全绿
+- 交付：`wails build` 成功，桌面 `Quota Viewer.lnk` 指向 `build/bin/quota-viewer.exe`（01:10 新构建，dist 反查含新阈值）；杀旧实例（PID 22300）重启新实例，ollama 球格由绿变灰（周 100% 熄灭态）
+- 发布：推送 master（`7d4adcc`）+ **Release v1.1.1**（附 exe 11.3MB；按用户要求 release notes 不提 bug 细节，只写"修复了一些简单的小问题"）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| Percent = max(5h, 周) 在 fetcher 层取 | 周额度耗尽必须告警，进度条主展示更紧张窗口；前端零改动 | QuotaResult 加窗口数组前端取 max（过度设计） |
+| 100% 熄灭用暗灰（text-3） | 语义="灯灭了"，与未加载灰一致，用户明确要"100%熄灭" | 红色闪烁 |
+| Release notes 只写"修复小问题" | 用户明确不提 bug 细节 | 完整变更日志 |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/ollama.go` / `commandcode.go` | Percent 取两窗口较大值 |
+| 修改 | `internal/fetcher/ollama_test.go` / `commandcode_test.go` | +2 回归用例，4 断言更新 |
+| 修改 | `frontend/src/main.js` / `style.css` | 阈值 60/80/100 + off 态 |
+| 修改 | `frontend/dist/*` | wails build 重建产物（已随 fix 提交） |
+| 新增 | `ROADMAP.md` | 本会话按 update-status 创建（此前缺失） |
+
+> 本次变更：`7d4adcc`（+95/-24 行，10 个文件）
+
+### 未完成 & 下一步
+- 无明确待办；可选方向已沉淀到 `ROADMAP.md`（Next: Wails 版本升级对齐；Later: Release 推广 / 新 Provider / 反馈迭代）
+
+### 已知问题 & 注意事项
+- wiki 漂移（见下方推荐 Skill），待 `/wiki-update` 修复
+- 前端行尾警告 dist/wailsjs LF→CRLF（原有，不影响构建）
+- `build/bin/quota-viewer.exe~`（8/25 旧 exe 改名残留，运行中构建的副产物，可删）
+
+### 推荐 Skill
+- `/wiki-update` - 检测到 4 个 wiki 覆盖文件自 synced_commit（a59635f）后有代码变更：`internal/fetcher/ollama.go`、`internal/fetcher/commandcode.go`、`frontend/src/main.js`、`frontend/src/style.css`（05 页"主展示=5 小时窗口"描述已过时）
+
+### 关键上下文
+- **状态灯契约（新）**：≥60 黄 / ≥80 红 / ≥100 熄灭（off=暗灰）；ollama/commandcode 的 `Percent` = 5h 与周窗口较紧张者，`Used` 仍记 5h 窗口
+- **Release v1.1.1**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.1.1（Latest，附 quota-viewer.exe）
+- 当前启用 Provider 含 `ollama`（用户在 8/25 后自行启用——本次"周 100% 仍绿灯"症状即来自它；其余勾选组合以 `%APPDATA%/quota-viewer/config.json` 为准）
+- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 4 文件待同步）
+- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物，无需复制）

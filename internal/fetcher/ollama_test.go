@@ -108,9 +108,9 @@ func TestOllamaFetcher_ValidHTML_ParsesBothWindows(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	// 主展示 = session 5h 窗口
-	if result.Percent != 10 {
-		t.Errorf("expected Percent=10 (session), got %f", result.Percent)
+	// 主展示 = 更紧张的窗口(此处为 weekly 41.6);Used 仍记录 session 5h
+	if result.Percent != 41.6 {
+		t.Errorf("expected Percent=41.6 (weekly), got %f", result.Percent)
 	}
 	if result.Used != 10 {
 		t.Errorf("expected Used=10, got %f", result.Used)
@@ -154,8 +154,8 @@ func TestOllamaFetcher_NoDataTime_LeavesResetUnknown(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Percent != 5 {
-		t.Errorf("expected Percent=5, got %f", result.Percent)
+	if result.Percent != 12 {
+		t.Errorf("expected Percent=12 (weekly), got %f", result.Percent)
 	}
 	if result.ResetAt != "" {
 		t.Errorf("expected empty ResetAt without data-time, got '%s'", result.ResetAt)
@@ -260,11 +260,41 @@ func TestOllamaFetcher_ZeroPercent_IsValid(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Percent != 0 {
-		t.Errorf("expected Percent=0, got %f", result.Percent)
+	// session 0% 是合法解析(Used=0);Percent 由更紧张的周窗口驱动
+	if result.Used != 0 {
+		t.Errorf("expected Used=0 (session), got %f", result.Used)
+	}
+	if result.Percent != 41.6 {
+		t.Errorf("expected Percent=41.6 (weekly), got %f", result.Percent)
 	}
 	if !strings.Contains(result.Remaining, "周 41.6%") {
 		t.Errorf("expected weekly usage in Remaining, got '%s'", result.Remaining)
+	}
+}
+
+// TestOllamaFetcher_WeeklyExhausted_DrivesPercent 验证周窗口耗尽时球色必须告警:
+// Percent 取 5h 与周窗口中更紧张的一个(用户场景:5h 0% / 周 100% 仍闪绿灯)。
+func TestOllamaFetcher_WeeklyExhausted_DrivesPercent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body>
+<span>Session usage</span><span>0% used</span><div data-time="2026-08-12T12:00:00Z">Resets in 5 hours</div>
+<span>Weekly usage</span><span>100% used</span><div data-time="2026-08-16T00:00:00Z">Resets in 4 days</div>
+</body></html>`))
+	}))
+	defer server.Close()
+
+	f := NewOllamaFetcher("wos-session=test")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Percent != 100 {
+		t.Errorf("expected Percent=100 (weekly exhausted drives ball color), got %f", result.Percent)
+	}
+	if result.Used != 0 {
+		t.Errorf("expected Used=0 (session window), got %f", result.Used)
 	}
 }
 
@@ -285,8 +315,8 @@ func TestOllamaFetcher_WidthFallback(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Percent != 8.5 {
-		t.Errorf("expected Percent=8.5, got %f", result.Percent)
+	if result.Percent != 20 {
+		t.Errorf("expected Percent=20 (weekly width), got %f", result.Percent)
 	}
 }
 

@@ -133,17 +133,14 @@ function updateCountdowns() {
 
 setInterval(updateCountdowns, 30000);
 
+// 状态色阈值:≥60% 黄,≥80% 红,≥100% 熄灭(额度耗尽)
 function getStatusColor(r) {
     if (r.error) return "red";
-    // 余额型(如 DeepSeek):设了预算后按消耗百分比走颜色,未设预算恒绿
-    if (r.kind === "balance" && r.percent > 0) {
-        if (r.percent >= 90) return "red";
-        if (r.percent >= 75) return "yellow";
-        return "green";
-    }
-    if (r.kind === "balance") return "green";
-    if (r.percent >= 90) return "red";
-    if (r.percent >= 75) return "yellow";
+    // 余额型(如 DeepSeek):未设预算恒绿,设了预算后按消耗百分比走同一套阈值
+    if (r.kind === "balance" && !(r.percent > 0)) return "green";
+    if (r.percent >= 100) return "off";
+    if (r.percent >= 80) return "red";
+    if (r.percent >= 60) return "yellow";
     return "green";
 }
 

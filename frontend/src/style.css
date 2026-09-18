@@ -84,6 +84,7 @@ html, body {
 .ball-cell.green { color: var(--green); }
 .ball-cell.yellow { color: var(--yellow); }
 .ball-cell.red { color: var(--red); }
+.ball-cell.off { color: var(--text-3); } /* 额度耗尽=熄灭 */
 
 /* === 面板外壳(详情 / 配置共用) === */
 .panel, .settings {
@@ -179,6 +180,7 @@ html, body {
 .status-dot.green { background: var(--green); }
 .status-dot.yellow { background: var(--yellow); }
 .status-dot.red { background: var(--red); }
+.status-dot.off { background: var(--text-3); }
 
 .quota-remaining {
     color: var(--text-2);
@@ -205,6 +207,7 @@ html, body {
 .progress-fill.green { background: linear-gradient(90deg, var(--green), var(--green-soft)); }
 .progress-fill.yellow { background: linear-gradient(90deg, var(--yellow), var(--yellow-soft)); }
 .progress-fill.red { background: linear-gradient(90deg, var(--red), var(--red-soft)); }
+.progress-fill.off { background: var(--track); }
 
 /* === 倒计时行 === */
 .quota-reset {

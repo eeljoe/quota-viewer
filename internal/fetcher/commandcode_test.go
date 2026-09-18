@@ -158,6 +158,39 @@ func TestCommandCode_OrgUser_SendsOrgID(t *testing.T) {
 	}
 }
 
+// TestCommandCode_WeeklyExhausted_DrivesPercent 验证周窗口耗尽时球色必须告警:
+// Percent 取 5h 与周窗口中更紧张的一个(5h 0% / 周 100% 不应恒绿)。
+func TestCommandCode_WeeklyExhausted_DrivesPercent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/alpha/whoami":
+			_, _ = w.Write([]byte(`{"success":true,"user":{"userName":"eeljoe"},"org":null}`))
+		case "/alpha/billing/credits":
+			_, _ = w.Write([]byte(`{
+  "credits": {"monthlyCredits": 9.36},
+  "windowLimits": {
+    "fiveHour": {"used": 0, "cap": 3, "exceeded": false, "resetAt": 1787643912049},
+    "weekly": {"used": 6, "cap": 6, "exceeded": true, "resetAt": 1788230712049}
+  }
+}`))
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+
+	f := NewCommandCodeFetcher("user_test")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Percent != 100 {
+		t.Errorf("expected Percent=100 (weekly exhausted drives ball color), got %f", result.Percent)
+	}
+}
+
 // TestCommandCode_MissingWindows_ReturnsError 验证 credits 响应缺窗口数据时明确报错。
 func TestCommandCode_MissingWindows_ReturnsError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

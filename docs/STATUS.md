@@ -8,34 +8,34 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
-> 5. **直接跳到最新一条「会话记录：2026-09-19 01:16」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-09-22 10:03」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-09-19 01:16`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`7d4adcc` on `master`（本会话 STATUS/ROADMAP 更新待提交）
-> 📊 累计会话数：主文档 7 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-09-22 10:03`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`639e4f1` on `master`（已推送；Release v1.1.2 已发布）
+> 📊 累计会话数：主文档 8 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "7d4adcc", "branch": "master", "dirty": true, "timestamp": "2026-09-19T01:16:00+08:00"} -->
+<!-- git-meta: {"last_commit": "639e4f1", "branch": "master", "dirty": true, "timestamp": "2026-09-22T10:03:00+08:00"} -->
 
-- **日期**：2026-09-19 01:16
-- **会话摘要**：状态灯修复（周窗口耗尽告警 + 阈值 60/80/100 熄灭）发布 v1.1.1；修复已验证、已推送 GitHub
+- **日期**：2026-09-22 10:03
+- **会话摘要**：Kimi 周额度耗尽漏报修复（Percent 取 5h 与 7 天窗口较紧张者）；推送 master 并发布 Release v1.1.2
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.1.1 已发布**（GitHub Release 附 exe）——七平台监控全部实测可用；状态灯契约升级为 60% 黄 / 80% 红 / 100% 熄灭，周窗口耗尽会告警
+- 当前阶段：**v1.1.2 已发布**（GitHub Release 附 exe）——七平台监控全部实测可用；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；Kimi 与 ollama/commandcode 一致，任一窗口（5h 或周）耗尽都会告警
 - 下一步：无明确待办，计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
-- 注意事项：wiki 有 4 文件漂移待 `/wiki-update`；无阻塞项
+- 注意事项：wiki 有 5 文件漂移待 `/wiki-update`；无阻塞项
 
 ---
 
@@ -424,3 +424,59 @@
 - 当前启用 Provider 含 `ollama`（用户在 8/25 后自行启用——本次"周 100% 仍绿灯"症状即来自它；其余勾选组合以 `%APPDATA%/quota-viewer/config.json` 为准）
 - Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 4 文件待同步）
 - 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物，无需复制）
+
+---
+
+## 会话记录：2026-09-22 10:03
+
+> **会话摘要**：修复 Kimi 周额度耗尽漏报（Percent 取 5h 与 7 天窗口较紧张者），推送 master 并发布 Release v1.1.2
+> **Git**：`639e4f1` on `master`（已推送；v1.1.2 已发布；本会话 STATUS 更新待提交）
+> **任务组**：额度告警修复（承接 2026-09-19 状态灯修复会话）
+> **任务组状态**：已完成（修复已验证并发布 v1.1.2）
+
+### 本次完成
+- **Kimi 周窗口漏报修复**：用户给出两张截图对照——Kimi Code 官方页显示「5 小时用量 Code 0%、7 天用量 Code 100%」，而本应用 Kimi 仍是绿点 + `0 / 100 (5小时)`，即只读 `limits[0]`（5 小时窗口）、完全忽略周窗口（与 9/19 的 ollama/commandcode 同构漏报）
+- **线上响应确认**（真实 Key 打 `GET api.kimi.com/coding/v1/usages`）：`usage{limit:100,used:100,resetTime:...}`（周）+ `limits[0].detail`（5h，remaining=100）+ 新增字段 `usages.limit_5h/limit_7d.used_ratio`（本次才发现的窗口比率字段）
+- **修复**：`Percent` 取 5h 与 7 天窗口较紧张者（沿用 9/19 契约），`Used/Total/ResetAt` 仍记 5 小时窗口，`Remaining` 追加周用量 → 实测输出 `0 / 100 (5小时) · 周 100% 已用`，球灯按 ≥100% 熄灭为暗灰；新增 `usages.limit_5h/limit_7d` 比率解析作为 `details.limit` 缺失时的兜底
+- 测试：3 个新用例（真实 payload 的周耗尽复现 `TestKimiFetcher_WeeklyExhausted_PercentAlerts`；仅比率响应解析；周低于 5h 时不得压低 Percent），先红后绿；`go test ./...` 全绿
+- 交付：`wails build`（09:35 构建，CLI 不在 PATH，用 `C:\Users\joe\go\bin\wails.exe`）→ 杀旧实例（PID 31920）重启新实例（PID 16584）
+- 发布：推送 master（`639e4f1`）+ **Release v1.1.2**（附 quota-viewer.exe，标题「用量统计小修复」，notes 按既有偏好只写"修复了一些简单的小问题"）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| Percent = max(5h, 周) 同样适用于 Kimi | 与 9/19 ollama/commandcode 契约一致，周耗尽必须告警 | Kimi 单独用周窗口驱动（破坏一致性） |
+| 周用量优先读 `usages.limit_7d.used_ratio`，回退 `usage.used/limit` | 官方新增的比率字段最直接；字符串对象保留兼容 | 只读 `usage` 字符串（旧字段可能下线） |
+| `Remaining` 追加「· 周 X% 已用」而非替换 | 5h 的绝对值/总量信息仍有用，与 Ollama 行格式对齐 | 只显示周百分比 |
+| 倒计时仍按 5 小时窗口 | 与 ollama 现有行为一致，避免本次扩大改动面 | ResetAt 取较紧张窗口（已列入可选项待用户决定） |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/kimi.go` | usages/周窗口解析 + Percent 取两窗口较大值 |
+| 修改 | `internal/fetcher/kimi_test.go` | +3 用例（周耗尽 / 仅比率 / 周低于 5h） |
+
+> 本次变更：`639e4f1`（+168/-10 行，2 个文件）
+> 变更基准：`git diff d6e7572..HEAD --stat`
+
+### 未完成 & 下一步
+- 无明确待办；可选方向：① Kimi 倒计时改取"驱动告警的窗口"的重置时间；② 官方页「总使用量 33.68%」对应的总额度字段（`totalQuota`/booster）未纳入监控，需要时可加
+- 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+
+### 已知问题 & 注意事项
+- **本机截图取证受限**：`PrintWindow` 抓 Wails 窗口只得到部分渲染、`BitBlt`(CAPTUREBLT) 与全屏 `CopyFromScreen` 抓不到悬浮球（WebView2/合成层），结论以 fetcher 线上实测为准
+- **wails CLI 不在 PATH**：须用 `C:\Users\joe\go\bin\wails.exe build`
+- `gofmt -l` 会列出仓库里几乎所有 Go 文件（全仓 CRLF 行尾），非本次改动引入，勿按此"修格式"
+- wiki 漂移（见「推荐 Skill」），待 `/wiki-update` 修复
+- `build/bin/quota-viewer.exe~`（8/25 旧 exe 改名残留，可删）
+
+### 推荐 Skill
+- `/wiki-update` - 检测到 5 个 wiki 覆盖文件自 synced_commit（a59635f）后有代码变更：`internal/fetcher/kimi.go`、`internal/fetcher/ollama.go`、`internal/fetcher/commandcode.go`、`frontend/src/main.js`、`frontend/src/style.css`（02/05 页的 Kimi 条目与"主展示=5 小时窗口"描述已过时）
+
+### 关键上下文
+- **窗口告警契约（完整版）**：`Percent = max(较紧张的窗口)` 对 Kimi / Ollama / Command Code 三家统一；`Used/Total/Remaining/ResetAt` 仍以 5 小时（或主）窗口为准；≥60 黄 / ≥80 红 / ≥100 熄灭
+- **Kimi 响应结构**：`usage`（周：limit/used/remaining/resetTime 字符串）+ `limits[0].detail`（5h）+ `usages.limit_5h/limit_7d.used_ratio`（0-1 比率，2026-09 新增）；旧版 `{"data":[{model_name:"all"}]}` 仍兼容
+- **Release v1.1.2**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.1.2（Latest，附 quota-viewer.exe）
+- 当前启用 Provider：kimi / ollama / command-code（其余在配置里关闭；以 `%APPDATA%/quota-viewer/config.json` 为准）
+- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 5 文件待同步）
+- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物）

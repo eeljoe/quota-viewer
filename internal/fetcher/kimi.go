@@ -3,6 +3,7 @@ package fetcher
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,7 +15,8 @@ import (
 // 认证: Authorization: Bearer sk-kimi-xxx
 // User-Agent: KimiCLI/1.6
 //
-// 响应为嵌套对象,usage 为周/主额度,limits[0] 为 5 小时窗口。
+// 响应为嵌套对象,usage 为周/主额度,limits[0] 与 usages.limit_5h 为 5 小时窗口,
+// usages.limit_7d 为 7 天窗口。Percent 取两窗口中更紧张的一个。
 type KimiFetcher struct {
 	apiKey string
 	apiURL string // 可为空,默认为线上端点(便于测试覆盖)
@@ -30,8 +32,21 @@ type kimiUsageResponse struct {
 	Usage kimiUsage `json:"usage"`
 	// Limits 为 5 小时窗口等细分限制;Limits[0] 为 5 小时窗口。
 	Limits []kimiLimit `json:"limits"`
+	// Usages 为窗口比率(limit_5h / limit_7d);used_ratio 为 0-1 的已用比例。
+	Usages kimiUsages `json:"usages"`
 	// 兼容旧版数组响应:若返回的是 {"data":[...]} 则走旧路径。
 	Data []kimiUsageItemLegacy `json:"data"`
+}
+
+type kimiUsages struct {
+	Limit5h kimiRatio `json:"limit_5h"`
+	Limit7d kimiRatio `json:"limit_7d"`
+}
+
+// kimiRatio 为窗口已用比率;used_ratio 用指针以区分"字段缺失"与"0%"。
+type kimiRatio struct {
+	UsedRatio *float64 `json:"used_ratio"`
+	ResetTime string   `json:"reset_time"`
 }
 
 type kimiUser struct {
@@ -127,7 +142,9 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 		return result
 	}
 
-	// 优先:5 小时窗口(limits[0].detail)
+	// 5 小时窗口驱动 Used/Total/Remaining 首项与 ResetAt;
+	// Percent 取 5h 与周窗口中更紧张者,任一窗口耗尽都必须告警。
+	sessionFound := false
 	if len(body.Limits) > 0 && body.Limits[0].Detail.Limit != "" {
 		d := body.Limits[0].Detail
 		remaining, _ := kimiParseStringFloat(d.Remaining)
@@ -140,19 +157,46 @@ func (k *KimiFetcher) Fetch() QuotaResult {
 		}
 		result.Remaining = fmt.Sprintf("%s / %s (5小时)", formatNum(used), formatNum(limit))
 		result.ResetAt = d.ResetTime
+		sessionFound = true
+	} else if body.Usages.Limit5h.UsedRatio != nil {
+		ratio := kimiRatioPercent(*body.Usages.Limit5h.UsedRatio)
+		result.Used = ratio
+		result.Total = 100
+		result.Percent = ratio
+		result.Remaining = fmt.Sprintf("%s%% (5小时)", kimiFormatPercent(ratio))
+		result.ResetAt = body.Usages.Limit5h.ResetTime
+		sessionFound = true
+	}
+
+	weeklyPercent, weeklyFound := kimiWeeklyPercent(body)
+	if weeklyFound && weeklyPercent > result.Percent {
+		result.Percent = weeklyPercent
+	}
+
+	if sessionFound {
+		if weeklyFound {
+			result.Remaining += fmt.Sprintf(" · 周 %s%% 已用", kimiFormatPercent(weeklyPercent))
+		}
 		return result
 	}
 
-	// 兜底:周额度 usage 对象
-	if body.Usage.Limit != "" || body.Usage.Used != "" {
-		used, _ := kimiParseStringFloat(body.Usage.Used)
-		limit, _ := kimiParseStringFloat(body.Usage.Limit)
-		result.Used = used
-		result.Total = limit
-		if limit > 0 {
-			result.Percent = used / limit * 100
+	// 兜底:仅有周额度 usage 对象
+	if weeklyFound {
+		used, err := kimiParseStringFloat(body.Usage.Used)
+		if err != nil {
+			used = weeklyPercent
+			result.Total = 100
+		} else {
+			limit, _ := kimiParseStringFloat(body.Usage.Limit)
+			result.Total = limit
 		}
-		result.Remaining = fmt.Sprintf("%s / %s", formatNum(used), formatNum(limit))
+		result.Used = used
+		result.Percent = weeklyPercent
+		if result.Total > 0 {
+			result.Remaining = fmt.Sprintf("%s / %s", formatNum(result.Used), formatNum(result.Total))
+		} else {
+			result.Remaining = fmt.Sprintf("%s%% 已用", kimiFormatPercent(weeklyPercent))
+		}
 		result.ResetAt = body.Usage.ResetTime
 		return result
 	}
@@ -193,4 +237,34 @@ func kimiParseStringFloat(s string) (float64, error) {
 		return 0, fmt.Errorf("空字符串")
 	}
 	return strconv.ParseFloat(s, 64)
+}
+
+// kimiWeeklyPercent 返回 7 天(周)窗口已用百分比。
+// 优先 usages.limit_7d.used_ratio(显式比率),缺失时回退 usage.used/limit 字符串。
+func kimiWeeklyPercent(body kimiUsageResponse) (float64, bool) {
+	if body.Usages.Limit7d.UsedRatio != nil {
+		return kimiRatioPercent(*body.Usages.Limit7d.UsedRatio), true
+	}
+	if body.Usage.Limit == "" && body.Usage.Used == "" {
+		return 0, false
+	}
+	used, err := kimiParseStringFloat(body.Usage.Used)
+	if err != nil {
+		return 0, false
+	}
+	limit, err := kimiParseStringFloat(body.Usage.Limit)
+	if err != nil || limit <= 0 {
+		return 0, false
+	}
+	return used / limit * 100, true
+}
+
+// kimiRatioPercent 把 0-1 的 used_ratio 转成百分比。
+func kimiRatioPercent(ratio float64) float64 {
+	return ratio * 100
+}
+
+// kimiFormatPercent 百分比展示:最多保留一位小数,去掉多余的 .0。
+func kimiFormatPercent(v float64) string {
+	return strconv.FormatFloat(math.Round(v*10)/10, 'f', -1, 64)
 }

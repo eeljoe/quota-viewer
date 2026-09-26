@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // TestOllamaFetcher_EmptyCookie_ReturnsError 验证空 Cookie 返回错误。
@@ -346,5 +348,73 @@ func TestOllamaFetcher_HighSessionPercent(t *testing.T) {
 	// 5h 95.5% 应该是主展示(警示色)
 	if result.Percent != 95.5 {
 		t.Errorf("expected Percent=95.5, got %f", result.Percent)
+	}
+}
+
+// validOllamaUsageHTML 返回带双窗口用量的最小合法页面。
+func validOllamaUsageHTML() string {
+	return `<html><body>
+<h2>Session usage</h2><span>10% used</span><div data-time="2026-08-12T12:00:00Z">Resets in 5 hours</div>
+<h2>Weekly usage</h2><span>41.6% used</span><div data-time="2026-08-16T00:00:00Z">Resets in 4 days</div>
+</body></html>`
+}
+
+// withShortOllamaTimeout 临时缩短 HTTP 超时,返回恢复函数。
+func withShortOllamaTimeout(t *testing.T, d time.Duration) {
+	t.Helper()
+	old := ollamaHTTPTimeout
+	ollamaHTTPTimeout = d
+	t.Cleanup(func() { ollamaHTTPTimeout = old })
+}
+
+// TestOllamaFetcher_SlowFirstResponse_RetriesSucceeds 回归(2026-09-27 用户报
+// "context deadline exceeded ... awaiting headers" 而浏览器可开):
+// 服务端偶发慢响应(首包超过超时)不应直接报错——重试一次应拿到快响应。
+func TestOllamaFetcher_SlowFirstResponse_RetriesSucceeds(t *testing.T) {
+	withShortOllamaTimeout(t, 400*time.Millisecond)
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			time.Sleep(800 * time.Millisecond) // 首次请求超过超时
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(validOllamaUsageHTML()))
+	}))
+	defer server.Close()
+
+	f := NewOllamaFetcher("wos-session=test")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("expected retry to succeed, got error: %s", result.Error)
+	}
+	if result.Percent != 41.6 {
+		t.Errorf("expected Percent=41.6, got %f", result.Percent)
+	}
+	if atomic.LoadInt32(&calls) < 2 {
+		t.Errorf("expected >=2 requests (retry fired), got %d", calls)
+	}
+}
+
+// TestOllamaFetcher_AlwaysSlow_ReturnsTimeoutError 验证服务端持续慢时错误仍会浮出
+// (不会无限重试/挂死),错误文案保持 "请求失败" 前缀。
+func TestOllamaFetcher_AlwaysSlow_ReturnsTimeoutError(t *testing.T) {
+	withShortOllamaTimeout(t, 400*time.Millisecond)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(800 * time.Millisecond)
+		w.Write([]byte(validOllamaUsageHTML()))
+	}))
+	defer server.Close()
+
+	f := NewOllamaFetcher("wos-session=test")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if !strings.Contains(result.Error, "请求失败") {
+		t.Errorf("expected '请求失败' error, got '%s'", result.Error)
+	}
+	if !strings.Contains(result.Error, "context deadline exceeded") {
+		t.Errorf("expected timeout error detail, got '%s'", result.Error)
 	}
 }

@@ -49,6 +49,13 @@ var (
 
 var ollamaUsageLabels = []string{"Session usage", "Hourly usage", "Weekly usage"}
 
+// ollamaHTTPTimeout 是单次请求超时。ollama.com 偶发慢响应(>10s 才回响应头),
+// 10s 会把浏览器能正常打开的页面报成超时,放宽到 30s;测试可缩短。
+var ollamaHTTPTimeout = 30 * time.Second
+
+// ollamaRetries 是传输层错误(超时/断连)后的重试次数。GET 无请求体,幂等可安全重试。
+const ollamaRetries = 1
+
 func (f *OllamaFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
 		Platform:    "Ollama",
@@ -62,27 +69,16 @@ func (f *OllamaFetcher) Fetch() QuotaResult {
 	}
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: ollamaHTTPTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
 
 	url := strings.TrimRight(f.baseURL, "/") + "/settings"
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		result.Error = fmt.Sprintf("创建请求失败: %v", err)
-		return result
-	}
 
-	req.Header.Set("Cookie", f.cookie)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Origin", "https://ollama.com")
-	req.Header.Set("Referer", "https://ollama.com/settings")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
-
-	resp, err := client.Do(req)
+	// 偶发慢响应/网络抖动时重试一次,避免单次抖动在 15 分钟轮询间隔里长期挂错误。
+	resp, err := f.doRequest(client, url)
 	if err != nil {
 		result.Error = fmt.Sprintf("请求失败: %v", err)
 		return result
@@ -133,6 +129,34 @@ func (f *OllamaFetcher) Fetch() QuotaResult {
 		result.Remaining += fmt.Sprintf(" · 周 %.1f%% 已用", weekly.percent)
 	}
 	return result
+}
+
+// doRequest 发送 GET,传输层错误时重试最多 ollamaRetries 次。每次尝试重建
+// request(请求对象不可复用),重试前等 1 秒避开瞬时抖动。
+func (f *OllamaFetcher) doRequest(client *http.Client, url string) (*http.Response, error) {
+	var lastErr error
+	for attempt := 0; attempt <= ollamaRetries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Second)
+		}
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Cookie", f.cookie)
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+		req.Header.Set("Origin", "https://ollama.com")
+		req.Header.Set("Referer", url)
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
 }
 
 // parseOllamaUsageBlock 按标题切出最多 4000 字节的窗口,再提取百分比与 data-time。

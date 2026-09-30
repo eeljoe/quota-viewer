@@ -188,7 +188,9 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 			remain = append(remain, fmt.Sprintf("月 %.1f%% 已用", p))
 		}
 	}
-	if coreMax > stdMax {
+	if coreMax > 0 {
+		// Core 仓只在 Standard 限流后接管计费,一有消耗就值得展示
+		// (用户常驻开源模型 + overage 回退 Core 的场景)。
 		remain = append(remain, fmt.Sprintf("Core %.1f%% 已用", coreMax))
 	}
 	if limits.ExtraUsageBalanceCents != nil && *limits.ExtraUsageBalanceCents > 0 {

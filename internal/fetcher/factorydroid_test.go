@@ -172,6 +172,35 @@ func TestFactoryDroid_MonthlyDrives_Shows(t *testing.T) {
 	}
 }
 
+// TestFactoryDroid_CoreActive_Shows 验证 Core 仓(Standard 限流后的接管计费)
+// 一有消耗就展示——即使其百分比低于 Standard 窗口(回退场景,用户常驻开源模型)。
+func TestFactoryDroid_CoreActive_Shows(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+  "usesTokenRateLimitsBilling": true,
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 40}},
+    "core": {"fiveHour": {"usedPercent": 5}}
+  }
+}`))
+	}))
+	defer server.Close()
+
+	f := NewFactoryDroidFetcher("fk_test")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Percent != 40 {
+		t.Errorf("expected Percent=40 (standard still drives), got %f", result.Percent)
+	}
+	if !strings.Contains(result.Remaining, "Core 5.0% 已用") {
+		t.Errorf("expected active Core tank surfaced, got '%s'", result.Remaining)
+	}
+}
+
 // TestFactoryDroid_Legacy_Fallback 验证旧账单模型兜底:billing/limits 未启用
 // token-rate 计费时,回退 /api/organization/subscription/usage。
 func TestFactoryDroid_Legacy_Fallback(t *testing.T) {

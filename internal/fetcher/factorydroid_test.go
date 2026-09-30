@@ -83,6 +83,9 @@ func TestFactoryDroid_TokenRateLimits_FormatsResult(t *testing.T) {
 	if result.Total != 100 || result.Used != 20 {
 		t.Errorf("expected Used=20/Total=100 (5h 窗口驱动主展示), got %f/%f", result.Used, result.Total)
 	}
+	if !strings.Contains(result.Remaining, "5小时 20.0% 已用") {
+		t.Errorf("expected 5-hour window leading Remaining (Ollama convention), got '%s'", result.Remaining)
+	}
 	if !strings.Contains(result.Remaining, "周 45.0% 已用") || !strings.Contains(result.Remaining, "Extra $3.20") {
 		t.Errorf("unexpected Remaining: '%s'", result.Remaining)
 	}

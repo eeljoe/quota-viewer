@@ -171,7 +171,10 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 			UTC().Format(time.RFC3339)
 	}
 
+	// 5 小时窗口放在首位(Ollama 惯例:纯百分比数据要把主窗口数字写出来);
+	// 周/月/Core/Extra 依次跟进。
 	var remain []string
+	remain = append(remain, fmt.Sprintf("5小时 %.1f%% 已用", result.Used))
 	if std.Weekly != nil && std.Weekly.UsedPercent != nil {
 		remain = append(remain, fmt.Sprintf("周 %.1f%% 已用", clampPercent(*std.Weekly.UsedPercent)))
 	}

@@ -23,10 +23,10 @@
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "152259b", "branch": "master", "dirty": true, "timestamp": "2026-09-30T23:00:00+08:00"} -->
+<!-- git-meta: {"last_commit": "7c8971f", "branch": "master", "dirty": true, "timestamp": "2026-09-30T23:10:00+08:00"} -->
 
-- **日期**：2026-09-30 22:10（23:00 收尾更新）
-- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板展示两轮对齐（5小时/周 常驻，月度仅告警时出现）；wiki 同步；Release v1.2.0 建到 Draft 待发布
+- **日期**：2026-09-30 22:10（23:10 收尾更新）
+- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板展示两轮对齐（5小时/周 常驻，Core 有消耗即显示）；wiki 同步；Release v1.2.0 建到 Draft 待发布
 
 ---
 
@@ -486,7 +486,7 @@
 ## 会话记录：2026-09-30 22:10
 
 > **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；Release v1.2.0 建到 Draft，等 e2e 确认后发布
-> **Git**：`152259b` on `master`（`cc01446`+`6b347c8` 已推送；`2890e22`/`152259b` 与 STATUS 更新待推送；v1.2.0 仅有 Draft 未发布）
+> **Git**：`7c8971f` on `master`（`cc01446`+`6b347c8` 已推送；`2890e22`/`152259b`/`7c8971f` 与 STATUS 更新待推送；v1.2.0 仅有 Draft 未发布）
 > **任务组**：Factory Droid Provider 接入
 > **任务组状态**：已完成（功能已验证并交付运行）
 
@@ -499,7 +499,7 @@
 - **交付**：杀旧实例（PID 29844）→ `wails build`（16.9s，CLI 用 `C:\Users\joe\go\bin\wails.exe`）→ config 启用 factory-droid（key 走 .env 自动发现）→ 重启新实例（PID 31888）
 - **「保存多次才生效」诊断**（用户报疑似缓存 bug）：非缓存——手工改配置造成 4 个同时启用，SaveConfig 的「≤3 静默钳制」把排在最后的 factory-droid 悄悄关掉，用户反复保存才收敛；顺带抓到真 bug：`config.AllProviderIDs` 漏登记 factory-droid（7≠8，全新安装/自动补全路径都不带它）。修复：AllProviderIDs 补齐 + 新增跨包同步守护测试 + Load 时钳制超限启用（配置面板永远不会再出现「勾了 4 个」的不可能状态），先红后绿，全量测试通过，已重建交付（PID 32216）
 - **wiki 同步**（`/wiki-update`）：5 文件——02 模块表基线刷到 cc01446（补 Command Code 两行 + Factory Droid 两行）、05 增 Factory Droid 端点/解析细节与 Kimi/Ollama 行为注记、07 增清单同步契约与 Load 钳制说明、09 测试分类更新、00 元数据与「八平台」措辞；覆盖缓存 49→50 项，漂移清零
-- **e2e 反馈修复（两轮）**：① 面板 Remaining 只显示周/月（漏 5h 主窗口）→ 补 5h 首段；② 用户仍不通过——与 Kimi/Ollama 的两段式不一致且面板截断 → 月度/Core 改为「仅当成为最紧张窗口（驱动球色告警）时追加」，常驻只显示 5小时/周，先红后绿，重建交付（PID 11860）
+- **e2e 反馈修复（三轮）**：① 面板 Remaining 只显示周/月（漏 5h 主窗口）→ 补 5h 首段；② 用户仍不通过——与 Kimi/Ollama 的两段式不一致且面板截断 → 常驻只显示 5小时/周，月度仅在驱动告警时追加；③ 澄清计费顺序后 Core 改为「一有消耗即显示」（用户常驻 GLM-5.3-Flash 等 Core 池模型，Standard 烧满后 Core 仓接管，那是他最需要看到的时刻）。全程先红后绿，重建交付（PID 20988）
 - **发布（进行中）**：`cc01446`+`6b347c8` 已推送；v1.2.0 已建 **Draft**（标题「新增 Droid 额度视图」，notes 写修复 bug + 新增 Droid 视图，附旧 exe）——e2e 确认后需换新 exe 并 publish
 
 ### 本次决策
@@ -510,7 +510,8 @@
 | Percent 含 Core 池 | Core 是独立计费窗口，耗尽同样影响可用性，与「最紧张窗口」契约一致 | 只算 standard（漏报 Core 耗尽） |
 | ResetAt 仍取 5h 窗口 | 与 9/22 Kimi 会话决策一致（倒计时跟主窗口） | 取驱动告警窗口的重置时间（仍是待定可选项） |
 | 超限钳制放 Load 而非只在 SaveConfig | 配置面板从 GetConfig 渲染，Load 不钳制就会出现「勾了 4 个」的不可能状态，保存时静默被砍（本次用户踩坑的直接原因） | 保存时报错提示（改动更大，前端也要跟上） |
-| 月度/Core 不常驻展示、仅告警时出现 | 用户明确要求与 Kimi/Ollama 两段式一致（且面板会截断）；但月度耗尽驱动告警必须保留（9/19、9/22 长窗口漏报同类坑） | 月度完全不算入 Percent（退回长窗口漏报坑） |
+| 月度不常驻展示、仅超 5h/周 时出现 | 用户明确要求与 Kimi/Ollama 两段式一致（且面板会截断）；但月度耗尽驱动告警必须保留（9/19、9/22 长窗口漏报同类坑） | 月度完全不算入 Percent（退回长窗口漏报坑） |
+| Core 仓一有消耗即展示 | 计费顺序是「Core 模型先烧 Standard，Core 独立仓只在 Standard 限流后接管」——Core 有读数正是用户进入回退状态的信号（该用户常驻 flash 模型） | 仅驱动告警时显示（回退场景反而看不见） |
 
 ### 新增/变更文件
 | 操作 | 文件路径 | 说明 |
@@ -527,7 +528,7 @@
 | 新增 | `~/.factory/.env` | FACTORY_API_KEY（应用外，不入库） |
 
 ### 未完成 & 下一步
-- 等用户 e2e 确认面板展示「5小时/周」两段式 → 推送 `2890e22`/`152259b` + 用新 exe 替换 v1.2.0 Draft 资产（`gh release upload --clobber`）并 publish
+- 等用户 e2e 确认面板展示 → 推送 `2890e22`/`152259b`/`7c8971f` + 用新 exe 替换 v1.2.0 Draft 资产（`gh release upload --clobber`）并 publish
 - 可选：观察几天，Factory 私有端点漂移时对照官方 web bundle 更新 `factorydroid.go`
 - 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
@@ -539,6 +540,7 @@
 
 ### 关键上下文
 - **Factory 端点**：`GET https://api.factory.ai/api/billing/limits`（Bearer fk- key；请求头 `x-factory-client: web-app` + `Origin`/`Referer: https://app.factory.ai`）；`usesTokenRateLimitsBilling=true` 时读 `limits.standard/core.{fiveHour,weekly,monthly}`（均只有 `usedPercent`/`secondsRemaining`，无绝对值）+ `extraUsageBalanceCents`；否则回退 `GET /api/organization/subscription/usage?useCache=true`（standard/premium：`userTokens`/`totalAllowance`/`usedRatio`；`usedRatio` 有恒 0 脏数据，绝对值可信时优先）
+- **Factory 计费结构**（官方 pricing/individuals + models 文档）：Individual 套餐三滚动窗口 5h/7d/30d，三个都有余量才能发请求；Droid Core = 开源权重模型池（GLM/DeepSeek/Qwen/MiniMax/Kimi K 等，倍率 0.06×~1.2×），**Core 模型用量先烧 Standard 窗口**，独立 Core 窗口只在 Standard 限流后接管（`overagePreference` 控制回退到 Core 还是 Extra 预付）；商业模型倍率 0.2×~12×；窗口绝对数值官方未公布
 - **Key 来源**：app.factory.ai/settings/api-keys 生成；本机已写入 `~/.factory/.env`（fetcher 留空自动读）
 - **参考实现**：token-monitor PR #685（`src/shared/providers/factory/limits.js`）、CodexBar `docs/factory.md`
 - 当前启用 Provider：kimi / ollama / command-code / factory-droid（以 `%APPDATA%/quota-viewer/config.json` 为准）

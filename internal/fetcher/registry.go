@@ -111,6 +111,19 @@ var registry = []ProviderDef{
 			return NewCommandCodeFetcher(creds["api_key"])
 		},
 	},
+	{
+		ID:          "factory-droid",
+		DisplayName: "Factory Droid",
+		Abbr:        "F",
+		Kind:        KindUsage,
+		LoginURL:    "https://app.factory.ai/settings/api-keys",
+		Fields: []CredentialField{
+			{Key: "api_key", Label: "API Key(留空自动读 ~/.factory/.env)", Type: "password"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewFactoryDroidFetcher(creds["api_key"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

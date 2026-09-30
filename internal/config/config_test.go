@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"quota-viewer/internal/fetcher"
 )
 
 // writeConfig 把 JSON 写入测试 APPDATA 下的配置文件。
@@ -68,6 +70,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "deepseek", Enabled: true, Creds: map[string]string{"api_key": "d1"}, Budget: 500.00},
 			{ID: "ollama", Enabled: false, Creds: map[string]string{"cookie": "wos-session=o1"}},
 			{ID: "command-code", Enabled: false},
+			{ID: "factory-droid", Enabled: false},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -151,8 +154,17 @@ func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
 		t.Fatalf("expected %d providers after migration, got %d", len(AllProviderIDs), len(cfg.Providers))
 	}
 	last := cfg.Providers[len(cfg.Providers)-1]
-	if last.ID != "command-code" || last.Enabled {
-		t.Errorf("expected disabled command-code appended, got %+v", last)
+	if last.ID != "factory-droid" || last.Enabled {
+		t.Errorf("expected disabled factory-droid appended, got %+v", last)
+	}
+	// ollama 也应被补全且默认关闭
+	for _, p := range cfg.Providers {
+		if p.ID == "ollama" && p.Enabled {
+			t.Errorf("expected disabled ollama appended, got %+v", p)
+		}
+		if p.ID == "command-code" && p.Enabled {
+			t.Errorf("expected disabled command-code appended, got %+v", p)
+		}
 	}
 	// ollama 也应被补全且默认关闭
 	for _, p := range cfg.Providers {
@@ -262,5 +274,69 @@ func TestLoad_MigrateLegacyEmpty_ReturnsDefaults(t *testing.T) {
 	}
 	if enabledCount != 3 {
 		t.Errorf("expected 3 default enabled providers, got %d", enabledCount)
+	}
+}
+
+// TestAllProviderIDs_MatchesFetcherRegistry 守护 config.AllProviderIDs 与 fetcher
+// 注册表同步。两份清单漂移时:Default()/ensureKnownProviders 漏掉新 Provider,
+// 全新安装与旧配置升级路径都不会带上它(2026-09-30 接入 factory-droid 时实际踩坑)。
+func TestAllProviderIDs_MatchesFetcherRegistry(t *testing.T) {
+	all := fetcher.GetAll()
+	if len(AllProviderIDs) != len(all) {
+		t.Fatalf("AllProviderIDs has %d entries but registry has %d", len(AllProviderIDs), len(all))
+	}
+	for i, def := range all {
+		if AllProviderIDs[i] != def.ID {
+			t.Errorf("AllProviderIDs[%d]=%s, registry[%d]=%s (order must match)",
+				i, AllProviderIDs[i], i, def.ID)
+		}
+	}
+}
+
+// TestLoad_ClampsEnabledOverThree 复现 2026-09-30 现场:手工编辑配置造成 4 个同时
+// 启用(绕过 SaveConfig 的钳制)。Load 必须按顺序钳制回 3 个,否则配置面板会渲染出
+// 「勾了 4 个」的不可能状态,保存时被静默钳掉一个,用户反复保存才收敛。
+func TestLoad_ClampsEnabledOverThree(t *testing.T) {
+	writeConfig(t, `{
+	  "providers": [
+	    {"id":"kimi","enabled":true},
+	    {"id":"xfyun","enabled":false},
+	    {"id":"opencode-go","enabled":false},
+	    {"id":"mimo","enabled":false},
+	    {"id":"deepseek","enabled":false},
+	    {"id":"ollama","enabled":true},
+	    {"id":"command-code","enabled":true},
+	    {"id":"factory-droid","enabled":true,"creds":{"api_key":"fk_keep"}}
+	  ],
+	  "refresh_interval_min": 15,
+	  "ball_x": -1,
+	  "ball_y": -1
+	}`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	enabledCount := 0
+	byID := map[string]ProviderConfig{}
+	for _, p := range cfg.Providers {
+		byID[p.ID] = p
+		if p.Enabled {
+			enabledCount++
+		}
+	}
+	if enabledCount != 3 {
+		t.Errorf("expected exactly 3 enabled after clamp, got %d", enabledCount)
+	}
+	// 注册表顺序在前的保留启用,最后的 factory-droid 被钳制关闭
+	if !byID["kimi"].Enabled || !byID["ollama"].Enabled || !byID["command-code"].Enabled {
+		t.Error("expected first three enabled providers to survive clamp")
+	}
+	if byID["factory-droid"].Enabled {
+		t.Error("expected factory-droid clamped to disabled (4th enabled)")
+	}
+	// 钳制只关启用,不丢凭证
+	if byID["factory-droid"].Creds["api_key"] != "fk_keep" {
+		t.Errorf("clamping must preserve credentials, got %+v", byID["factory-droid"])
 	}
 }

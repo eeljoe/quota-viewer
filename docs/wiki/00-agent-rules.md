@@ -30,16 +30,16 @@
 | `main.go` | 入口 + Wails 运行时选项 |
 | `workarea_windows.go` | Win32 原生调用（DPI/工作区/窗口子类） |
 | `internal/config/` | 配置持久化（动态 Provider 列表）+ Cookie 解析 |
-| `internal/fetcher/` | Provider 注册表 + 六平台抓取器 |
+| `internal/fetcher/` | Provider 注册表 + 八平台抓取器 |
 | `internal/tray/` | 系统托盘 |
 | `frontend/src/` | 前端源码（index.html / main.js / style.css） |
 | `frontend/dist/` | 构建产物（Go embed） |
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "a59635f", "synced_at": "2026-08-13T00:50:00Z", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "cc01446", "synced_at": "2026-09-30T22:30:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `a59635f`（2026-08-13 00:50），共 11 个文件。
+> **Wiki 同步状态**：最后同步于 `cc01446`（2026-09-30 22:30），共 11 个文件。
 
 ## Wiki 文件索引
 
@@ -50,7 +50,7 @@
 | 02 | module-catalog | 全部模块职责与行数 |
 | 03 | core-pipeline | 刷新调用链、事件总线契约 |
 | 04 | window-positioning | 窗口定位、DPI、工作区、fitToScreen |
-| 05 | fetching-platforms | 六平台抓取器、注册表与 QuotaResult |
+| 05 | fetching-platforms | 八平台抓取器、注册表与 QuotaResult |
 | 06 | systray | 系统托盘实现与线程铁律 |
 | 07 | config-model | 动态 Provider 配置模型与旧格式迁移 |
 | 08 | api-contract | Wails 绑定 API（动态配置契约） |

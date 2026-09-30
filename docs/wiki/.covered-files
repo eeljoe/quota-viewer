@@ -2,7 +2,9 @@ app.go
 balance
 ballSize
 cd frontend && npm run build
+command-code
 deepseek
+factory-droid
 frontend/dist/
 frontend/src/
 frontend/src/*
@@ -15,16 +17,15 @@ go.mod
 id
 internal/config/
 internal/config/*.go
-internal/config/config.go
 internal/config/config_test.go
+internal/config/config.go
 internal/config/cookie.go
 internal/fetcher/
 internal/fetcher/*.go
 internal/fetcher/budget.go
 internal/fetcher/format.go
-internal/fetcher/kimi.go
 internal/fetcher/kimi_test.go
-internal/fetcher/opencode_go_test.go
+internal/fetcher/kimi.go
 internal/fetcher/registry.go
 internal/fetcher/types.go
 internal/tray/

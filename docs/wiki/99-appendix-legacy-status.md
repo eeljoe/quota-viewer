@@ -112,3 +112,110 @@
 - **DeepSeek 余额型**：`Kind="balance"`，前端恒绿；`balance_infos` 数组取首个非零余额币种
 - **新增 Provider 路径**：fetcher 实现 → registry.go 注册 → 前端自动适配（README 有英文指南）
 - Wiki 指针状态：`docs/wiki/` 11 个文件，`.covered-files` 46 项，synced_commit `85e03e9`
+
+---
+
+## 会话记录：2026-09-19 01:16
+
+> **会话摘要**：修复悬浮球状态灯两处问题（周窗口耗尽不告警、阈值 75/90 过晚）并发布 Release v1.1.1
+> **Git**：`7d4adcc` on `master`（已推送；本会话 STATUS/ROADMAP 更新待提交）
+
+### 本次完成
+- **状态灯阈值调整**：75% 黄 / 90% 红 → **60% 黄 / 80% 红 / 100% 熄灭**（`main.js` getStatusColor 统一用量型与余额型预算条；`style.css` 新增 off 暗灰态：球格/圆点/进度条三处）
+- **周窗口耗尽不告警修复**：`ollama.go` / `commandcode.go` 的 `Percent` 改为取 5h 与周窗口中更紧张的一个（原仅 5h 窗口驱动球色，周 100% + 5h 0% 仍闪绿灯；Command Code 同构顺手同修）。`Used`/`ResetAt` 仍记 5h 窗口
+- 测试：新增 2 个回归用例（WeeklyExhausted，先红后绿复现症状），4 个既有 ollama 断言更新为 max 语义；`go test ./...` 全绿
+- 交付：`wails build` 成功，桌面 `Quota Viewer.lnk` 指向 `build/bin/quota-viewer.exe`（01:10 新构建，dist 反查含新阈值）；杀旧实例（PID 22300）重启新实例，ollama 球格由绿变灰（周 100% 熄灭态）
+- 发布：推送 master（`7d4adcc`）+ **Release v1.1.1**（附 exe 11.3MB；按用户要求 release notes 不提 bug 细节，只写"修复了一些简单的小问题"）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| Percent = max(5h, 周) 在 fetcher 层取 | 周额度耗尽必须告警，进度条主展示更紧张窗口；前端零改动 | QuotaResult 加窗口数组前端取 max（过度设计） |
+| 100% 熄灭用暗灰（text-3） | 语义="灯灭了"，与未加载灰一致，用户明确要"100%熄灭" | 红色闪烁 |
+| Release notes 只写"修复小问题" | 用户明确不提 bug 细节 | 完整变更日志 |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/ollama.go` / `commandcode.go` | Percent 取两窗口较大值 |
+| 修改 | `internal/fetcher/ollama_test.go` / `commandcode_test.go` | +2 回归用例，4 断言更新 |
+| 修改 | `frontend/src/main.js` / `style.css` | 阈值 60/80/100 + off 态 |
+| 修改 | `frontend/dist/*` | wails build 重建产物（已随 fix 提交） |
+| 新增 | `ROADMAP.md` | 本会话按 update-status 创建（此前缺失） |
+
+> 本次变更：`7d4adcc`（+95/-24 行，10 个文件）
+
+### 未完成 & 下一步
+- 无明确待办；可选方向已沉淀到 `ROADMAP.md`（Next: Wails 版本升级对齐；Later: Release 推广 / 新 Provider / 反馈迭代）
+
+### 已知问题 & 注意事项
+- wiki 漂移（见下方推荐 Skill），待 `/wiki-update` 修复
+- 前端行尾警告 dist/wailsjs LF→CRLF（原有，不影响构建）
+- `build/bin/quota-viewer.exe~`（8/25 旧 exe 改名残留，运行中构建的副产物，可删）
+
+### 推荐 Skill
+- `/wiki-update` - 检测到 4 个 wiki 覆盖文件自 synced_commit（a59635f）后有代码变更：`internal/fetcher/ollama.go`、`internal/fetcher/commandcode.go`、`frontend/src/main.js`、`frontend/src/style.css`（05 页"主展示=5 小时窗口"描述已过时）
+
+### 关键上下文
+- **状态灯契约（新）**：≥60 黄 / ≥80 红 / ≥100 熄灭（off=暗灰）；ollama/commandcode 的 `Percent` = 5h 与周窗口较紧张者，`Used` 仍记 5h 窗口
+- **Release v1.1.1**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.1.1（Latest，附 quota-viewer.exe）
+- 当前启用 Provider 含 `ollama`（用户在 8/25 后自行启用——本次"周 100% 仍绿灯"症状即来自它；其余勾选组合以 `%APPDATA%/quota-viewer/config.json` 为准）
+- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 4 文件待同步）
+- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物，无需复制）
+
+---
+
+## 会话记录：2026-09-22 10:03
+
+> **会话摘要**：修复 Kimi 周额度耗尽漏报（Percent 取 5h 与 7 天窗口较紧张者），推送 master 并发布 Release v1.1.2
+> **Git**：`639e4f1` on `master`（已推送；v1.1.2 已发布；本会话 STATUS 更新待提交）
+> **任务组**：额度告警修复（承接 2026-09-19 状态灯修复会话）
+> **任务组状态**：已完成（修复已验证并发布 v1.1.2）
+
+### 本次完成
+- **Kimi 周窗口漏报修复**：用户给出两张截图对照——Kimi Code 官方页显示「5 小时用量 Code 0%、7 天用量 Code 100%」，而本应用 Kimi 仍是绿点 + `0 / 100 (5小时)`，即只读 `limits[0]`（5 小时窗口）、完全忽略周窗口（与 9/19 的 ollama/commandcode 同构漏报）
+- **线上响应确认**（真实 Key 打 `GET api.kimi.com/coding/v1/usages`）：`usage{limit:100,used:100,resetTime:...}`（周）+ `limits[0].detail`（5h，remaining=100）+ 新增字段 `usages.limit_5h/limit_7d.used_ratio`（本次才发现的窗口比率字段）
+- **修复**：`Percent` 取 5h 与 7 天窗口较紧张者（沿用 9/19 契约），`Used/Total/ResetAt` 仍记 5 小时窗口，`Remaining` 追加周用量 → 实测输出 `0 / 100 (5小时) · 周 100% 已用`，球灯按 ≥100% 熄灭为暗灰；新增 `usages.limit_5h/limit_7d` 比率解析作为 `details.limit` 缺失时的兜底
+- 测试：3 个新用例（真实 payload 的周耗尽复现 `TestKimiFetcher_WeeklyExhausted_PercentAlerts`；仅比率响应解析；周低于 5h 时不得压低 Percent），先红后绿；`go test ./...` 全绿
+- 交付：`wails build`（09:35 构建，CLI 不在 PATH，用 `C:\Users\joe\go\bin\wails.exe`）→ 杀旧实例（PID 31920）重启新实例（PID 16584）
+- 发布：推送 master（`639e4f1`）+ **Release v1.1.2**（附 quota-viewer.exe，标题「用量统计小修复」，notes 按既有偏好只写"修复了一些简单的小问题"）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| Percent = max(5h, 周) 同样适用于 Kimi | 与 9/19 ollama/commandcode 契约一致，周耗尽必须告警 | Kimi 单独用周窗口驱动（破坏一致性） |
+| 周用量优先读 `usages.limit_7d.used_ratio`，回退 `usage.used/limit` | 官方新增的比率字段最直接；字符串对象保留兼容 | 只读 `usage` 字符串（旧字段可能下线） |
+| `Remaining` 追加「· 周 X% 已用」而非替换 | 5h 的绝对值/总量信息仍有用，与 Ollama 行格式对齐 | 只显示周百分比 |
+| 倒计时仍按 5 小时窗口 | 与 ollama 现有行为一致，避免本次扩大改动面 | ResetAt 取较紧张窗口（已列入可选项待用户决定） |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/kimi.go` | usages/周窗口解析 + Percent 取两窗口较大值 |
+| 修改 | `internal/fetcher/kimi_test.go` | +3 用例（周耗尽 / 仅比率 / 周低于 5h） |
+
+> 本次变更：`639e4f1`（+168/-10 行，2 个文件）
+> 变更基准：`git diff d6e7572..HEAD --stat`
+
+### 未完成 & 下一步
+- 无明确待办；可选方向：① Kimi 倒计时改取"驱动告警的窗口"的重置时间；② 官方页「总使用量 33.68%」对应的总额度字段（`totalQuota`/booster）未纳入监控，需要时可加
+- 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+
+### 已知问题 & 注意事项
+- **本机截图取证受限**：`PrintWindow` 抓 Wails 窗口只得到部分渲染、`BitBlt`(CAPTUREBLT) 与全屏 `CopyFromScreen` 抓不到悬浮球（WebView2/合成层），结论以 fetcher 线上实测为准
+- **wails CLI 不在 PATH**：须用 `C:\Users\joe\go\bin\wails.exe build`
+- `gofmt -l` 会列出仓库里几乎所有 Go 文件（全仓 CRLF 行尾），非本次改动引入，勿按此"修格式"
+- wiki 漂移（见「推荐 Skill」），待 `/wiki-update` 修复
+- `build/bin/quota-viewer.exe~`（8/25 旧 exe 改名残留，可删）
+
+### 推荐 Skill
+- `/wiki-update` - 检测到 5 个 wiki 覆盖文件自 synced_commit（a59635f）后有代码变更：`internal/fetcher/kimi.go`、`internal/fetcher/ollama.go`、`internal/fetcher/commandcode.go`、`frontend/src/main.js`、`frontend/src/style.css`（02/05 页的 Kimi 条目与"主展示=5 小时窗口"描述已过时）
+
+### 关键上下文
+- **窗口告警契约（完整版）**：`Percent = max(较紧张的窗口)` 对 Kimi / Ollama / Command Code 三家统一；`Used/Total/Remaining/ResetAt` 仍以 5 小时（或主）窗口为准；≥60 黄 / ≥80 红 / ≥100 熄灭
+- **Kimi 响应结构**：`usage`（周：limit/used/remaining/resetTime 字符串）+ `limits[0].detail`（5h）+ `usages.limit_5h/limit_7d.used_ratio`（0-1 比率，2026-09 新增）；旧版 `{"data":[{model_name:"all"}]}` 仍兼容
+- **Release v1.1.2**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.1.2（Latest，附 quota-viewer.exe）
+- 当前启用 Provider：kimi / ollama / command-code（其余在配置里关闭；以 `%APPDATA%/quota-viewer/config.json` 为准）
+- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 5 文件待同步）
+- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物）
+

@@ -16,26 +16,26 @@
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
 > 📍 最新章节位置：`## 会话记录：2026-09-30 22:10`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`6b347c8` on `master`（已推送；Release v1.2.0 已发布）
-> 📊 累计会话数：主文档 9 条，另有 3 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 🔖 对应 commit：`3a9eec2` on `master`（已推送；Release v1.2.0 已发布）
+> 📊 累计会话数：主文档 7 条，另有 5 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "7c8971f", "branch": "master", "dirty": true, "timestamp": "2026-09-30T23:10:00+08:00"} -->
+<!-- git-meta: {"last_commit": "3a9eec2", "branch": "master", "dirty": false, "timestamp": "2026-09-30T22:39:00+08:00"} -->
 
-- **日期**：2026-09-30 22:10（23:10 收尾更新）
-- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板展示两轮对齐（5小时/周 常驻，Core 有消耗即显示）；wiki 同步；Release v1.2.0 建到 Draft 待发布
+- **日期**：2026-09-30 22:10（22:39 发布收尾）
+- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板展示三轮对齐（5小时/周 常驻，Core 有消耗即显示）；wiki 同步；推送全部提交并发布 Release v1.2.0
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.1.2 已发布**（GitHub Release 附 exe）——七平台监控全部实测可用；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；Kimi 与 ollama/commandcode 一致，任一窗口（5h 或周）耗尽都会告警
+- 当前阶段：**v1.2.0 已发布**（GitHub Release 附 exe）——八平台监控全部实测可用（新增 Factory Droid）；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；Kimi 与 ollama/commandcode 一致，任一窗口（5h 或周）耗尽都会告警
 - 下一步：无明确待办，计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
-- 注意事项：wiki 有 5 文件漂移待 `/wiki-update`；无阻塞项
+- 注意事项：wiki 05 内容已同步但 synced_commit 待 `/wiki-update` 推进；无阻塞项
 
 ---
 
@@ -46,42 +46,43 @@
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
 - **功能**：悬浮球（1-3 格动态，颜色=状态）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）
 
 ## 当前分支与最近提交
 
 - **分支**：master（与远程同步）
-- **HEAD**：`7d4adcc`（fix：状态灯修复，已推送；本会话 docs 更新待提交）
+- **HEAD**：`3a9eec2`（全部已推送；Release v1.2.0 已发布）
 - **最近提交**：
-  - `7d4adcc` - fix: 修复悬浮球状态灯——周窗口耗尽不告警与阈值调整
-  - `f03e78a` - docs: 修正 STATUS 累计会话数(6 条)
-  - `231657c` - fix: 修复 OpenCode Go 浮点用量解析,精简 Command Code 剩余文本
-- **Release**：v1.1.1（2026-09-19，Latest，附 exe）← v1.1.0 ← v1.0.0
+  - `3a9eec2` - docs: 记录 Factory 计费顺序与 Core 展示规则
+  - `7c8971f` - fix: Core 仓一有消耗即展示——Standard 限流后接管计费的回退场景
+  - `152259b` - fix: Factory Droid 面板与 Kimi/Ollama 展示对齐——月度不常驻
+- **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0
 
 ---
 
 ## 当前任务进度
 
-### ✅ 已完成（截至 2026-09-19）
-- **七平台监控**：Kimi / 讯飞星辰 / OpenCode Go / MiMo / DeepSeek / Ollama / Command Code——fetcher 注册表驱动，新增平台前端零改动
+### ✅ 已完成（截至 2026-09-30）
+- **八平台监控**：Kimi / 讯飞星辰 / OpenCode Go / MiMo / DeepSeek / Ollama / Command Code / Factory Droid——fetcher 注册表驱动，新增平台前端零改动
 - **状态灯契约**（9/19）：60% 黄 / 80% 红 / 100% 熄灭（off 暗灰）；ollama/commandcode 的 Percent 取 5h 与周窗口较紧张者；发布 v1.1.1
 - **DeepSeek 预算条**（8/7）：QuotaResult Balance/Currency + `budget.go` ApplyBudget + ProviderConfig.Budget + 前端预算输入/色阈值/刷新倒计时
 - **Ollama Provider**（8/13）：`ollama.go` HTML 解析 5 小时 Session 主窗口 + 周用量；14 个 httptest 用例；config 自动补全新 Provider（默认关闭）；真实账号冒烟通过（8/13 01:33）
 - **Command Code Provider**（8/25）：`commandcode.go` 逆向官方 CLI 私有 `/alpha/*` API（whoami + billing/credits），Bearer API Key（留空自动读 `~/.commandcode/auth.json`）；8 个 httptest 用例；真实账号冒烟通过
-- **开源发布**：GitHub eeljoe/quota-viewer，Release v1.0.0 / v1.1.0 / v1.1.1（均附 exe）
+- **Factory Droid Provider**（9/30）：`factorydroid.go` 走官方 web 同源 `/api/billing/limits`（5h/周/月 + Core 池 + Extra 余额，旧账单模型兜底），Key 留空自动读 `~/.factory/.env`；9 个 httptest 用例；真实冒烟通过；发布 v1.2.0
+- **开源发布**：GitHub eeljoe/quota-viewer，Release v1.0.0 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0（均附 exe）
 
 ### 🔄 进行中
 - 无
 
 ### 📋 待办
-- wiki 漂移同步（4 文件，`/wiki-update`）
+- wiki-meta synced_commit 推进（wiki 05 内容已同步，`/wiki-update` 顺手刷）
 - 计划级事项见 `ROADMAP.md`
 
 ---
 
 ## 未完成 & 下一步
 
-1. wiki 漂移同步（4 文件，`/wiki-update`）
+1. wiki-meta synced_commit 推进（wiki 05 内容已在 `3a9eec2` 同步，仅元数据待 `/wiki-update`）
 2. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
 ---
@@ -375,118 +376,13 @@
 - Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项
 - GitHub 仓库：https://github.com/eeljoe/quota-viewer（已同步至 3f1df7b）
 
----
-
-## 会话记录：2026-09-19 01:16
-
-> **会话摘要**：修复悬浮球状态灯两处问题（周窗口耗尽不告警、阈值 75/90 过晚）并发布 Release v1.1.1
-> **Git**：`7d4adcc` on `master`（已推送；本会话 STATUS/ROADMAP 更新待提交）
-
-### 本次完成
-- **状态灯阈值调整**：75% 黄 / 90% 红 → **60% 黄 / 80% 红 / 100% 熄灭**（`main.js` getStatusColor 统一用量型与余额型预算条；`style.css` 新增 off 暗灰态：球格/圆点/进度条三处）
-- **周窗口耗尽不告警修复**：`ollama.go` / `commandcode.go` 的 `Percent` 改为取 5h 与周窗口中更紧张的一个（原仅 5h 窗口驱动球色，周 100% + 5h 0% 仍闪绿灯；Command Code 同构顺手同修）。`Used`/`ResetAt` 仍记 5h 窗口
-- 测试：新增 2 个回归用例（WeeklyExhausted，先红后绿复现症状），4 个既有 ollama 断言更新为 max 语义；`go test ./...` 全绿
-- 交付：`wails build` 成功，桌面 `Quota Viewer.lnk` 指向 `build/bin/quota-viewer.exe`（01:10 新构建，dist 反查含新阈值）；杀旧实例（PID 22300）重启新实例，ollama 球格由绿变灰（周 100% 熄灭态）
-- 发布：推送 master（`7d4adcc`）+ **Release v1.1.1**（附 exe 11.3MB；按用户要求 release notes 不提 bug 细节，只写"修复了一些简单的小问题"）
-
-### 本次决策
-| 决策 | 原因 | 备选方案 |
-|------|------|----------|
-| Percent = max(5h, 周) 在 fetcher 层取 | 周额度耗尽必须告警，进度条主展示更紧张窗口；前端零改动 | QuotaResult 加窗口数组前端取 max（过度设计） |
-| 100% 熄灭用暗灰（text-3） | 语义="灯灭了"，与未加载灰一致，用户明确要"100%熄灭" | 红色闪烁 |
-| Release notes 只写"修复小问题" | 用户明确不提 bug 细节 | 完整变更日志 |
-
-### 新增/变更文件
-| 操作 | 文件路径 | 说明 |
-|------|----------|------|
-| 修改 | `internal/fetcher/ollama.go` / `commandcode.go` | Percent 取两窗口较大值 |
-| 修改 | `internal/fetcher/ollama_test.go` / `commandcode_test.go` | +2 回归用例，4 断言更新 |
-| 修改 | `frontend/src/main.js` / `style.css` | 阈值 60/80/100 + off 态 |
-| 修改 | `frontend/dist/*` | wails build 重建产物（已随 fix 提交） |
-| 新增 | `ROADMAP.md` | 本会话按 update-status 创建（此前缺失） |
-
-> 本次变更：`7d4adcc`（+95/-24 行，10 个文件）
-
-### 未完成 & 下一步
-- 无明确待办；可选方向已沉淀到 `ROADMAP.md`（Next: Wails 版本升级对齐；Later: Release 推广 / 新 Provider / 反馈迭代）
-
-### 已知问题 & 注意事项
-- wiki 漂移（见下方推荐 Skill），待 `/wiki-update` 修复
-- 前端行尾警告 dist/wailsjs LF→CRLF（原有，不影响构建）
-- `build/bin/quota-viewer.exe~`（8/25 旧 exe 改名残留，运行中构建的副产物，可删）
-
-### 推荐 Skill
-- `/wiki-update` - 检测到 4 个 wiki 覆盖文件自 synced_commit（a59635f）后有代码变更：`internal/fetcher/ollama.go`、`internal/fetcher/commandcode.go`、`frontend/src/main.js`、`frontend/src/style.css`（05 页"主展示=5 小时窗口"描述已过时）
-
-### 关键上下文
-- **状态灯契约（新）**：≥60 黄 / ≥80 红 / ≥100 熄灭（off=暗灰）；ollama/commandcode 的 `Percent` = 5h 与周窗口较紧张者，`Used` 仍记 5h 窗口
-- **Release v1.1.1**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.1.1（Latest，附 quota-viewer.exe）
-- 当前启用 Provider 含 `ollama`（用户在 8/25 后自行启用——本次"周 100% 仍绿灯"症状即来自它；其余勾选组合以 `%APPDATA%/quota-viewer/config.json` 为准）
-- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 4 文件待同步）
-- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物，无需复制）
-
----
-
-## 会话记录：2026-09-22 10:03
-
-> **会话摘要**：修复 Kimi 周额度耗尽漏报（Percent 取 5h 与 7 天窗口较紧张者），推送 master 并发布 Release v1.1.2
-> **Git**：`639e4f1` on `master`（已推送；v1.1.2 已发布；本会话 STATUS 更新待提交）
-> **任务组**：额度告警修复（承接 2026-09-19 状态灯修复会话）
-> **任务组状态**：已完成（修复已验证并发布 v1.1.2）
-
-### 本次完成
-- **Kimi 周窗口漏报修复**：用户给出两张截图对照——Kimi Code 官方页显示「5 小时用量 Code 0%、7 天用量 Code 100%」，而本应用 Kimi 仍是绿点 + `0 / 100 (5小时)`，即只读 `limits[0]`（5 小时窗口）、完全忽略周窗口（与 9/19 的 ollama/commandcode 同构漏报）
-- **线上响应确认**（真实 Key 打 `GET api.kimi.com/coding/v1/usages`）：`usage{limit:100,used:100,resetTime:...}`（周）+ `limits[0].detail`（5h，remaining=100）+ 新增字段 `usages.limit_5h/limit_7d.used_ratio`（本次才发现的窗口比率字段）
-- **修复**：`Percent` 取 5h 与 7 天窗口较紧张者（沿用 9/19 契约），`Used/Total/ResetAt` 仍记 5 小时窗口，`Remaining` 追加周用量 → 实测输出 `0 / 100 (5小时) · 周 100% 已用`，球灯按 ≥100% 熄灭为暗灰；新增 `usages.limit_5h/limit_7d` 比率解析作为 `details.limit` 缺失时的兜底
-- 测试：3 个新用例（真实 payload 的周耗尽复现 `TestKimiFetcher_WeeklyExhausted_PercentAlerts`；仅比率响应解析；周低于 5h 时不得压低 Percent），先红后绿；`go test ./...` 全绿
-- 交付：`wails build`（09:35 构建，CLI 不在 PATH，用 `C:\Users\joe\go\bin\wails.exe`）→ 杀旧实例（PID 31920）重启新实例（PID 16584）
-- 发布：推送 master（`639e4f1`）+ **Release v1.1.2**（附 quota-viewer.exe，标题「用量统计小修复」，notes 按既有偏好只写"修复了一些简单的小问题"）
-
-### 本次决策
-| 决策 | 原因 | 备选方案 |
-|------|------|----------|
-| Percent = max(5h, 周) 同样适用于 Kimi | 与 9/19 ollama/commandcode 契约一致，周耗尽必须告警 | Kimi 单独用周窗口驱动（破坏一致性） |
-| 周用量优先读 `usages.limit_7d.used_ratio`，回退 `usage.used/limit` | 官方新增的比率字段最直接；字符串对象保留兼容 | 只读 `usage` 字符串（旧字段可能下线） |
-| `Remaining` 追加「· 周 X% 已用」而非替换 | 5h 的绝对值/总量信息仍有用，与 Ollama 行格式对齐 | 只显示周百分比 |
-| 倒计时仍按 5 小时窗口 | 与 ollama 现有行为一致，避免本次扩大改动面 | ResetAt 取较紧张窗口（已列入可选项待用户决定） |
-
-### 新增/变更文件
-| 操作 | 文件路径 | 说明 |
-|------|----------|------|
-| 修改 | `internal/fetcher/kimi.go` | usages/周窗口解析 + Percent 取两窗口较大值 |
-| 修改 | `internal/fetcher/kimi_test.go` | +3 用例（周耗尽 / 仅比率 / 周低于 5h） |
-
-> 本次变更：`639e4f1`（+168/-10 行，2 个文件）
-> 变更基准：`git diff d6e7572..HEAD --stat`
-
-### 未完成 & 下一步
-- 无明确待办；可选方向：① Kimi 倒计时改取"驱动告警的窗口"的重置时间；② 官方页「总使用量 33.68%」对应的总额度字段（`totalQuota`/booster）未纳入监控，需要时可加
-- 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
-
-### 已知问题 & 注意事项
-- **本机截图取证受限**：`PrintWindow` 抓 Wails 窗口只得到部分渲染、`BitBlt`(CAPTUREBLT) 与全屏 `CopyFromScreen` 抓不到悬浮球（WebView2/合成层），结论以 fetcher 线上实测为准
-- **wails CLI 不在 PATH**：须用 `C:\Users\joe\go\bin\wails.exe build`
-- `gofmt -l` 会列出仓库里几乎所有 Go 文件（全仓 CRLF 行尾），非本次改动引入，勿按此"修格式"
-- wiki 漂移（见「推荐 Skill」），待 `/wiki-update` 修复
-- `build/bin/quota-viewer.exe~`（8/25 旧 exe 改名残留，可删）
-
-### 推荐 Skill
-- `/wiki-update` - 检测到 5 个 wiki 覆盖文件自 synced_commit（a59635f）后有代码变更：`internal/fetcher/kimi.go`、`internal/fetcher/ollama.go`、`internal/fetcher/commandcode.go`、`frontend/src/main.js`、`frontend/src/style.css`（02/05 页的 Kimi 条目与"主展示=5 小时窗口"描述已过时）
-
-### 关键上下文
-- **窗口告警契约（完整版）**：`Percent = max(较紧张的窗口)` 对 Kimi / Ollama / Command Code 三家统一；`Used/Total/Remaining/ResetAt` 仍以 5 小时（或主）窗口为准；≥60 黄 / ≥80 红 / ≥100 熄灭
-- **Kimi 响应结构**：`usage`（周：limit/used/remaining/resetTime 字符串）+ `limits[0].detail`（5h）+ `usages.limit_5h/limit_7d.used_ratio`（0-1 比率，2026-09 新增）；旧版 `{"data":[{model_name:"all"}]}` 仍兼容
-- **Release v1.1.2**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.1.2（Latest，附 quota-viewer.exe）
-- 当前启用 Provider：kimi / ollama / command-code（其余在配置里关闭；以 `%APPDATA%/quota-viewer/config.json` 为准）
-- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项，synced_commit `a59635f`（漂移 5 文件待同步）
-- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（即 wails build 产物）
-
+> 📦 历史会话已归档（任务组「额度告警修复」2026-09-19 / 2026-09-22 两条）：docs/wiki/99-appendix-legacy-status.md
 ---
 
 ## 会话记录：2026-09-30 22:10
 
-> **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；Release v1.2.0 建到 Draft，等 e2e 确认后发布
-> **Git**：`7c8971f` on `master`（`cc01446`+`6b347c8` 已推送；`2890e22`/`152259b`/`7c8971f` 与 STATUS 更新待推送；v1.2.0 仅有 Draft 未发布）
+> **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；e2e 确认后推送全部提交并发布 Release v1.2.0
+> **Git**：`3a9eec2` on `master`（全部已推送；Release v1.2.0 已发布）
 > **任务组**：Factory Droid Provider 接入
 > **任务组状态**：已完成（功能已验证并交付运行）
 
@@ -500,7 +396,7 @@
 - **「保存多次才生效」诊断**（用户报疑似缓存 bug）：非缓存——手工改配置造成 4 个同时启用，SaveConfig 的「≤3 静默钳制」把排在最后的 factory-droid 悄悄关掉，用户反复保存才收敛；顺带抓到真 bug：`config.AllProviderIDs` 漏登记 factory-droid（7≠8，全新安装/自动补全路径都不带它）。修复：AllProviderIDs 补齐 + 新增跨包同步守护测试 + Load 时钳制超限启用（配置面板永远不会再出现「勾了 4 个」的不可能状态），先红后绿，全量测试通过，已重建交付（PID 32216）
 - **wiki 同步**（`/wiki-update`）：5 文件——02 模块表基线刷到 cc01446（补 Command Code 两行 + Factory Droid 两行）、05 增 Factory Droid 端点/解析细节与 Kimi/Ollama 行为注记、07 增清单同步契约与 Load 钳制说明、09 测试分类更新、00 元数据与「八平台」措辞；覆盖缓存 49→50 项，漂移清零
 - **e2e 反馈修复（三轮）**：① 面板 Remaining 只显示周/月（漏 5h 主窗口）→ 补 5h 首段；② 用户仍不通过——与 Kimi/Ollama 的两段式不一致且面板截断 → 常驻只显示 5小时/周，月度仅在驱动告警时追加；③ 澄清计费顺序后 Core 改为「一有消耗即显示」（用户常驻 GLM-5.3-Flash 等 Core 池模型，Standard 烧满后 Core 仓接管，那是他最需要看到的时刻）。全程先红后绿，重建交付（PID 20988）
-- **发布（进行中）**：`cc01446`+`6b347c8` 已推送；v1.2.0 已建 **Draft**（标题「新增 Droid 额度视图」，notes 写修复 bug + 新增 Droid 视图，附旧 exe）——e2e 确认后需换新 exe 并 publish
+- **发布完成**（e2e 确认通过后收尾）：推送 6 个提交（`7961a87..3a9eec2`）→ `gh release upload --clobber` 换上新 exe（quota-viewer.exe 11.36MB，含 Core 展示修正）→ publish **v1.2.0**（https://github.com/eeljoe/quota-viewer/releases/tag/v1.2.0，notes 沿用「修复小问题 + 新增 Droid 视图」措辞偏好）
 
 ### 本次决策
 | 决策 | 原因 | 备选方案 |
@@ -528,7 +424,6 @@
 | 新增 | `~/.factory/.env` | FACTORY_API_KEY（应用外，不入库） |
 
 ### 未完成 & 下一步
-- 等用户 e2e 确认面板展示 → 推送 `2890e22`/`152259b`/`7c8971f` + 用新 exe 替换 v1.2.0 Draft 资产（`gh release upload --clobber`）并 publish
 - 可选：观察几天，Factory 私有端点漂移时对照官方 web bundle 更新 `factorydroid.go`
 - 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
@@ -538,6 +433,9 @@
 - `~/.factory/.env` 现在被 Droid CLI 与 Quota Viewer 共用，注意不要把它提交进任何仓库
 - `frontend/wailsjs/go/models.ts` 显示 M 但 diff 为空（纯行尾噪音）
 
+### 推荐 Skill
+- `/wiki-update` - 检测到 2 个 wiki 覆盖文件自 synced_commit（cc01446）后有代码变更：`internal/fetcher/factorydroid.go`、`internal/fetcher/factorydroid_test.go`——但 Core 展示规则的事实已在 `3a9eec2` 同步进 wiki 05，仅 wiki-meta synced_commit 待推进
+
 ### 关键上下文
 - **Factory 端点**：`GET https://api.factory.ai/api/billing/limits`（Bearer fk- key；请求头 `x-factory-client: web-app` + `Origin`/`Referer: https://app.factory.ai`）；`usesTokenRateLimitsBilling=true` 时读 `limits.standard/core.{fiveHour,weekly,monthly}`（均只有 `usedPercent`/`secondsRemaining`，无绝对值）+ `extraUsageBalanceCents`；否则回退 `GET /api/organization/subscription/usage?useCache=true`（standard/premium：`userTokens`/`totalAllowance`/`usedRatio`；`usedRatio` 有恒 0 脏数据，绝对值可信时优先）
 - **Factory 计费结构**（官方 pricing/individuals + models 文档）：Individual 套餐三滚动窗口 5h/7d/30d，三个都有余量才能发请求；Droid Core = 开源权重模型池（GLM/DeepSeek/Qwen/MiniMax/Kimi K 等，倍率 0.06×~1.2×），**Core 模型用量先烧 Standard 窗口**，独立 Core 窗口只在 Standard 限流后接管（`overagePreference` 控制回退到 Core 还是 Extra 预付）；商业模型倍率 0.2×~12×；窗口绝对数值官方未公布
@@ -545,5 +443,5 @@
 - **参考实现**：token-monitor PR #685（`src/shared/providers/factory/limits.js`）、CodexBar `docs/factory.md`
 - 当前启用 Provider：kimi / ollama / command-code / factory-droid（以 `%APPDATA%/quota-viewer/config.json` 为准）
 - Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 50 项，synced_commit `cc01446`（漂移已清零，2026-09-30 同步）
-- **Release v1.2.0**：Draft 待发布（https://github.com/eeljoe/quota-viewer/releases 编辑/发布页可见），资产需换 `2890e22` 后的新 exe
+- **Release v1.2.0**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.2.0（Latest，附 quota-viewer.exe 11.36MB）
 - 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（本会话已重建）

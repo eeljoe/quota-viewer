@@ -23,10 +23,10 @@
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "6b347c8", "branch": "master", "dirty": false, "timestamp": "2026-09-30T22:35:00+08:00"} -->
+<!-- git-meta: {"last_commit": "2890e22", "branch": "master", "dirty": true, "timestamp": "2026-09-30T22:50:00+08:00"} -->
 
-- **日期**：2026-09-30 22:10（22:35 收尾更新）
-- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷；wiki 同步，推送 master，发布 Release v1.2.0
+- **日期**：2026-09-30 22:10（22:50 收尾更新）
+- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；wiki 同步；Release v1.2.0 建到 Draft 待发布
 
 ---
 
@@ -485,8 +485,8 @@
 
 ## 会话记录：2026-09-30 22:10
 
-> **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷；推送 master 并发布 Release v1.2.0
-> **Git**：`6b347c8` on `master`（已推送；Release v1.2.0 已发布）
+> **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；Release v1.2.0 建到 Draft，等 e2e 确认后发布
+> **Git**：`2890e22` on `master`（`cc01446`+`6b347c8` 已推送；`2890e22` 与 STATUS 更新待推送；v1.2.0 仅有 Draft 未发布）
 > **任务组**：Factory Droid Provider 接入
 > **任务组状态**：已完成（功能已验证并交付运行）
 
@@ -499,7 +499,8 @@
 - **交付**：杀旧实例（PID 29844）→ `wails build`（16.9s，CLI 用 `C:\Users\joe\go\bin\wails.exe`）→ config 启用 factory-droid（key 走 .env 自动发现）→ 重启新实例（PID 31888）
 - **「保存多次才生效」诊断**（用户报疑似缓存 bug）：非缓存——手工改配置造成 4 个同时启用，SaveConfig 的「≤3 静默钳制」把排在最后的 factory-droid 悄悄关掉，用户反复保存才收敛；顺带抓到真 bug：`config.AllProviderIDs` 漏登记 factory-droid（7≠8，全新安装/自动补全路径都不带它）。修复：AllProviderIDs 补齐 + 新增跨包同步守护测试 + Load 时钳制超限启用（配置面板永远不会再出现「勾了 4 个」的不可能状态），先红后绿，全量测试通过，已重建交付（PID 32216）
 - **wiki 同步**（`/wiki-update`）：5 文件——02 模块表基线刷到 cc01446（补 Command Code 两行 + Factory Droid 两行）、05 增 Factory Droid 端点/解析细节与 Kimi/Ollama 行为注记、07 增清单同步契约与 Load 钳制说明、09 测试分类更新、00 元数据与「八平台」措辞；覆盖缓存 49→50 项，漂移清零
-- **发布**：推送 master（`cc01446` 代码 + `6b347c8` docs）+ **Release v1.2.0**（附 quota-viewer.exe，标题「新增 Droid 视图」，notes 写修复 bug + 新增 Droid 视图，按惯例不提细节）
+- **e2e 反馈修复**：面板 Remaining 只显示周/月（漏 5h 主窗口）——纯百分比数据应沿 Ollama 惯例写出主窗口数字；改为 `5小时 → 周 → 月 → Core → Extra` 顺序，先红后绿，重建交付（PID 21364）
+- **发布（进行中）**：`cc01446`+`6b347c8` 已推送；v1.2.0 已建 **Draft**（标题「新增 Droid 额度视图」，notes 写修复 bug + 新增 Droid 视图，附旧 exe）——e2e 确认后需换新 exe 并 publish
 
 ### 本次决策
 | 决策 | 原因 | 备选方案 |
@@ -525,6 +526,7 @@
 | 新增 | `~/.factory/.env` | FACTORY_API_KEY（应用外，不入库） |
 
 ### 未完成 & 下一步
+- 等用户 e2e 确认面板展示「5小时/周」→ 推送 `2890e22` + 用新 exe 替换 v1.2.0 Draft 资产（`gh release upload --clobber`）并 publish
 - 可选：观察几天，Factory 私有端点漂移时对照官方 web bundle 更新 `factorydroid.go`
 - 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
@@ -540,5 +542,5 @@
 - **参考实现**：token-monitor PR #685（`src/shared/providers/factory/limits.js`）、CodexBar `docs/factory.md`
 - 当前启用 Provider：kimi / ollama / command-code / factory-droid（以 `%APPDATA%/quota-viewer/config.json` 为准）
 - Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 50 项，synced_commit `cc01446`（漂移已清零，2026-09-30 同步）
-- **Release v1.2.0**：新增 Droid 视图；https://github.com/eeljoe/quota-viewer/releases/tag/v1.2.0
+- **Release v1.2.0**：Draft 待发布（https://github.com/eeljoe/quota-viewer/releases 编辑/发布页可见），资产需换 `2890e22` 后的新 exe
 - 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（本会话已重建）

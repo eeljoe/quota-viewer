@@ -34,7 +34,9 @@ type ProviderConfig struct {
     {"id": "opencode-go", "enabled": true},
     {"id": "mimo", "enabled": false},
     {"id": "deepseek", "enabled": false, "budget": 300},
-    {"id": "ollama", "enabled": false}
+    {"id": "ollama", "enabled": false},
+    {"id": "command-code", "enabled": false},
+    {"id": "factory-droid", "enabled": true}
   ],
   "refresh_interval_min": 15,
   "ball_x": -1,
@@ -45,9 +47,11 @@ type ProviderConfig struct {
 ### 常量
 
 ```go
-var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama"}
+var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid"}
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启用前三个
 ```
+
+> 清单与 fetcher 注册表的同步由 `config_test.go` 的 `TestAllProviderIDs_MatchesFetcherRegistry` 守护——注册表新增 Provider 时两处必须同步改。
 
 ### 旧格式迁移（config v1 → v2，Load 时自动）
 
@@ -59,6 +63,7 @@ var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启�
 - 迁移后立即回写新格式（`_ = Save(cfg)`，失败静默）
 - 4 个以上有值 → 钳制：按注册表顺序保留前 3 个 enabled，其余凭证保留但关闭
 - 已有 v2 配置缺少新 Provider 时，`ensureKnownProviders` 在 Load 时追加默认关闭的条目并回写，保留用户原有启用状态与凭证
+- Load 末尾钳制：启用数 >3 时按顺序保留前 3 个关闭其余（凭证不动）——手工编辑配置/异常状态不可能再让面板渲染出「勾了 4 个」的不可能状态（2026-09-30 教训：外部改配置造成 4 启用，SaveConfig 静默钳掉新 Provider，用户反复保存才收敛）
 
 ### 存储位置
 
@@ -91,9 +96,9 @@ $session.Cookies.Add((New-Object System.Net.Cookie("name", "value", "/", "domain
 
 | 文件 | 职责 |
 |---|---|
-| `internal/config/config.go` | Config/ProviderConfig 结构、Default、Load（含迁移）、Save |
+| `internal/config/config.go` | Config/ProviderConfig 结构、Default、Load（含迁移 + 超限钳制）、Save |
 | `internal/config/cookie.go` | NormalizeCookieInput + PS 转义还原 |
-| `internal/config/config_test.go` | 默认值、往返、旧格式迁移（含 mimo_cookie）用例 |
+| `internal/config/config_test.go` | 默认值、往返、旧格式迁移（含 mimo_cookie）、清单同步守护、超限钳制用例 |
 | `app.go` | GetConfig 掩码、SaveConfig 钳制与空串语义 |
 
 ---
@@ -103,4 +108,4 @@ $session.Cookies.Add((New-Object System.Net.Cookie("name", "value", "/", "domain
 - `providers` 结构变更 = 破坏性变更；迁移逻辑在 config.Load 内,改结构必须同步迁移
 - `SaveConfig` 的空凭证"不修改"语义——前端掩码回显依赖它
 - Cookie 输入规范化必须始终经过 `NormalizeCookieInput`（xfyun 与 mimo 都走它）
-- 展示上限 3 / 下限 1:config 迁移与 app.SaveConfig 双处钳制
+- 展示上限 3 / 下限 1:config Load(含迁移)与 app.SaveConfig 钳制;AllProviderIDs 与 fetcher 注册表必须同步(有守护测试)

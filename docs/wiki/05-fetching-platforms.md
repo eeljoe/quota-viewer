@@ -69,12 +69,16 @@ func Get(id string) (ProviderDef, bool)
 | `deepseek` | DeepSeek | D | api_key (password) | `https://api.deepseek.com/user/balance`, Bearer |
 | `ollama` | Ollama | O | cookie (textarea) | `https://ollama.com/settings`, Cookie 头,HTML 解析(无公开 quota API) |
 | `command-code` | Command Code | C | api_key (password, 留空自动读 `~/.commandcode/auth.json`) | `https://api.commandcode.ai/alpha/*`, Bearer(CLI 私有路由) |
+| `factory-droid` | Factory Droid | F | api_key (password, 留空自动读 `~/.factory/.env` 的 `FACTORY_API_KEY`) | `https://api.factory.ai/api/billing/limits`, Bearer + `x-factory-client: web-app`(web 私有路由) |
 
 - 每个 fetcher 的 `baseURL`/`apiURL` 可重写（构造时传空用默认）——测试通过该参数注入 httptest server
 - OpenCode Go 抓取的是 Dashboard 页面（SSR hydration + data-slot 双模式解析）；`usagePercent` 为浮点（如 `3.1`），解析用 ParseFloat
 - DeepSeek 是余额型：`Kind="balance"`，响应 `{"is_available":bool,"balance_infos":[{"currency","total_balance",...}]}`；取**第一条非零余额**的币种（如 USD $0.00 + CNY ¥247.51 → 显示 `余额 ¥247.51 (CNY)`）；`is_available=false` 或全部余额为 0 → Error；展示值经 ApplyBudget 按用户预算换算为消耗百分比（默认预算 300）
 - Ollama Cloud 无公开 quota API（issue #15132），抓取 `ollama.com/settings` 页 HTML 解析 Session(5 小时)与 Weekly 用量百分比（详见 ADDING_A_PROVIDER.md 特殊说明）
 - Command Code 无公开额度 API，`commandcode.go` 复用官方 CLI 的私有路由 `/alpha/whoami` + `/alpha/billing/credits`（Bearer 认证）；主展示 = 5 小时窗口用量，周窗口与剩余 credits 写入 `Remaining`，`ResetAt` 取 5 小时窗口 `resetAt`（epoch ms → UTC ISO）。结构随 CLI 升级可能变化，失效时对照官方 cli.mjs 更新
+- Kimi 的 `Percent` 取 5h 与 7 天窗口较紧张者（周耗尽必须告警）；周用量优先读 `usages.limit_7d.used_ratio`，回退 `usage.used/limit`；`Used/Total/ResetAt` 仍记 5 小时窗口
+- Ollama 抓取对慢响应放宽：30s 超时（ollama.com 偶发 >10s 慢响应）+ 传输层错误重试一次
+- Factory Droid 无公开额度查询 API（官方 Analytics API 个人端点 Enterprise 限定且滞后一天），`factorydroid.go` 走官方 web 端同源私有路由：优先 token-rate limits 模型 `GET /api/billing/limits`（`usesTokenRateLimitsBilling=true` 时读 `limits.standard/core.{fiveHour,weekly,monthly}`，均只有 `usedPercent`/`secondsRemaining` 无绝对值；`extraUsageBalanceCents` 为预付 Extra Usage 余额），否则回退旧账单模型 `GET /api/organization/subscription/usage?useCache=true`（`usedRatio` 有恒 0 脏数据，绝对值可信时优先）。`Percent = max(全部窗口，含 Core)`；`Used/Total/ResetAt` 以 5h 主窗口为准（Total=100/Used=5h%，沿 Ollama 先例）；周/月/Core/Extra 写入 `Remaining`（全 0 池不产生噪音）。Key 在 app.factory.ai/settings/api-keys 生成（`fk-` 前缀），留空自动读 `~/.factory/.env`（支持 export 前缀/引号/行尾注释，与 Droid CLI 共用）。结构随官方升级可能变化（曾漂移过一次），失效时对照官方 web bundle 更新
 - `format.go` 的 `formatNum` 做千分位展示格式化（仅内部使用）
 
 ### 预算换算（budget.go）
@@ -95,8 +99,8 @@ func Get(id string) (ProviderDef, bool)
 ### 测试模式
 
 全部用 `net/http/httptest` 起假服务，`baseURL` 指向假服务：
-- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` 覆盖成功/失败/异常响应路径
-- `registry_test.go` 校验注册表完整性（6 个、顺序、字段定义、Build 可执行；空凭证保持离线）
+- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` / `factorydroid_test.go` 覆盖成功/失败/异常响应路径
+- `registry_test.go` 校验注册表完整性（8 个、顺序、字段定义、Build 可执行；空凭证保持离线）
 
 ---
 
@@ -106,7 +110,7 @@ func Get(id string) (ProviderDef, bool)
 |---|---|
 | `internal/fetcher/types.go` | QuotaResult + Fetcher 接口 + Kind 常量（契约核心） |
 | `internal/fetcher/registry.go` | ProviderDef + 注册表（新增 Provider 的唯一入口） |
-| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` / `commandcode.go` | 各平台实现 |
+| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` / `commandcode.go` / `factorydroid.go` | 各平台实现 |
 | `internal/fetcher/format.go` | 千分位格式化 |
 | `internal/fetcher/budget.go` | 余额型预算 → 消耗百分比换算(ApplyBudget) |
 

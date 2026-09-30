@@ -23,7 +23,8 @@ type ProviderConfig struct {
 }
 
 // AllProviderIDs 全部已知 Provider id(与 fetcher 注册表一致,顺序 = 展示顺序)。
-var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code"}
+// 同步由 config_test.go 的 TestAllProviderIDs_MatchesFetcherRegistry 守护。
+var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid"}
 
 // DefaultProviderIDs 默认启用的 Provider(与现状一致:Kimi/讯飞/OpenCode Go)。
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"}
@@ -128,6 +129,18 @@ func Load() (*Config, error) {
 	}
 	if ensureKnownProviders(cfg) {
 		_ = Save(cfg) // 新 Provider 迁移回写失败不阻塞启动
+	}
+
+	// 钳制最多 3 个启用(展示上限):手工编辑配置/异常状态可能超过,
+	// 不钳制会让配置面板渲染出"勾了 4 个"的不可能状态,保存时被静默钳掉。
+	enabledCount := 0
+	for i := range cfg.Providers {
+		if cfg.Providers[i].Enabled {
+			enabledCount++
+			if enabledCount > 3 {
+				cfg.Providers[i].Enabled = false
+			}
+		}
 	}
 
 	return cfg, nil

@@ -83,15 +83,9 @@ func TestFactoryDroid_TokenRateLimits_FormatsResult(t *testing.T) {
 	if result.Total != 100 || result.Used != 20 {
 		t.Errorf("expected Used=20/Total=100 (5h 窗口驱动主展示), got %f/%f", result.Used, result.Total)
 	}
-	if !strings.Contains(result.Remaining, "5小时 20.0% 已用") {
-		t.Errorf("expected 5-hour window leading Remaining (Ollama convention), got '%s'", result.Remaining)
-	}
-	if !strings.Contains(result.Remaining, "周 45.0% 已用") || !strings.Contains(result.Remaining, "Extra $3.20") {
+	// 展示与 Kimi/Ollama 对齐:常驻 5小时/周;月度非最紧张窗口不显示;Extra 有余款才显示
+	if result.Remaining != "5小时 20.0% 已用 · 周 45.0% 已用 · Extra $3.20" {
 		t.Errorf("unexpected Remaining: '%s'", result.Remaining)
-	}
-	// Core 池全 0 且无预付余额时不产生展示噪音(真实账户常见形态)
-	if strings.Contains(result.Remaining, "Core") || strings.Contains(result.Remaining, "Extra $0.00") {
-		t.Errorf("zero-value pools should stay silent, got '%s'", result.Remaining)
 	}
 	// ResetAt 来自 5h 窗口的 secondsRemaining(3600s)
 	if reset, err := time.Parse(time.RFC3339, result.ResetAt); err != nil {
@@ -149,6 +143,32 @@ func TestFactoryDroid_CoreWindow_Alerts(t *testing.T) {
 	}
 	if !strings.Contains(result.Remaining, "Core") {
 		t.Errorf("expected Core info in Remaining, got '%s'", result.Remaining)
+	}
+}
+
+// TestFactoryDroid_MonthlyDrives_Shows 验证月度成为最紧张窗口时必须展示并驱动告警
+// (长窗口耗尽漏报是 9/19、9/22 两次修复的同类坑,月度不能只算不显示)。
+func TestFactoryDroid_MonthlyDrives_Shows(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+  "usesTokenRateLimitsBilling": true,
+  "limits": {"standard": {"fiveHour": {"usedPercent": 10}, "weekly": {"usedPercent": 20}, "monthly": {"usedPercent": 90}}}
+}`))
+	}))
+	defer server.Close()
+
+	f := NewFactoryDroidFetcher("fk_test")
+	f.baseURL = server.URL
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Percent != 90 {
+		t.Errorf("expected Percent=90 (monthly drives ball color), got %f", result.Percent)
+	}
+	if !strings.Contains(result.Remaining, "月 90.0% 已用") {
+		t.Errorf("expected monthly window surfaced when driving, got '%s'", result.Remaining)
 	}
 }
 

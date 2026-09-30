@@ -125,35 +125,33 @@ func (f *FactoryDroidFetcher) Fetch() QuotaResult {
 
 // parseTokenRateLimits 解析新账单模型。窗口只有百分比、无绝对值,沿用 Ollama 先例:
 // Total=100、Used=5h 百分比;Percent 取全部窗口(含 Core 池)最紧张的一个。
+// Remaining 与 Kimi/Ollama 展示对齐:常驻 5小时/周;月度/Core 仅在成为最紧张窗口
+// (驱动球色告警)时追加说明——长窗口耗尽不能只算不显示,但平时不做展示噪音。
 func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *factoryLimitsResp) QuotaResult {
 	std := limits.Limits.Standard
 	fiveHour := std.FiveHour
 
-	percent := 0.0
-	poolPercent := func(p *factoryPool) {
+	poolMax := func(p *factoryPool) float64 {
 		if p == nil {
-			return
+			return 0
 		}
+		m := 0.0
 		for _, w := range []*factoryWindow{p.FiveHour, p.Weekly, p.Monthly} {
-			if w != nil && w.UsedPercent != nil && clampPercent(*w.UsedPercent) > percent {
-				percent = clampPercent(*w.UsedPercent)
+			if w != nil && w.UsedPercent != nil && clampPercent(*w.UsedPercent) > m {
+				m = clampPercent(*w.UsedPercent)
 			}
 		}
+		return m
 	}
-	poolPercent(std)
-	coreTightest := 0.0
+	stdMax := poolMax(std)
+	// Core 池是独立计费窗口,仅在确实有数据时纳入告警与展示。
+	coreMax := 0.0
 	if core := limits.Limits.Core; core != nil {
-		// Core 池是独立计费窗口,仅在确实有数据时纳入告警与展示。
-		hasData := false
 		for _, w := range []*factoryWindow{core.FiveHour, core.Weekly, core.Monthly} {
 			if w != nil && w.UsedPercent != nil {
-				hasData = true
+				coreMax = poolMax(core)
 				break
 			}
-		}
-		if hasData {
-			poolPercent(core)
-			coreTightest = maxCorePercent(core)
 		}
 	}
 
@@ -164,25 +162,34 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 
 	result.Used = clampPercent(*fiveHour.UsedPercent)
 	result.Total = 100
-	result.Percent = percent
+	result.Percent = stdMax
+	if coreMax > result.Percent {
+		result.Percent = coreMax
+	}
 	if fiveHour.SecondsRemaining != nil && *fiveHour.SecondsRemaining > 0 {
 		result.ResetAt = time.Now().
 			Add(time.Duration(*fiveHour.SecondsRemaining * float64(time.Second))).
 			UTC().Format(time.RFC3339)
 	}
 
-	// 5 小时窗口放在首位(Ollama 惯例:纯百分比数据要把主窗口数字写出来);
-	// 周/月/Core/Extra 依次跟进。
-	var remain []string
-	remain = append(remain, fmt.Sprintf("5小时 %.1f%% 已用", result.Used))
+	remain := []string{fmt.Sprintf("5小时 %.1f%% 已用", result.Used)}
 	if std.Weekly != nil && std.Weekly.UsedPercent != nil {
 		remain = append(remain, fmt.Sprintf("周 %.1f%% 已用", clampPercent(*std.Weekly.UsedPercent)))
 	}
-	if std.Monthly != nil && std.Monthly.UsedPercent != nil {
-		remain = append(remain, fmt.Sprintf("月 %.1f%% 已用", clampPercent(*std.Monthly.UsedPercent)))
+	// 常驻展示窗口(5h/周)中最紧张者;月度仅在严格超过它时才需要补充说明
+	shownMax := result.Used
+	if std.Weekly != nil && std.Weekly.UsedPercent != nil {
+		if p := clampPercent(*std.Weekly.UsedPercent); p > shownMax {
+			shownMax = p
+		}
 	}
-	if coreTightest > 0 {
-		remain = append(remain, fmt.Sprintf("Core %.1f%% 已用", coreTightest))
+	if m := std.Monthly; m != nil && m.UsedPercent != nil {
+		if p := clampPercent(*m.UsedPercent); p > shownMax {
+			remain = append(remain, fmt.Sprintf("月 %.1f%% 已用", p))
+		}
+	}
+	if coreMax > stdMax {
+		remain = append(remain, fmt.Sprintf("Core %.1f%% 已用", coreMax))
 	}
 	if limits.ExtraUsageBalanceCents != nil && *limits.ExtraUsageBalanceCents > 0 {
 		remain = append(remain, fmt.Sprintf("Extra $%.2f", *limits.ExtraUsageBalanceCents/100))
@@ -255,17 +262,6 @@ func factoryLegacyPercent(b *factoryLegacyBucket) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-// maxCorePercent 返回 Core 池中最紧张的窗口百分比。
-func maxCorePercent(p *factoryPool) float64 {
-	tightest := 0.0
-	for _, w := range []*factoryWindow{p.FiveHour, p.Weekly, p.Monthly} {
-		if w != nil && w.UsedPercent != nil && clampPercent(*w.UsedPercent) > tightest {
-			tightest = clampPercent(*w.UsedPercent)
-		}
-	}
-	return tightest
 }
 
 func clampPercent(v float64) float64 {

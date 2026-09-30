@@ -23,10 +23,10 @@
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "2890e22", "branch": "master", "dirty": true, "timestamp": "2026-09-30T22:50:00+08:00"} -->
+<!-- git-meta: {"last_commit": "152259b", "branch": "master", "dirty": true, "timestamp": "2026-09-30T23:00:00+08:00"} -->
 
-- **日期**：2026-09-30 22:10（22:50 收尾更新）
-- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；wiki 同步；Release v1.2.0 建到 Draft 待发布
+- **日期**：2026-09-30 22:10（23:00 收尾更新）
+- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板展示两轮对齐（5小时/周 常驻，月度仅告警时出现）；wiki 同步；Release v1.2.0 建到 Draft 待发布
 
 ---
 
@@ -486,7 +486,7 @@
 ## 会话记录：2026-09-30 22:10
 
 > **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板改展示 5小时/周；Release v1.2.0 建到 Draft，等 e2e 确认后发布
-> **Git**：`2890e22` on `master`（`cc01446`+`6b347c8` 已推送；`2890e22` 与 STATUS 更新待推送；v1.2.0 仅有 Draft 未发布）
+> **Git**：`152259b` on `master`（`cc01446`+`6b347c8` 已推送；`2890e22`/`152259b` 与 STATUS 更新待推送；v1.2.0 仅有 Draft 未发布）
 > **任务组**：Factory Droid Provider 接入
 > **任务组状态**：已完成（功能已验证并交付运行）
 
@@ -499,7 +499,7 @@
 - **交付**：杀旧实例（PID 29844）→ `wails build`（16.9s，CLI 用 `C:\Users\joe\go\bin\wails.exe`）→ config 启用 factory-droid（key 走 .env 自动发现）→ 重启新实例（PID 31888）
 - **「保存多次才生效」诊断**（用户报疑似缓存 bug）：非缓存——手工改配置造成 4 个同时启用，SaveConfig 的「≤3 静默钳制」把排在最后的 factory-droid 悄悄关掉，用户反复保存才收敛；顺带抓到真 bug：`config.AllProviderIDs` 漏登记 factory-droid（7≠8，全新安装/自动补全路径都不带它）。修复：AllProviderIDs 补齐 + 新增跨包同步守护测试 + Load 时钳制超限启用（配置面板永远不会再出现「勾了 4 个」的不可能状态），先红后绿，全量测试通过，已重建交付（PID 32216）
 - **wiki 同步**（`/wiki-update`）：5 文件——02 模块表基线刷到 cc01446（补 Command Code 两行 + Factory Droid 两行）、05 增 Factory Droid 端点/解析细节与 Kimi/Ollama 行为注记、07 增清单同步契约与 Load 钳制说明、09 测试分类更新、00 元数据与「八平台」措辞；覆盖缓存 49→50 项，漂移清零
-- **e2e 反馈修复**：面板 Remaining 只显示周/月（漏 5h 主窗口）——纯百分比数据应沿 Ollama 惯例写出主窗口数字；改为 `5小时 → 周 → 月 → Core → Extra` 顺序，先红后绿，重建交付（PID 21364）
+- **e2e 反馈修复（两轮）**：① 面板 Remaining 只显示周/月（漏 5h 主窗口）→ 补 5h 首段；② 用户仍不通过——与 Kimi/Ollama 的两段式不一致且面板截断 → 月度/Core 改为「仅当成为最紧张窗口（驱动球色告警）时追加」，常驻只显示 5小时/周，先红后绿，重建交付（PID 11860）
 - **发布（进行中）**：`cc01446`+`6b347c8` 已推送；v1.2.0 已建 **Draft**（标题「新增 Droid 额度视图」，notes 写修复 bug + 新增 Droid 视图，附旧 exe）——e2e 确认后需换新 exe 并 publish
 
 ### 本次决策
@@ -510,6 +510,7 @@
 | Percent 含 Core 池 | Core 是独立计费窗口，耗尽同样影响可用性，与「最紧张窗口」契约一致 | 只算 standard（漏报 Core 耗尽） |
 | ResetAt 仍取 5h 窗口 | 与 9/22 Kimi 会话决策一致（倒计时跟主窗口） | 取驱动告警窗口的重置时间（仍是待定可选项） |
 | 超限钳制放 Load 而非只在 SaveConfig | 配置面板从 GetConfig 渲染，Load 不钳制就会出现「勾了 4 个」的不可能状态，保存时静默被砍（本次用户踩坑的直接原因） | 保存时报错提示（改动更大，前端也要跟上） |
+| 月度/Core 不常驻展示、仅告警时出现 | 用户明确要求与 Kimi/Ollama 两段式一致（且面板会截断）；但月度耗尽驱动告警必须保留（9/19、9/22 长窗口漏报同类坑） | 月度完全不算入 Percent（退回长窗口漏报坑） |
 
 ### 新增/变更文件
 | 操作 | 文件路径 | 说明 |
@@ -526,7 +527,7 @@
 | 新增 | `~/.factory/.env` | FACTORY_API_KEY（应用外，不入库） |
 
 ### 未完成 & 下一步
-- 等用户 e2e 确认面板展示「5小时/周」→ 推送 `2890e22` + 用新 exe 替换 v1.2.0 Draft 资产（`gh release upload --clobber`）并 publish
+- 等用户 e2e 确认面板展示「5小时/周」两段式 → 推送 `2890e22`/`152259b` + 用新 exe 替换 v1.2.0 Draft 资产（`gh release upload --clobber`）并 publish
 - 可选：观察几天，Factory 私有端点漂移时对照官方 web bundle 更新 `factorydroid.go`
 - 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 

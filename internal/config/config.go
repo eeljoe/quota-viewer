@@ -12,6 +12,7 @@ type Config struct {
 	RefreshIntervalMin int              `json:"refresh_interval_min"`
 	BallX              int              `json:"ball_x"`
 	BallY              int              `json:"ball_y"`
+	ExtendedMode       bool             `json:"extended_mode,omitempty"` // 扩展模式:悬浮球最多 9 格(默认关闭,3 格)
 }
 
 // ProviderConfig 描述单个 Provider 的启用状态与凭证。
@@ -24,10 +25,37 @@ type ProviderConfig struct {
 
 // AllProviderIDs 全部已知 Provider id(与 fetcher 注册表一致,顺序 = 展示顺序)。
 // 同步由 config_test.go 的 TestAllProviderIDs_MatchesFetcherRegistry 守护。
-var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid"}
+var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid", "minimax"}
 
 // DefaultProviderIDs 默认启用的 Provider(与现状一致:Kimi/讯飞/OpenCode Go)。
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"}
+
+// 展示上限:普通模式 3 个;扩展模式放开到注册表上限(当前 9)。
+const (
+	maxEnabledNormal   = 3
+	maxEnabledExtended = 9
+)
+
+// EnabledLimit 返回启用数量上限:扩展模式放开到 9,普通模式 3 个。
+func EnabledLimit(extended bool) int {
+	if extended {
+		return maxEnabledExtended
+	}
+	return maxEnabledNormal
+}
+
+// clampEnabled 把启用数量钳制到上限(超出部分按顺序关闭)。
+func clampEnabled(providers []ProviderConfig, limit int) {
+	enabledCount := 0
+	for i := range providers {
+		if providers[i].Enabled {
+			enabledCount++
+			if enabledCount > limit {
+				providers[i].Enabled = false
+			}
+		}
+	}
+}
 
 // legacyConfig 旧版扁平配置结构(仅用于 Load 时迁移)。
 type legacyConfig struct {
@@ -131,17 +159,9 @@ func Load() (*Config, error) {
 		_ = Save(cfg) // 新 Provider 迁移回写失败不阻塞启动
 	}
 
-	// 钳制最多 3 个启用(展示上限):手工编辑配置/异常状态可能超过,
-	// 不钳制会让配置面板渲染出"勾了 4 个"的不可能状态,保存时被静默钳掉。
-	enabledCount := 0
-	for i := range cfg.Providers {
-		if cfg.Providers[i].Enabled {
-			enabledCount++
-			if enabledCount > 3 {
-				cfg.Providers[i].Enabled = false
-			}
-		}
-	}
+	// 钳制最多启用上限(普通 3 / 扩展 9):手工编辑配置/异常状态可能超过,
+	// 不钳制会让配置面板渲染出不可能的勾选状态,保存时被静默钳掉。
+	clampEnabled(cfg.Providers, EnabledLimit(cfg.ExtendedMode))
 
 	return cfg, nil
 }
@@ -199,16 +219,8 @@ func migrateFromLegacy(l legacyConfig) *Config {
 	}
 	set("opencode-go", len(oc) > 0, oc)
 
-	// 钳制最多 3 个启用(展示上限)
-	enabledCount := 0
-	for i := range cfg.Providers {
-		if cfg.Providers[i].Enabled {
-			enabledCount++
-			if enabledCount > 3 {
-				cfg.Providers[i].Enabled = false
-			}
-		}
-	}
+	// 钳制最多 3 个启用(展示上限;旧格式无扩展模式)
+	clampEnabled(cfg.Providers, EnabledLimit(false))
 
 	_ = Save(cfg) // 回写新格式,失败静默
 	return cfg

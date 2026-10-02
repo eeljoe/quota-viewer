@@ -2,8 +2,10 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"quota-viewer/internal/fetcher"
@@ -71,6 +73,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "ollama", Enabled: false, Creds: map[string]string{"cookie": "wos-session=o1"}},
 			{ID: "command-code", Enabled: false},
 			{ID: "factory-droid", Enabled: false},
+			{ID: "minimax", Enabled: false},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -154,22 +157,15 @@ func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
 		t.Fatalf("expected %d providers after migration, got %d", len(AllProviderIDs), len(cfg.Providers))
 	}
 	last := cfg.Providers[len(cfg.Providers)-1]
-	if last.ID != "factory-droid" || last.Enabled {
-		t.Errorf("expected disabled factory-droid appended, got %+v", last)
+	if last.ID != "minimax" || last.Enabled {
+		t.Errorf("expected disabled minimax appended, got %+v", last)
 	}
-	// ollama 也应被补全且默认关闭
-	for _, p := range cfg.Providers {
-		if p.ID == "ollama" && p.Enabled {
-			t.Errorf("expected disabled ollama appended, got %+v", p)
-		}
-		if p.ID == "command-code" && p.Enabled {
-			t.Errorf("expected disabled command-code appended, got %+v", p)
-		}
-	}
-	// ollama 也应被补全且默认关闭
-	for _, p := range cfg.Providers {
-		if p.ID == "ollama" && p.Enabled {
-			t.Errorf("expected disabled ollama appended, got %+v", p)
+	// ollama / command-code / factory-droid 也应被补全且默认关闭
+	for _, id := range []string{"ollama", "command-code", "factory-droid"} {
+		for _, p := range cfg.Providers {
+			if p.ID == id && p.Enabled {
+				t.Errorf("expected disabled %s appended, got %+v", id, p)
+			}
 		}
 	}
 	if cfg.Providers[0].Creds["api_key"] != "k" {
@@ -338,5 +334,54 @@ func TestLoad_ClampsEnabledOverThree(t *testing.T) {
 	// 钳制只关启用,不丢凭证
 	if byID["factory-droid"].Creds["api_key"] != "fk_keep" {
 		t.Errorf("clamping must preserve credentials, got %+v", byID["factory-droid"])
+	}
+}
+
+// TestLoad_ExtendedMode_AllowsNineEnabled 验证扩展模式把启用上限从 3 放开到 9:
+// extended_mode=true 时全部 Provider 可同时启用;普通模式仍然钳回 3。
+func TestLoad_ExtendedMode_AllowsNineEnabled(t *testing.T) {
+	buildJSON := func(extended bool) string {
+		ids := make([]string, 0, len(AllProviderIDs))
+		for _, id := range AllProviderIDs {
+			ids = append(ids, fmt.Sprintf(`{"id":"%s","enabled":true}`, id))
+		}
+		return fmt.Sprintf(`{
+		  "providers": [%s],
+		  "extended_mode": %t,
+		  "refresh_interval_min": 15,
+		  "ball_x": -1,
+		  "ball_y": -1
+		}`, strings.Join(ids, ","), extended)
+	}
+
+	writeConfig(t, buildJSON(true))
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	enabled := 0
+	for _, p := range cfg.Providers {
+		if p.Enabled {
+			enabled++
+		}
+	}
+	if enabled != len(AllProviderIDs) {
+		t.Errorf("extended mode: expected all %d enabled, got %d", len(AllProviderIDs), enabled)
+	}
+
+	// 同样的启用状态,关闭扩展模式 → 钳回 3
+	writeConfig(t, buildJSON(false))
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	enabled = 0
+	for _, p := range cfg.Providers {
+		if p.Enabled {
+			enabled++
+		}
+	}
+	if enabled != 3 {
+		t.Errorf("normal mode: expected 3 enabled after clamp, got %d", enabled)
 	}
 }

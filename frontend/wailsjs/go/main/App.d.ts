@@ -15,6 +15,6 @@ export function Refresh():Promise<Array<fetcher.QuotaResult>>;
 
 export function SaveBallPosition(arg1:number,arg2:number):Promise<void>;
 
-export function SaveConfig(arg1:Array<main.ProviderInput>,arg2:number):Promise<void>;
+export function SaveConfig(arg1:Array<main.ProviderInput>,arg2:number,arg3:boolean):Promise<void>;
 
 export function TestConnection(arg1:string):Promise<string>;

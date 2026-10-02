@@ -15,27 +15,28 @@
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-09-30 22:10`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`3a9eec2` on `master`（已推送；Release v1.2.0 已发布）
-> 📊 累计会话数：主文档 7 条，另有 5 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-02 22:57`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`b13a10a` on `master`（已推送）
+> 📊 累计会话数：主文档 8 条，另有 5 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "3a9eec2", "branch": "master", "dirty": false, "timestamp": "2026-09-30T22:39:00+08:00"} -->
+<!-- git-meta: {"last_commit": "b13a10a", "branch": "master", "dirty": false, "timestamp": "2026-10-02T23:00:00+08:00"} -->
 
-- **日期**：2026-09-30 22:10（22:39 发布收尾）
-- **会话摘要**：新增 Factory Droid 额度监控（第 8 家 Provider）+ 诊断「保存多次才生效」并修复两个潜在缺陷 + 面板展示三轮对齐（5小时/周 常驻，Core 有消耗即显示）；wiki 同步；推送全部提交并发布 Release v1.2.0
+- **日期**：2026-10-02 22:57
+- **会话摘要**：新增 MiniMax 额度监控（第 9 家 Provider，Token Plan sk-cp- Key）+ 扩展模式（悬浮球 4-9 格网格）+ 球形悬浮球改版；config.json 中途被误写坏、经内存写回完整恢复；推送 b13a10a
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.2.0 已发布**（GitHub Release 附 exe）——八平台监控全部实测可用（新增 Factory Droid）；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；Kimi 与 ollama/commandcode 一致，任一窗口（5h 或周）耗尽都会告警
+- 当前阶段：**v1.2.0 已发布** + master 新增三件套（未发版）：九平台监控（新增 MiniMax）、扩展模式（悬浮球最多 9 格，默认 3）、球形外观
+- 状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent（Kimi/ollama/commandcode/factory-droid/minimax 一致）
 - 下一步：无明确待办，计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
-- 注意事项：wiki 05 内容已同步但 synced_commit 待 `/wiki-update` 推进；无阻塞项
+- 注意事项：wiki 待 `/wiki-update` 同步本次三件套（05/02/07/09/00）；无阻塞项
 
 ---
 
@@ -45,18 +46,18 @@
 - **技术栈**：Go 1.24 + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite 打包）
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
-- **功能**：悬浮球（1-3 格动态，颜色=状态）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）
+- **功能**：悬浮球（1-9 格动态，颜色=状态，球形）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证 + 扩展模式开关）+ 系统托盘 + 关闭到托盘
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）
 
 ## 当前分支与最近提交
 
 - **分支**：master（与远程同步）
-- **HEAD**：`3a9eec2`（全部已推送；Release v1.2.0 已发布）
+- **HEAD**：`b13a10a`（全部已推送）
 - **最近提交**：
+  - `b13a10a` - feat: MiniMax 额度监控(第 9 家)+ 扩展模式 4-9 格 + 球形悬浮球
+  - `edce48b` - docs: 收尾 v1.2.0 发布记录,归档额度告警修复组会话
   - `3a9eec2` - docs: 记录 Factory 计费顺序与 Core 展示规则
-  - `7c8971f` - fix: Core 仓一有消耗即展示——Standard 限流后接管计费的回退场景
-  - `152259b` - fix: Factory Droid 面板与 Kimi/Ollama 展示对齐——月度不常驻
-- **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0
+- **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0（三件套未发版）
 
 ---
 
@@ -69,21 +70,23 @@
 - **Ollama Provider**（8/13）：`ollama.go` HTML 解析 5 小时 Session 主窗口 + 周用量；14 个 httptest 用例；config 自动补全新 Provider（默认关闭）；真实账号冒烟通过（8/13 01:33）
 - **Command Code Provider**（8/25）：`commandcode.go` 逆向官方 CLI 私有 `/alpha/*` API（whoami + billing/credits），Bearer API Key（留空自动读 `~/.commandcode/auth.json`）；8 个 httptest 用例；真实账号冒烟通过
 - **Factory Droid Provider**（9/30）：`factorydroid.go` 走官方 web 同源 `/api/billing/limits`（5h/周/月 + Core 池 + Extra 余额，旧账单模型兜底），Key 留空自动读 `~/.factory/.env`；9 个 httptest 用例；真实冒烟通过；发布 v1.2.0
+- **MiniMax Provider + 扩展模式 + 球形悬浮球**（10/2）：`minimax.go` 走 `coding_plan/remains`（sk-cp- 订阅 Key，三主机域名链，剩余% 反转已用%）；扩展模式启用上限 3→9（配置面板开关）；悬浮球改圆形 + 4+ 格网格布局；9 个 httptest 用例；真实冒烟通过
 - **开源发布**：GitHub eeljoe/quota-viewer，Release v1.0.0 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0（均附 exe）
 
 ### 🔄 进行中
 - 无
 
 ### 📋 待办
-- wiki-meta synced_commit 推进（wiki 05 内容已同步，`/wiki-update` 顺手刷）
+- wiki 同步本次三件套（05 端点细节 / 02 模块表 / 07 钳制契约+扩展模式 / 09 测试 / 00 元数据），`/wiki-update` 顺手刷
 - 计划级事项见 `ROADMAP.md`
 
 ---
 
 ## 未完成 & 下一步
 
-1. wiki-meta synced_commit 推进（wiki 05 内容已在 `3a9eec2` 同步，仅元数据待 `/wiki-update`）
-2. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+1. 用户目验新悬浮球（4 格 2x2 网格 + 球形观感，代码侧无法替代目验）
+2. wiki 三件套同步（见待办）
+3. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
 ---
 
@@ -445,3 +448,64 @@
 - Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 50 项，synced_commit `cc01446`（漂移已清零，2026-09-30 同步）
 - **Release v1.2.0**：https://github.com/eeljoe/quota-viewer/releases/tag/v1.2.0（Latest，附 quota-viewer.exe 11.36MB）
 - 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（本会话已重建）
+
+---
+
+## 会话记录：2026-10-02 22:57
+
+> **会话摘要**：新增 MiniMax 额度监控（第 9 家 Provider，Token Plan sk-cp- Key）+ 扩展模式（悬浮球 4-9 格网格）+ 球形悬浮球改版；config.json 中途被误写坏、经应用内存写回完整恢复（零丢失）；推送 `b13a10a`
+> **Git**：`b13a10a` on `master`（已推送）
+> **任务组**：MiniMax Provider 接入 + 展示形态改版
+> **任务组状态**：已完成（冒烟通过，新实例运行中，待用户目验）
+
+### 本次完成
+- **调研**：MiniMax Token Plan（M Plan）私有端点 `GET /v1/api/openplatform/coding_plan/remains`（Bearer sk-cp- 订阅 Key + Referer 官方 web 同款）；字段 `current_*_remaining_percent` 是**剩余%**，部分套餐绝对量 count 恒 0；与 minimax-status（JochenYang）CLI 源码、token_manager 调研交叉验证
+- **实现 `minimax.go`**：剩余% 反转为已用%（语义反转事故写回归守护测试）；5h + 周双窗口取最紧张者（窗口告警契约对齐 Kimi/Ollama/Factory）；三主机域名链 `api.minimaxi.com → www.minimaxi.com → api.minimax.io`（实测 www 偶发 TLS 握手超时，海外不认国内 Key 返回业务 1004）；注册表第 9 家，缩写 MX，LoginURL 指向套餐页
+- **测试**：9 个 httptest 用例先红后绿（语义反转守护 / 周无限制判定 / Total=0 退化 / 域名链回退 / 1004 提示 / 空套餐卡等），`go test ./...` 全绿
+- **扩展模式**：`Config.ExtendedMode` + `EnabledLimit`（普通 3 / 扩展 9），Load / SaveConfig / 旧格式迁移三处钳制统一走一个函数；配置面板新增「扩展模式」开关；悬浮球 4+ 格走网格（4=2x2，5-6=3 列两行，7-9=3x3）；详情面板高度随条目伸缩（封顶 640，列表内部滚动）
+- **球形改版**：`border-radius: 50%` + 径向高光 + 下缘内阴影营造球体；格子从竖分隔条改为软芯片（1px gap，去 hairline 分隔线）；单格放大占满；2-3 格条带、字号随数量分档
+- **交付**：MiniMax key 写入应用配置并启用 + `extended_mode=true`；真实 key 冒烟（5h 25.0% 已用 · 周 3.0% 已用，与 curl 原始响应逐字段一致，ResetAt 4.2h 后）；杀旧实例（PID 9548）→ `wails build`（30s）→ 新实例 PID 32608；推送 `b13a10a`
+
+### 事故与恢复（如实记录）
+- 修 config.json 时 PowerShell 脚本失误（先 `Remove` 属性再引用它），把 `%APPDATA%\quota-viewer\config.json` 覆盖成 133 字节残骸，8 家凭证一度全部丢失
+- **恢复路径**：运行中的应用（PID 9548）内存仍持有完整配置 → 用户点击悬浮球触发 `mouseup → SaveBallPosition → config.Save` 整份写回，3147 字节完整恢复，**零丢失**
+- **教训**：改应用外配置文件前先确认应用运行状态（运行中实例是热备份）；PowerShell 对 PSObject Remove 属性后原引用即失效
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 取 `model_remains[0]` 主套餐卡 | 与官方 CLI 生态一致；视频/音乐等赠送卡（3/3 之类）不该进主告警 | 遍历全卡取最紧张（赠送卡会污染告警） |
+| 三主机域名链逐个回退 | www 实测偶发超时、海外不认国内 Key；单域名故障即全挂 | 只用 api.minimaxi.com（回退能力弱） |
+| Total=0 退化为纯百分比展示 | 实测订阅档 count 恒 0，绝对量不可信 | 硬显示 0/0（NaN/误导） |
+| 扩展模式默认关、上限 9 | 保持默认极简；9=当前注册表容量 | 默认全开 / 无上限（网格布局无界） |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `internal/fetcher/minimax.go` | MiniMax 抓取器（域名链 + 剩余%反转 + 百分比退化） |
+| 新增 | `internal/fetcher/minimax_test.go` | 9 个 httptest 用例 |
+| 修改 | `internal/fetcher/registry.go` + `_test.go` | 注册 minimax（8→9，断言同步） |
+| 修改 | `internal/config/config.go` + `_test.go` | ExtendedMode + EnabledLimit/clampEnabled 收敛 + 扩展钳制用例 |
+| 修改 | `app.go` | SaveConfig 增 extendedMode 参数；fetchAll 上限动态；GetConfig 回传 extended_mode |
+| 修改 | `frontend/src/{index.html,main.js,style.css}` | 扩展开关 + 网格球格 + 球形样式 + 面板伸缩 |
+| 修改 | `frontend/wailsjs/go/main/App.{js,d.ts}` | SaveConfig 三参绑定（手改，与生成物一致） |
+| 修改 | `frontend/dist/*` | 重建产物 |
+| 修改 | `%APPDATA%/quota-viewer/config.json` | minimax 启用 + extended_mode（应用外修改） |
+
+### 未完成 & 下一步
+- 用户目验悬浮球（4 格 2x2 网格 + 球形观感）
+- wiki 三件套同步（05/02/07/09/00），`/wiki-update`
+- 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+
+### 已知问题 & 注意事项
+- MiniMax sk-cp- Key 在对话中明文出现过，介意可去 platform.minimaxi.com/console/plan 轮换，轮换后更新应用配置即可（无自动发现机制，需手工填）
+- MiniMax 私有端点无稳定性承诺；漂移时对照 minimax-status 源码或官方 web bundle 更新 `minimax.go`（已入 ROADMAP Later）
+- `~/.minimax-config.json`（minimax-status CLI）与本应用凭证相互独立，不共享
+- 前端行尾警告（dist/wailsjs LF→CRLF）依旧，不影响构建
+
+### 关键上下文
+- **MiniMax 端点**：`GET https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains`（Bearer sk-cp-；Referer `https://platform.minimaxi.com/`）；成功响应 `model_remains[]` + `base_resp.status_code=0`；鉴权失败 1004/2049（HTTP 200 也可能携带）
+- **字段语义**：`current_interval_remaining_percent` / `current_weekly_remaining_percent` 是剩余%（0-100）；`remains_time` / `weekly_remains_time` 毫秒级重置倒计时；`current_interval_total_count` 部分套餐恒 0；「无周限」判定 = 周总额 0 且无周剩余%（minimax-status 同款）
+- **展示对齐**：Remaining = `5小时 X% 已用 · 周 Y% 已用`（无周限→`周无限制`）；Percent = max(5h 已用, 周 已用)；ResetAt 取 5h 窗口倒计时
+- 当前启用 Provider：kimi / ollama / factory-droid / minimax（4 个，`extended_mode=true`）
+- 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（本会话已重建，PID 32608）

@@ -17,6 +17,7 @@
 - 新 Provider 扩展（按用户需求，入口见 docs/ADDING_A_PROVIDER.md）
 - 用户反馈迭代
 - Factory 私有端点漂移维护 — `/api/billing/limits` 无稳定性承诺，失效时对照官方 web bundle 更新 `factorydroid.go`。验收：端点漂移报错后恢复。入口：直接做
+- MiniMax 私有端点漂移维护 — `coding_plan/remains` 无稳定性承诺，失效时对照 minimax-status 源码或官方 web bundle 更新 `minimax.go`。验收：端点漂移报错后恢复。入口：直接做
 - Kimi 细节打磨 — 倒计时改取"正在驱动告警的窗口"的重置时间（现在固定 5h 窗口）；官方页「总使用量」总额度字段未纳入监控。验收：用户提出即做。入口：直接做
 
 ## 已升级 / 已否决（留痕，防止重复提出）

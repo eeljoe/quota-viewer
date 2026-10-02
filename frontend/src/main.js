@@ -11,6 +11,13 @@ const SIZES = {
 let currentView = "ball"; // ball | panel | settings
 let currentResults = [];
 let providerCards = []; // [{id, enabled: checkbox, fields: [{key, input}]}]
+let currentExtendedMode = false; // 扩展模式:悬浮球最多 9 格(默认 3)
+let lastPanelH = SIZES.panel[1]; // 面板当前窗口高度(随条目数伸缩)
+
+// 启用数量上限:扩展模式 9,普通 3(与后端钳制一致)
+function maxEnabled() {
+    return currentExtendedMode ? 9 : 3;
+}
 
 // === 视图切换(统一入口,负责窗口尺寸与屏幕内定位) ===
 function setView(view) {
@@ -22,9 +29,17 @@ function setView(view) {
     if (view === "ball") {
         window.go.main.App.CollapseWindow();
     } else {
-        const [w, h] = SIZES[view];
+        const [w, h] = view === "panel" ? panelSize() : SIZES[view];
+        lastPanelH = h;
         window.go.main.App.ExpandWindow(w, h);
     }
+}
+
+// 面板高度随条目数伸缩:1-3 条用默认尺寸,4-9 条增高,封顶 640(超出列表内部滚动)
+function panelSize() {
+    const n = Math.max(currentResults.length, 1);
+    const h = Math.min(640, 96 + n * 66);
+    return [SIZES.panel[0], Math.max(SIZES.panel[1], h)];
 }
 
 // === 事件监听 ===
@@ -105,10 +120,22 @@ function renderResults(results) {
     // 更新球面格子
     updateBall(results);
 
+    // 面板已展开且条目数变化时,同步窗口高度
+    syncPanelSize();
+
     // 更新时间
     const now = new Date();
     lastRefreshTime = now.getTime();
     document.getElementById("last-updated").textContent = "更新于 " + now.toLocaleTimeString("zh-CN");
+}
+
+function syncPanelSize() {
+    if (currentView !== "panel") return;
+    const [, h] = panelSize();
+    if (h !== lastPanelH) {
+        lastPanelH = h;
+        window.go.main.App.ExpandWindow(SIZES.panel[0], h);
+    }
 }
 
 // === 倒计时 ===
@@ -144,11 +171,17 @@ function getStatusColor(r) {
     return "green";
 }
 
-// 球面格子 = 启用的 Provider 数量(1-3),flex 均分(1 个占满 / 2 个各半 / 3 个各 1/3);
+// 球面格子 = 启用的 Provider 数量(1-9):1-3 单行条带,4+ 网格(2x2 → 3 列 → 3x3);
 // 格字颜色=状态;悬停 tooltip 显示各平台明细
 function updateBall(results) {
     const ball = document.getElementById("ball");
     ball.querySelectorAll(".ball-cell").forEach((c) => c.remove());
+
+    const n = results.length;
+    // 列数:1-3 单行 n 列;4 → 2x2;5+ → 3 列
+    const cols = n <= 3 ? n : (n <= 4 ? 2 : 3);
+    ball.classList.toggle("grid", n >= 4);
+    if (n >= 4) ball.style.setProperty("--cols", cols);
 
     results.forEach((r) => {
         const cell = document.createElement("span");
@@ -157,8 +190,14 @@ function updateBall(results) {
         ball.appendChild(cell);
     });
 
+    // 数量档位驱动字号
+    ball.classList.remove("cells-2-3", "cells-4-6", "cells-7-9");
+    if (n >= 7) ball.classList.add("cells-7-9");
+    else if (n >= 4) ball.classList.add("cells-4-6");
+    else if (n >= 2) ball.classList.add("cells-2-3");
+
     // 单格时放大字母占满整个球
-    ball.classList.toggle("single-cell", results.length === 1);
+    ball.classList.toggle("single-cell", n === 1);
 
     ball.title = results
         .map((r) => r.platform + ": " + (r.error || r.remaining || "未知"))
@@ -178,6 +217,8 @@ document.getElementById("btn-close-settings").addEventListener("click", () => {
 async function loadConfig() {
     try {
         const cfg = await window.go.main.App.GetConfig();
+        currentExtendedMode = !!cfg.extended_mode;
+        document.getElementById("input-extended").checked = currentExtendedMode;
         renderProviderList(cfg.providers || []);
         document.getElementById("input-interval").value = cfg.refresh_interval_min || 15;
     } catch (e) {
@@ -279,12 +320,12 @@ function renderProviderList(providers) {
             fieldsWrap.appendChild(budgetGroup);
         }
 
-        // 勾选限制:最多 3 个、最少 1 个
+        // 勾选限制:普通模式最多 3 个、扩展模式最多 9 个,最少 1 个
         cb.addEventListener("change", () => {
             const enabledCount = providerCards.filter((c) => c.enabled.checked).length;
-            if (enabledCount > 3) {
+            if (enabledCount > maxEnabled()) {
                 cb.checked = false;
-                toast("最多展示 3 个 Provider", "error");
+                toast(`最多展示 ${maxEnabled()} 个 Provider(可开启扩展模式)`, "error");
                 return;
             }
             if (enabledCount < 1) {
@@ -303,8 +344,9 @@ function renderProviderList(providers) {
 document.getElementById("btn-save-config").addEventListener("click", async () => {
     const providers = collectProviders();
     const interval = parseInt(document.getElementById("input-interval").value) || 15;
+    currentExtendedMode = document.getElementById("input-extended").checked;
     try {
-        await window.go.main.App.SaveConfig(providers, interval);
+        await window.go.main.App.SaveConfig(providers, interval, currentExtendedMode);
         // 清空输入框(已保存)
         providerCards.forEach((c) => c.fields.forEach((f) => {
             f.input.value = "";

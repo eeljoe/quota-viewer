@@ -163,15 +163,18 @@ func (a *App) GetConfig() map[string]interface{} {
 		"refresh_interval_min": a.cfg.RefreshIntervalMin,
 		"ball_x":               a.cfg.BallX,
 		"ball_y":               a.cfg.BallY,
+		"extended_mode":        a.cfg.ExtendedMode,
 	}
 }
 
-// SaveConfig 保存 Provider 配置。最多 3 个启用、最少 1 个启用(后端钳制)。
-func (a *App) SaveConfig(providers []ProviderInput, refreshMin int) error {
+// SaveConfig 保存 Provider 配置。启用数量钳制:普通模式 1-3 个,扩展模式 1-9 个(后端钳制)。
+func (a *App) SaveConfig(providers []ProviderInput, refreshMin int, extendedMode bool) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	// 1) 钳制启用数量:0 个 → 全部启用(再由上限裁到前 3);超过 3 → 保留前 3
+	limit := config.EnabledLimit(extendedMode)
+
+	// 1) 钳制启用数量:0 个 → 全部启用(再由上限裁掉超出者);超过上限 → 保留前 limit 个
 	enabledCount := 0
 	for _, p := range providers {
 		if p.Enabled {
@@ -184,17 +187,18 @@ func (a *App) SaveConfig(providers []ProviderInput, refreshMin int) error {
 		}
 		enabledCount = len(providers)
 	}
-	if enabledCount > 3 {
+	if enabledCount > limit {
 		kept := 0
 		for i := range providers {
 			if providers[i].Enabled {
 				kept++
-				if kept > 3 {
+				if kept > limit {
 					providers[i].Enabled = false
 				}
 			}
 		}
 	}
+	a.cfg.ExtendedMode = extendedMode
 
 	// 2) 合并到配置(空凭证 = 不修改)
 	for _, in := range providers {
@@ -395,17 +399,19 @@ func anchoredPos(ballX, ballY, w, h, ballPhys, rx, ry, rw, rh, margin int) (int,
 	return x, y
 }
 
-// fetchAll 并发抓取所有已启用的 Provider(最多 3 个),结果顺序 = 注册表顺序。
+// fetchAll 并发抓取所有已启用的 Provider(普通模式最多 3 个,扩展模式最多 9 个),
+// 结果顺序 = 注册表顺序。
 func (a *App) fetchAll() []fetcher.QuotaResult {
 	a.mu.Lock()
 	cfg := *a.cfg
 	a.mu.Unlock()
 
-	enabled := make([]config.ProviderConfig, 0, 3)
+	limit := config.EnabledLimit(cfg.ExtendedMode)
+	enabled := make([]config.ProviderConfig, 0, limit)
 	for _, p := range cfg.Providers {
 		if p.Enabled {
 			enabled = append(enabled, p)
-			if len(enabled) == 3 {
+			if len(enabled) == limit {
 				break
 			}
 		}

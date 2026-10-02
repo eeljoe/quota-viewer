@@ -124,6 +124,19 @@ var registry = []ProviderDef{
 			return NewFactoryDroidFetcher(creds["api_key"])
 		},
 	},
+	{
+		ID:          "minimax",
+		DisplayName: "MiniMax",
+		Abbr:        "MX",
+		Kind:        KindUsage,
+		LoginURL:    "https://platform.minimaxi.com/console/plan",
+		Fields: []CredentialField{
+			{Key: "api_key", Label: "Token Plan Key(sk-cp- 开头订阅 Key)", Type: "password"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewMiniMaxFetcher(creds["api_key"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

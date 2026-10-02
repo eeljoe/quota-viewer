@@ -42,6 +42,12 @@
         <div class="settings-body">
             <div id="provider-list"><!-- Provider 卡片由 JS 按注册表元数据动态生成 --></div>
             <div class="form-group">
+                <label class="provider-toggle">
+                    <input type="checkbox" id="input-extended" class="provider-check">
+                    <span>扩展模式(悬浮球最多 9 格,默认 3)</span>
+                </label>
+            </div>
+            <div class="form-group">
                 <label for="input-interval">刷新间隔(分钟)</label>
                 <input type="number" id="input-interval" class="input-narrow" min="1" value="15">
             </div>

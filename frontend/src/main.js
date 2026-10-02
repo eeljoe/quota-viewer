@@ -190,11 +190,10 @@ function updateBall(results) {
         ball.appendChild(cell);
     });
 
-    // 数量档位驱动字号
-    ball.classList.remove("cells-2-3", "cells-4-6", "cells-7-9");
+    // 数量档位驱动字号(4+ 网格才需要缩字号,1-3 沿用默认)
+    ball.classList.remove("cells-4-6", "cells-7-9");
     if (n >= 7) ball.classList.add("cells-7-9");
     else if (n >= 4) ball.classList.add("cells-4-6");
-    else if (n >= 2) ball.classList.add("cells-2-3");
 
     // 单格时放大字母占满整个球
     ball.classList.toggle("single-cell", n === 1);

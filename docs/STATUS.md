@@ -8,35 +8,35 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
-> 5. **直接跳到最新一条「会话记录：2026-09-22 10:03」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-03 00:15」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-02 22:57`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`b13a10a` on `master`（已推送）
-> 📊 累计会话数：主文档 8 条，另有 5 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-03 00:15`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`537daea` on `master`（已推送）
+> 📊 累计会话数：主文档 4 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "b13a10a", "branch": "master", "dirty": false, "timestamp": "2026-10-02T23:00:00+08:00"} -->
+<!-- git-meta: {"last_commit": "537daea", "branch": "master", "dirty": false, "timestamp": "2026-10-03T00:20:00+08:00"} -->
 
-- **日期**：2026-10-02 22:57
-- **会话摘要**：新增 MiniMax 额度监控（第 9 家 Provider，Token Plan sk-cp- Key）+ 扩展模式（悬浮球 4-9 格网格）+ 球形悬浮球改版；config.json 中途被误写坏、经内存写回完整恢复；推送 b13a10a
+- **日期**：2026-10-03 00:15
+- **会话摘要**：用户目验后否决球形方案（白面板/锯齿/丑底色）→ 窗口层 revert + 恢复方圆角视觉，保留 MiniMax 与扩展模式；归档 8 月旧会话 5 条；全部推送
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.2.0 已发布** + master 新增三件套（未发版）：九平台监控（新增 MiniMax）、扩展模式（悬浮球最多 9 格，默认 3）、球形外观
+- 当前阶段：**v1.2.0 已发布** + master 未发版增量：九平台监控（新增 MiniMax）+ 扩展模式（悬浮球最多 9 格，默认 3）；球形改版经用户目验否决，**已完整回滚**（UI 维持 v1.2.0 方圆角观感）
 - 状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent（Kimi/ollama/commandcode/factory-droid/minimax 一致）
-- 下一步：无明确待办，计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
-- 注意事项：wiki 待 `/wiki-update` 同步本次三件套（05/02/07/09/00）；无阻塞项
+- 下一步：wiki 三件套同步（`/wiki-update`）；计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+- 注意事项：无阻塞项
 
 ---
 
@@ -46,17 +46,17 @@
 - **技术栈**：Go 1.24 + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite 打包）
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
-- **功能**：悬浮球（1-9 格动态，颜色=状态，球形）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证 + 扩展模式开关）+ 系统托盘 + 关闭到托盘
+- **功能**：悬浮球（1-9 格动态，颜色=状态，方圆角）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证 + 扩展模式开关）+ 系统托盘 + 关闭到托盘
 - **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）
 
 ## 当前分支与最近提交
 
 - **分支**：master（与远程同步）
-- **HEAD**：`b13a10a`（全部已推送）
+- **HEAD**：`5bc855f`（全部已推送）
 - **最近提交**：
+  - `537daea` - fix: 回滚球形改版——恢复方圆角球体,保留扩展模式网格布局
+  - `e96af01` - Revert "fix: 球形悬浮球——窗口级圆形裁切 + 物理像素尺寸兜底"
   - `b13a10a` - feat: MiniMax 额度监控(第 9 家)+ 扩展模式 4-9 格 + 球形悬浮球
-  - `edce48b` - docs: 收尾 v1.2.0 发布记录,归档额度告警修复组会话
-  - `3a9eec2` - docs: 记录 Factory 计费顺序与 Core 展示规则
 - **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0（三件套未发版）
 
 ---
@@ -70,7 +70,7 @@
 - **Ollama Provider**（8/13）：`ollama.go` HTML 解析 5 小时 Session 主窗口 + 周用量；14 个 httptest 用例；config 自动补全新 Provider（默认关闭）；真实账号冒烟通过（8/13 01:33）
 - **Command Code Provider**（8/25）：`commandcode.go` 逆向官方 CLI 私有 `/alpha/*` API（whoami + billing/credits），Bearer API Key（留空自动读 `~/.commandcode/auth.json`）；8 个 httptest 用例；真实账号冒烟通过
 - **Factory Droid Provider**（9/30）：`factorydroid.go` 走官方 web 同源 `/api/billing/limits`（5h/周/月 + Core 池 + Extra 余额，旧账单模型兜底），Key 留空自动读 `~/.factory/.env`；9 个 httptest 用例；真实冒烟通过；发布 v1.2.0
-- **MiniMax Provider + 扩展模式 + 球形悬浮球**（10/2）：`minimax.go` 走 `coding_plan/remains`（sk-cp- 订阅 Key，三主机域名链，剩余% 反转已用%）；扩展模式启用上限 3→9（配置面板开关）；悬浮球改圆形 + 4+ 格网格布局；9 个 httptest 用例；真实冒烟通过
+- **MiniMax Provider + 扩展模式**（10/2）：`minimax.go` 走 `coding_plan/remains`（sk-cp- 订阅 Key，三主机域名链，剩余% 反转已用%）；扩展模式启用上限 3→9（配置面板开关）+ 4+ 格网格布局；9 个 httptest 用例；真实冒烟通过（球形改版 10/3 经目验否决，已回滚）
 - **开源发布**：GitHub eeljoe/quota-viewer，Release v1.0.0 / v1.1.0 / v1.1.1 / v1.1.2 / v1.2.0（均附 exe）
 
 ### 🔄 进行中
@@ -84,9 +84,8 @@
 
 ## 未完成 & 下一步
 
-1. 用户目验新悬浮球（4 格 2x2 网格 + 球形观感，代码侧无法替代目验）
-2. wiki 三件套同步（见待办）
-3. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+1. wiki 三件套同步（05 端点细节 / 02 模块表 / 07 钳制契约+扩展模式 / 09 测试 / 00 元数据），`/wiki-update` 顺手刷
+2. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 
 ---
 
@@ -153,203 +152,6 @@
 - `frontend/wailsjs/` - Wails v2 前端绑定（构建生成）
 - `docs/wiki/05-fetching-platforms.md` - 新增 Provider 指南详情
 - `docs/ADDING_A_PROVIDER.md` - **Agent 专用**新增 Provider 完整指南（fetcher 实现 + 注册 + 测试 + 检查清单）
-
----
-
-## 会话记录：2026-08-04 23:02
-
-> **会话摘要**：新增 Agent 专用 Provider 添加指南文档，双语 README 更新指向该文档并附 agent 指令模板
-> **Git**：`b62e6d5` on `master`（clean，已推送）
-
-### 本次完成
-- 创建 `docs/ADDING_A_PROVIDER.md`：面向 AI agent 的新增 Provider 完整指南，涵盖架构概述、Fetcher 实现（用量型/余额型/Cookie 类）、registry 注册、httptest 测试模板、验证步骤、检查清单、现有 Provider 速查表
-- 更新 `README.md`（英文）"Adding a New Provider" 部分：改为引导用户将文档路径 + 平台信息复制给 agent，附可复制指令模板
-- 更新 `README.zh-CN.md`（中文）"如何新增一个 Provider" 部分：同上，中文版指令模板
-- 提交 `b62e6d5` 并推送到远程
-
-### 本次决策
-| 决策 | 原因 | 备选方案 |
-|------|------|----------|
-| 文档放在 `docs/` 而非 `docs/wiki/` | wiki 面向 agent 日常查阅，本文档是用户主动提供给 agent 的专题指南，独立文件更合适 | 放 wiki 06 或新编号 |
-| README 中附可复制 agent 指令模板 | 用户只需填空 `<平台名>` `<URL>` `<认证方式>` `<展示内容>` 即可让 agent 自主完成 | 仅放文档链接，agent 自己读 |
-| 文档用中文撰写 | 项目为中文开发者项目，代码注释也全中文，保持一致 | 英文（但与代码注释风格不符） |
-
-### 新增/变更文件
-| 操作 | 文件路径 | 说明 |
-|------|----------|------|
-| 新增 | `docs/ADDING_A_PROVIDER.md` | Agent 专用新增 Provider 完整指南（343 行） |
-| 修改 | `README.md` | "Adding a New Provider" 改为 agent 指令模板 + 文档链接 |
-| 修改 | `README.zh-CN.md` | "如何新增一个 Provider" 改为 agent 指令模板 + 文档链接 |
-| 修改 | `docs/STATUS.md` | 本文件 |
-
-> 本次变更（从 85e03e9 到 b62e6d5）：+432/-39 行，4 个文件
-
-### 未完成 & 下一步
-- 无明确待办——项目已交付开源
-- 可选方向：Release 推广 / 新 Provider 扩展 / Wails 版本升级 / 用户反馈迭代
-
-### 关键上下文
-- **Agent 指南文档**：`docs/ADDING_A_PROVIDER.md`——用户想让 agent 新增 Provider 时，在 README 中复制指令模板填空即可
-- **指令模板格式**（中文）：`阅读 docs/ADDING_A_PROVIDER.md，按照文档为 <平台名> 新增一个 Provider。端点是 <URL>，认证方式是 <方式>，展示内容是 <展示什么>`
-- **GitHub 仓库**：https://github.com/eeljoe/quota-viewer（公开，已推送至 b62e6d5）
-- Wiki 指针状态：`docs/wiki/` 11 个文件，`.covered-files` 46 项，synced_commit `85e03e9`（本次未改动 wiki）
-
----
-
-## 会话记录：2026-08-07 16:37（补记）
-
-> **会话摘要**：DeepSeek 余额预算进度条 + 展开面板刷新倒计时 + README 效果截图（该会话当时未写入 STATUS，本次补记）
-> **Git**：`39aeaed` on `master`（clean）
-
-### 本次完成
-- `QuotaResult` 新增 `Balance/Currency` 字段，deepseek.go 填充原始余额与货币代码
-- 新增 `budget.go` ApplyBudget：余额型按预算换算消耗百分比（默认预算 300，余额超预算钳制为 0）
-- `ProviderDef` 新增 `Kind` 字段（usage/balance）；`ProviderConfig` 新增 `Budget` 字段
-- app.go fetchAll 传递 budget 并调用 ApplyBudget；配置面板对余额型显示预算输入框
-- 前端：展开面板进度条下方显示刷新倒计时（ResetAt 相对 now）；余额型状态色按消耗百分比走 yellow/red 阈值
-- 双语 README 更新新功能说明与效果截图（`docs/screenshots/preview-1/2.png`）
-- 测试：TestApplyBudget_* 5 个用例 + config Budget 往返
-
-### 本次决策
-| 决策 | 原因 | 备选方案 |
-|------|------|----------|
-| 余额型引入"预算"换算消耗百分比 | 余额无用量语义，用户想看到"花了多少" | 余额恒绿（原方案） |
-| 默认预算 300 元 | 用户未设时的合理默认 | 无默认/强制填写 |
-| Kind 字段放 ProviderDef | 注册表一处标注，前端按类型渲染 | 各 fetcher 自报 |
-
-> 本次变更：2 个 commit（+213/-20 行，20 个文件，含截图二进制）
-
-### 关键上下文
-- budget 语义：已消耗 = 预算 - 余额；`Percent = 已消耗/预算*100`；Remaining 显示 `余额 / 预算`
-- 根目录遗留 `09314663d2975b947bfa75fcf46e4769.png` = preview-2.png 的副本（未跟踪）
-
----
-
-## 会话记录：2026-08-13 00:55
-
-> **会话摘要**：新增 Ollama Cloud 额度监控 Provider（六平台收尾）+ 补齐 wiki 预算模块同步
-> **Git**：`cc82c71` on `master`（clean，本地领先远程 2 commit）
-
-### 本次完成
-- 接手上一会话遗留的 Ollama 半成品（ollama.go + 14 个测试 + registry 注册 + config 迁移），验证后提交
-- Ollama 抓取 `https://ollama.com/settings` 页面 HTML，解析 Session（5 小时）主窗口 + Weekly 周用量百分比（无公开 quota API，issue #15132）
-- config `ensureKnownProviders`：已有 v2 配置自动追加新 Provider（默认关闭，保留用户选择），测试覆盖
-- 注册表测试改为空凭证离线模式（避免 Build 测试发真实网络请求）
-- 验证：`go test -count=1 ./...` 全绿 / `npm run build` / `wails build` 成功；dist 重建产物与 HEAD 逐字节一致（仅文件名 hash 变化）已回退，不产生噪音提交
-- wiki 补同步：budget.go 模块、Balance/Currency、Kind/Budget 契约、ollama 平台行，`.covered-files` 重建（49 项）
-
-### 本次决策
-| 决策 | 原因 | 备选方案 |
-|------|------|----------|
-| Ollama 用 HTML 解析而非 API | Ollama 无公开 quota API，只能解析 server-rendered 页面 | 放弃该平台 |
-| 主展示 5 小时 Session 窗口 | 用户最关心当前会话额度（驱动球色），周用量写入 Remaining 辅助 | 周窗口为主 |
-| 回退 dist/wailsjs 重建产物 | 内容与 HEAD 逐字节一致，仅文件名 hash 变化，提交纯噪音 | 提交新 hash 产物 |
-| 补记 8/7 会话 + 补齐 wiki | STATUS/wiki 与代码脱节，违反文档一致性 | 只记录本次会话 |
-
-### 新增/变更文件
-| 操作 | 文件路径 | 说明 |
-|------|----------|------|
-| 新增 | `internal/fetcher/ollama.go` | Ollama Cloud settings HTML 抓取（206 行） |
-| 新增 | `internal/fetcher/ollama_test.go` | 14 个 httptest 用例（320 行） |
-| 修改 | `internal/fetcher/registry.go` / `registry_test.go` | ollama 注册 + 测试改离线空凭证 |
-| 修改 | `internal/config/config.go` / `config_test.go` | AllProviderIDs + ensureKnownProviders |
-| 修改 | `README.md` / `README.zh-CN.md` | 支持平台表 +Ollama |
-| 修改 | `docs/ADDING_A_PROVIDER.md` | 速查表 +Ollama 特殊说明 |
-| 修改 | `docs/wiki/00~09` + `.covered-files` | 预算模块补同步 + ollama 条目 |
-
-> 本次变更：2 个 commit（+685/-57 行，26 个文件）
-
-### 未完成 & 下一步
-1. **Ollama 真实账号冒烟**——用户在配置面板粘贴 Ollama Cookie → 测试连接 → 球格展示 5 小时用量
-2. **推送 master 到远程**——本地领先 2 个提交（a59635f / cc82c71），确认后 `git push`
-
-### 已知问题 & 注意事项
-- Ollama 依赖 ollama.com/settings 页面结构，页面改版 → "页面结构可能已变化"错误，需更新解析
-- Cookie 失效判定：302 跳转 / 登录页 HTML 特征（form + "Sign in to Ollama"）
-- 根目录 `09314663d2975b947bfa75fcf46e4769.png` 为 preview-2.png 未跟踪副本，可删除（未删，避免误删用户文件）
-
-### 关键上下文
-- Ollama 注册表字段：`textarea` Cookie，登录 URL `https://ollama.com/settings`；用户在设置页登录后粘贴含 wos-session / __Secure-session 的 Cookie（支持 "Copy as PowerShell" 整段粘贴）
-- 新增 Provider 完整路径见 `docs/ADDING_A_PROVIDER.md`（注册表驱动，前端零改动）
-- Wiki 指针状态：`docs/wiki/` 11 文件，synced_commit `cc82c71`，`.covered-files` 49 项
-- GitHub 仓库：https://github.com/eeljoe/quota-viewer（公开，远程落后本地 2 commit）
-
----
-
-## 会话记录：2026-08-13 01:33
-
-> **会话摘要**：Ollama 真实账号冒烟通过——用户按方法 A 粘贴 PowerShell Cookie 整段，测试连接成功，球格正常展示
-> **Git**：`9927e2e` on `master`（clean）
-
-### 本次完成
-- （上会话遗留）**Ollama 真实账号冒烟——已完成**：用户在配置面板粘贴浏览器 "Copy as PowerShell" 整段脚本（含 aid + __Secure-session），测试连接成功，球格展示 5 小时 Session 用量——六平台全部实测可用
-- 确认构建与桌面快捷方式：`build/bin/quota-viewer.exe` 为 00:37 新构建（二进制含 ollama）；桌面 `Quota Viewer.lnk` 直接指向该 exe，无需复制
-- 归档旧会话：主文档 ≥400 行触发阈值，3 条最早会话（05:31/14:10/15:00）原样移入 `docs/wiki/99-appendix-legacy-status.md`
-
-### 未完成 & 下一步
-1. **推送 master 到远程**——本地领先 3 个提交（a59635f / cc82c71 / 9927e2e），确认后 `git push`
-2. 可选：根目录截图副本 PNG 删除（待用户确认）
-3. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代
-
-### 关键上下文
-- Ollama Cookie 可行格式：浏览器 F12 → Network 找 settings 文档请求（不是 api/v1）→ 复制为 PowerShell → 整段粘贴，程序自动提取 `System.Net.Cookie` 的 name/value
-- 无公开 quota API，抓的是 settings 页面 HTML；页面改版需更新 `ollama.go` 解析
-- Wiki 指针状态：`docs/wiki/` 12 文件（新增 99 归档页），`.covered-files` 49 项
-- GitHub 仓库：https://github.com/eeljoe/quota-viewer（公开，远程落后本地 3 commit，待推送）
-
----
-
-## 会话记录：2026-08-25 12:13
-
-> **会话摘要**：新增 Command Code 额度监控 Provider（第七平台）——逆向官方 CLI 私有 /alpha API，实现 + 8 个 httptest 用例 + 真实账号冒烟通过；顺手加固注册表空凭证测试隔离用户目录
-> **Git**：`d149d3d`（feat）on `master`（本会话；docs 提交见本次）
-
-### 本次完成
-- 调研：从 `command-code` npm 包（v1.32.2）`dist/cli.mjs` 逆向出官方 CLI 的额度接口——`GET https://api.commandcode.ai/alpha/whoami`（取 orgId）+ `GET /alpha/billing/credits`（月度剩余 credits + 5 小时/周滚动窗口），认证 `Authorization: Bearer <API Key>`（`user_...`，Studio 生成，与 `~/.commandcode/auth.json` 的 apiKey 同源）
-- 新增 `internal/fetcher/commandcode.go`：主展示 = 5 小时窗口用量（驱动球色，与 Ollama 同构），月末剩余与周窗口写入 `Remaining`，`ResetAt` 取 5h 窗口 `resetAt`（epoch ms → UTC ISO）；API Key 留空自动读 `~/.commandcode/auth.json`（用户已登录官方 CLI 免填）
-- 注册到 registry（`command-code` / C / KindUsage）+ config `AllProviderIDs` 追加（ensureKnownProviders 自动补全新 Provider，默认关闭）
-- 测试：`commandcode_test.go` 8 个 httptest 用例（覆盖空 key、auth.json 自动读取、401、500、正常解析、org 用户带 orgId、结构缺失）；`registry_test.go` 改为 6→7 个并隔离 USERPROFILE（防止空凭证测试读到真实用户凭证/网络）
-- 验证：`go test -count=1 ./...` 全绿 / `go vet` 干净 / `wails build` 成功（2m13s，dist/wailsjs 重建产物与 HEAD 逐字节一致仅 hash 变，按惯例回退）；真实环境冒烟通过——`5小时 0.73/3.00 已用 · 周 0.73/6.00 · 余额 $9.27`（individual-go 计划真实数据）
-- README 双语平台表 / `docs/ADDING_A_PROVIDER.md` 速查表 + Command Code 特殊说明 / wiki 05 平台表与测试清单同步
-
-### 本次决策
-| 决策 | 原因 | 备选方案 |
-|------|------|----------|
-| 复用官方 CLI 私有 `/alpha/*` 端点 | Command Code 无公开额度查询 API，CLI 是其唯一数据源 | 抓 Studio 页面 HTML（更脆） / 放弃该平台 |
-| 主展示用 5 小时窗口 | 与 Ollama 同构，短窗口耗尽即被限流，球色告警最有价值 | 月度 credits 消耗为主 |
-| API Key 留空自动读 `~/.commandcode/auth.json` | 用户本机已登录官方 CLI，复用同一凭证免填 | 仅手动填 Key |
-| 注册表测试隔离 USERPROFILE | 空凭证 Build 测试不能读真实凭证或发真实网络 | 单 Provider 特判 |
-
-### 新增/变更文件
-| 操作 | 文件路径 | 说明 |
-|------|----------|------|
-| 新增 | `internal/fetcher/commandcode.go` | Command Code 额度抓取器（/alpha 私有 API） |
-| 新增 | `internal/fetcher/commandcode_test.go` | 8 个 httptest 用例 |
-| 修改 | `internal/fetcher/registry.go` / `registry_test.go` | command-code 注册 + 测试 6→7 & 隔离 HOME |
-| 修改 | `internal/config/config.go` / `config_test.go` | AllProviderIDs +command-code |
-| 修改 | `README.md` / `README.zh-CN.md` | 支持平台表 +Command Code |
-| 修改 | `docs/ADDING_A_PROVIDER.md` | 速查表 + Command Code 特殊说明 |
-| 修改 | `docs/wiki/05-fetching-platforms.md` | 平台表 + 测试清单 + 关键文件 +Command Code |
-| 修改 | `docs/STATUS.md` | 本文件 |
-
-> 本次变更（未提交）：约 +430/-30 行，11 个文件
-
-### 未完成 & 下一步
-1. **提交并推送**——按项目习惯拆 feat（代码/测试/README/ADDING_A_PROVIDER/wiki）+ docs（STATUS）两个 commit，然后 `git push`（本地领先远程 4 commit）
-2. 可选：根目录截图副本 PNG 删除（待用户确认）
-3. 可选方向：Release 推广 / 新 Provider 扩展 / 用户反馈迭代
-
-### 关键上下文
-- Command Code 端点（逆向官方 cli.mjs，`dist/bundled` 常量 `or/sr/ir/lr`）：`https://api.commandcode.ai/alpha/{whoami,billing/credits,billing/subscriptions,usage/summary}`；credits 响应含 `credits.monthlyCredits/purchasedCredits/freeCredits` + `windowLimits.fiveHour/weekly{used,cap,resetAt(ms)}`
-- CLI 认证：优先 `COMMANDCODE_API_KEY` 环境变量，其次 `~/.commandcode/auth.json` 的 `apiKey`；authorization 头为 `Bearer <key>`
-- 用户账号现状：individual-go 计划（月度 credits、5h cap $3 / 周 $6），个人账号 org=null（credits 端不带 orgId 参数）
-- Wiki 指针状态：`docs/wiki/` 12 文件，`.covered-files` 49 项
-- GitHub 仓库：https://github.com/eeljoe/quota-viewer（公开，远程落后本地 4 commit，待推送）
-
-### 会话内补记（修复，2026-08-25 13:0x）
-- **OpenCode Go「未找到有效配额窗口」修复**：OpenCode 页面把 `usagePercent` 改成浮点（如 `3.1`），`opencode_go.go` 用 `strconv.Atoi` 解析失败 → 全被当 0 → 误报无有效窗口（真实数据 rolling 3.1 / weekly 43 / monthly 38.3）。改为 `ParseFloat` + `windowInfo.usagePercent` 改 `float64`，新增 2 个浮点用例；真实冒烟 Percent=43.5、`周窗口 · 已用 43.5% · 剩余 56.5%`
-- **Command Code Remaining 精简**：原 `5小时 x/x 已用 · 周… · 余额…` 三连串在 340px 面板 210px 区域被省略号截断成乱串、且「5小时 x/x」与进度条重复。去掉 5h 段，Remaining 改为 `周 $1.26/6.00 · 余额 $8.74`（实测）
-- `go test ./...` 全绿、`wails build` 成功（产物回退惯例）；wiki 05 同步浮点说明
 
 ---
 
@@ -513,3 +315,56 @@
 - 当前启用 Provider：kimi / ollama / factory-droid / minimax（4 个，`extended_mode=true`）
 - **Wails 窗口线程事实**（本次实测）：OnStartup 与窗口不同线程 → `SetWindowSubclass` 必失败（ret=0），凡是依赖子类的窗口修复都无效；窗口操作要么走 Wails runtime，要么拿 hwnd 直调 Win32
 - 桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe`（本会话已重建，PID 31076）
+
+---
+
+## 会话记录：2026-10-03 00:15
+
+> **会话摘要**：用户目验后否决球形方案（展开面板全白 / 圆外底色丑 / 圆缘锯齿）——窗口层 revert + 球体视觉恢复方圆角，保留 MiniMax 与扩展模式；全部提交已推送
+> **Git**：`537daea` on `master`（全部已推送）
+> **任务组**：MiniMax Provider 接入 + 展示形态改版
+> **任务组状态**：已完成（球形否决回滚收尾；MiniMax + 扩展模式交付运行中）
+
+### 本次完成
+- （上会话遗留）**用户目验悬浮球——已完成，结论：否决**。用户发截图裁决：① 点击展开面板全白 ② 圆形背后底色丑 ③ 圆缘锯齿明显，明确「我的意见是回滚」
+- **窗口层回滚**：`git revert 86a76c7` → `e96af01`（SetWindowRgn 裁圆 / 物理像素 SetWindowPos / Expand-Collapse 挂钩全部移除，main.go 回到原始配置）
+- **球体视觉恢复**：style.css 回到方圆角（border-radius 16px + hairline 分隔），保留 4+ 格网格与面板高度自适应；main.js 去掉 cells-2-3 字号档 → `537daea`
+- **重建交付**：`wails build` → 新实例 PID 23220，截图验证：方圆角球体、K/O/F/MX 四格、无锯齿无杂色、窗口 120x120 物理正常（撑宽未复现——属窗口创建时机偶发，非必现 bug）
+- **补交 dist**：回滚后 `frontend/dist` 重建产物入库（新 hash，与交付 exe 一致）
+- **留痕**：ROADMAP「已否决」记录球形方案与重试前提；STATUS 10-02 记录补回滚根因 → `5bc855f`；归档 8 月旧会话 5 条到 wiki 99 页（本文件 ≥400 行触发）
+
+### 本次决策
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 球形方案整体放弃，不做锯齿修补 | region 无抗锯齿是 Win32 API 本质限制；Wails 透明链路（WebviewIsTransparent/NOREDIRECTIONBITMAP/Mica/Backdrop）逐层试过全残影，继续投入产出比低 | 微调 region（无解）/ 继续透明链路（已试败） |
+| 回滚只回外观，保留扩展模式网格与面板自适应 | 用户否决的是窗口外观三宗罪；4+ 格布局与 MiniMax 功能本身好用 | 连功能一起回退（误伤） |
+| dist 重建产物入库 | 项目惯例：产物变更即提交、逐字节相同才回退；保持仓库 dist 与交付 exe 一致 | 回退产物（仓库与 exe 脱节） |
+
+### 新增/变更文件
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 回退 | `main.go` / `workarea_windows.go` / `workarea_other.go` / `app.go` | 窗口层球形代码 revert（e96af01，与 b13a10a 前零差异） |
+| 修改 | `frontend/src/style.css` / `main.js` | 球体恢复方圆角，保留网格（537daea） |
+| 修改 | `frontend/dist/*` | 回滚后重建产物（本次补交） |
+| 修改 | `ROADMAP.md` / `docs/STATUS.md` | 已否决留痕 + 回滚根因（5bc855f） |
+| 归档 | `docs/wiki/99-appendix-legacy-status.md` | 第二批 5 条（08-04 ~ 08-25 12:13） |
+
+> 本次变更（b13a10a..537daea）：+100/-38 行，4 个文件（含文档）
+
+### 未完成 & 下一步
+- wiki 三件套同步（05/02/07/09/00，`/wiki-update`）——持续中
+- 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+
+### 已知问题 & 注意事项
+- 球形改版已否决留痕 ROADMAP「已升级/已否决」；若未来重试，先解决两个硬前提：Wails OnStartup 与窗口不同线程（SetWindowSubclass 必失败）、物理像素直调窗口尺寸会搅乱 Wails 尺寸状态（展开面板空白的根源）
+- 262px 撑宽为窗口创建时机偶发（回滚构建后未复现），无需处理
+- MiniMax Key 曾在对话中明文出现（10-02 记录），介意可去 platform.minimaxi.com 轮换后更新应用配置
+
+### 推荐 Skill
+- `/wiki-update` - 检测到 14 个 wiki 覆盖文件自 synced_commit（cc01446）后有变更：`internal/fetcher/{minimax,minimax_test,registry,registry_test,factorydroid,factorydroid_test}.go`、`internal/config/{config,config_test}.go`、`app.go`、`frontend/src/{index.html,main.js,style.css}`、`frontend/wailsjs/go/main/App.{js,d.ts}`（主体为 MiniMax+扩展模式三件套；factorydroid 两文件的展示规则事实已在 3a9eec2 同步进 wiki 05，仅 meta 待推进）
+
+### 关键上下文
+- 球形回滚后 UI = v1.2.0 观感 + 扩展模式网格：当前启用 kimi / ollama / factory-droid / minimax（4 格 2x2，`extended_mode=true`）
+- **球形失败三层教训**（已留痕，防止重蹈）：① Win32 SetWindowRgn 无抗锯齿，圆缘必锯齿；② Wails v2 + WebView2 透明链路逐层残影（实心底色/Mica 方块）；③ OnStartup 非窗口线程 → SetWindowSubclass 必失败；物理像素直调窗口尺寸会搅乱 Wails 尺寸状态机 → 展开面板全白
+- 当前运行实例 PID 23220（回滚版）；桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe` 已是回滚构建
+- Wiki 指针状态：`docs/wiki/` 12 文件 + 99 归档页（第二批 5 条），`.covered-files` 50 项，synced_commit `cc01446`（漂移 14 文件待 `/wiki-update`）

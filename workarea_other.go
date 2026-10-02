@@ -11,9 +11,3 @@ func workAreaForPoint(px, py int) (x, y, w, h, dpi int, ok bool) {
 func setupWindowStyles(title string) bool {
 	return false
 }
-
-// syncBallRegion 非 Windows 平台无需实现(窗口形状由系统管理)。
-func syncBallRegion() {}
-
-// ForceBallWindowSize 非 Windows 平台无需实现(无系统最小宽度问题)。
-func ForceBallWindowSize() {}

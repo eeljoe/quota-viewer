@@ -317,7 +317,6 @@ func (a *App) ExpandWindow(w, h int) {
 	}
 	wailsruntime.WindowSetSize(a.ctx, w, h)
 	wailsruntime.WindowSetPosition(a.ctx, x, y)
-	syncBallRegion() // 展开为面板:恢复矩形 region
 }
 
 // CollapseWindow 收起为悬浮球,并恢复到展开前的位置。
@@ -333,8 +332,6 @@ func (a *App) CollapseWindow() {
 	}
 	wailsruntime.WindowSetSize(a.ctx, ballSize, ballSize)
 	wailsruntime.WindowSetPosition(a.ctx, x, y)
-	ForceBallWindowSize() // 物理像素兜底:系统最小宽度钳制会把 60px 球窗撑宽
-	syncBallRegion()      // 收起为球:套圆形 region
 }
 
 // fitToScreen 计算让 w×h(逻辑像素)窗口完整落在球所在屏幕内的位置。

@@ -86,12 +86,18 @@ html, body {
 .ball-cell.red { color: var(--red); }
 .ball-cell.off { color: var(--text-3); } /* 额度耗尽=熄灭 */
 
-/* 扩展模式:4+ 格走网格(4=2x2,5-6=3 列两行,7-9=3x3),gap 露底色作分隔线 */
+/* 扩展模式:4+ 格按 --cols 列换行(4=2x2,5-9=3 列)。
+   flex-wrap + justify-content:center ⇒ 末行不满时整行居中(5 格排成 3+2 的「五环」式,
+   而不是 3+2 左对齐);每格按列数等宽,减 0.5px 余量避免浮点误差把第三格挤到下一行 */
 .ball.grid {
-    display: grid;
-    grid-template-columns: repeat(var(--cols, 3), 1fr);
-    grid-auto-rows: 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: stretch;
     gap: 1px;
+}
+.ball.grid .ball-cell {
+    flex: 0 0 calc((100% - (var(--cols, 3) - 1) * 1px) / var(--cols, 3) - 0.5px);
 }
 .ball.grid .ball-cell + .ball-cell { border-left: none; }
 .ball.cells-4-6 .ball-cell { font-size: 10px; }

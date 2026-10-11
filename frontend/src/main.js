@@ -181,6 +181,7 @@ function updateBall(results) {
     // 列数:1-3 单行 n 列;4 → 2x2;5+ → 3 列
     const cols = n <= 3 ? n : (n <= 4 ? 2 : 3);
     ball.classList.toggle("grid", n >= 4);
+    // 列数交给 CSS(.ball.grid 按 --cols 等宽换行 + 末行居中)
     if (n >= 4) ball.style.setProperty("--cols", cols);
 
     results.forEach((r) => {

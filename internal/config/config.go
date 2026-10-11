@@ -30,7 +30,7 @@ var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek"
 // DefaultProviderIDs 默认启用的 Provider(与现状一致:Kimi/讯飞/OpenCode Go)。
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"}
 
-// 展示上限:普通模式 3 个;扩展模式放开到注册表上限(当前 9)。
+// 展示上限:普通模式 3 个;扩展模式上限 9(前端 3x3 球格容量)。
 const (
 	maxEnabledNormal   = 3
 	maxEnabledExtended = 9

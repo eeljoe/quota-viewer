@@ -35,9 +35,12 @@ App.Refresh()                          [app.go:101]
 
 ```
 监听 window.runtime.EventsOn("quota:update")
- └─ updateBall(results)     按结果数动态重建球格(1 格占满/2 格各半/3 格各 1/3)
-                            颜色: green / yellow / red;余额型按预算消耗百分比走阈值
+ └─ updateBall(results)     按结果数动态重建球格:1-3 格单行(1 格放大占满/2 格各半/3 格各 1/3)
+                            4 格 2×2;5-9 格 3 列网格(字号随 4-6 / 7-9 档位缩小)
+                            颜色阈值:≥60% 黄 / ≥80% 红 / ≥100% 熄灭(off);余额型未设预算恒绿,
+                            设了预算后按消耗百分比走同一套阈值
  └─ updatePanel(results)    展开面板进度条 + 千分位数字 + 重置时间 + 刷新倒计时
+                            (面板高度随条目数伸缩:96 + n×66,封顶 640;见 main.js panelSize)
 状态: ball(收起) ⇄ panel(展开)，SIZES.ball=60
 ```
 

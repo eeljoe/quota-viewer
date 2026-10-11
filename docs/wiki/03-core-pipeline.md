@@ -39,6 +39,14 @@ App.Refresh()                          [app.go:101]
                             4 格 2×2;5-9 格 3 列网格(字号随 4-6 / 7-9 档位缩小)
                             颜色阈值:≥60% 黄 / ≥80% 红 / ≥100% 熄灭(off);余额型未设预算恒绿,
                             设了预算后按消耗百分比走同一套阈值
+                            [补 2026-10-11] 4+ 格的实现是 flex-wrap + justify-content:center
+                            (style.css:92-101,替代早先的 CSS Grid):每格等宽
+                            calc((100% - (cols-1)*1px)/cols - 0.5px),末行不满时整行居中 ——
+                            5 格排成 3+2「五环」式,不再是 3+2 左对齐(7/8 格同理)
+                            [补 2026-10-11] 窄格(3 格单行 / 5+ 格三列)球加 narrow,多字符
+                            缩写(MX/OD/Go)的格加 wide(main.js:187 判场景、193 按 abbr.length>1 打标),
+                            由 .ball.narrow .ball-cell.wide 降到 8.5px(style.css:110);
+                            宽格(1-2 格单行、4 格 2x2)字号不动
  └─ updatePanel(results)    展开面板进度条 + 千分位数字 + 重置时间 + 刷新倒计时
                             (面板高度随条目数伸缩:96 + n×66,封顶 640;见 main.js panelSize)
 状态: ball(收起) ⇄ panel(展开)，SIZES.ball=60

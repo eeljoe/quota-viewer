@@ -8,6 +8,8 @@
 
 行数基于 2026-10-11(`2d9031f`)工作区状态，口径 = `(Get-Content <文件> | Measure-Object -Line).Lines`（**非空行数，空行不计**；与 `(Get-Content <文件>).Count` 的总行数不同）。本页此前混用「总行数」与「非空行数」两种口径，本次统一为上述命令，因此个别**代码未变**的文件数字也会随之变化。
 
+**2026-10-11 16:11 复核**（`2d9031f` → `9760924`）：本轮只有前端两处代码变更，按同一口径（`(Get-Content <文件> | Measure-Object -Line).Lines`）重数——`frontend/src/main.js` 377→382、`frontend/src/style.css` 391→402；`frontend/src/index.html`（59）、`frontend/vite.config.js`（8）以及全部 Go 文件未变（`git diff --name-only 2d9031f..HEAD` 无 `.go` 条目）。
+
 | 模块 | 文件 | 行数 | 职责 |
 |---|---|---|---|
 | 应用编排 | `app.go` | 427 | 启动/刷新/动态配置/窗口定位/事件转发 |
@@ -45,8 +47,8 @@
 | 系统托盘 | `internal/tray/tray.go` | 85 | 托盘菜单 + 事件转发 + LockOSThread |
 | 托盘图标 | `internal/tray/assets/` | - | icon.ico / icon.png（embed） |
 | 前端 HTML | `frontend/src/index.html` | 59 | 悬浮球/面板/动态配置面板结构 |
-| 前端逻辑 | `frontend/src/main.js` | 377 | 视图状态机、动态球格、配置渲染、刷新倒计时 |
-| 前端样式 | `frontend/src/style.css` | 391 | 设计令牌 + 深色玻璃质感 + Provider 卡片 |
+| 前端逻辑 | `frontend/src/main.js` | 382 | 视图状态机、动态球格(列数 `--cols` / 窄格 `narrow` 标记)、配置渲染、刷新倒计时 |
+| 前端样式 | `frontend/src/style.css` | 402 | 设计令牌 + 深色玻璃质感 + Provider 卡片 + 球格布局(等宽换行 / 末行居中 / 窄格字号档) |
 | Vite 配置 | `frontend/vite.config.js` | 8 | 构建配置 |
 | 绑定 | `frontend/wailsjs/` | - | Wails 生成的前端绑定(构建生成) |
 

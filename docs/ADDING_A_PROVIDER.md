@@ -55,8 +55,8 @@ func NewYourPlatformFetcher(apiKey string) *YourPlatformFetcher {
 func (f *YourPlatformFetcher) Fetch() QuotaResult {
     result := QuotaResult{
         Platform:    "YourPlatform",   // 展示名（与注册表 DisplayName 一致）
+        Kind:        KindUsage,        // 用量型显式设 KindUsage；余额型改 KindBalance
         LastUpdated: time.Now(),
-        // Kind: KindBalance,            // 余额型才需要；用量型默认零值即 KindUsage
     }
 
     // 1. 凭证空检查
@@ -125,10 +125,10 @@ func (f *YourPlatformFetcher) Fetch() QuotaResult {
 
 | 类型 | `Kind` 值 | 语义 | 填充字段 | 前端表现 |
 |------|-----------|------|----------|----------|
-| **用量型**（默认） | `KindUsage`（空字符串） | Percent = 已用百分比 | `Used` / `Total` / `Percent` / `Remaining` / `ResetAt` | 球格颜色随 Percent 变化（绿/黄/红） |
+| **用量型**（默认） | `KindUsage`（`"usage"`） | Percent = 已用百分比 | `Used` / `Total` / `Percent` / `Remaining` / `ResetAt` | 球格颜色随 Percent 变化（绿/黄/红） |
 | **余额型** | `KindBalance` | 余额展示，无百分比 | 仅 `Remaining`（如 `余额 ¥247.51 (CNY)`） | 球格恒绿 |
 
-用量型不设 `Kind` 字段（零值 `""` 即可，前端按 usage 处理）。余额型必须在 `QuotaResult` 初始化时设 `Kind: KindBalance`。
+用量型必须显式设 `Kind: KindUsage`（注册表条目的 `Kind` 字段同样填 `KindUsage`）——不要留零值 `""`，那是历史写法，与 `types.go` 的常量及 `minimax.go` 等先例不一致。余额型必须设 `Kind: KindBalance`。
 
 ### 1.4 Cookie 类凭证
 
@@ -343,6 +343,9 @@ wails build
 | `deepseek` | DeepSeek | D | API Key (Bearer) | balance | `deepseek.go` |
 | `ollama` | Ollama | O | Browser session Cookie | usage | `ollama.go` |
 | `command-code` | Command Code | C | API Key (Bearer, `user_...`) | usage | `commandcode.go` |
+| `factory-droid` | Factory Droid | F | API Key (Bearer, `fk-...`；留空自动读 `~/.factory/.env`) | usage | `factorydroid.go` |
+| `minimax` | MiniMax | MX | Token Plan Key (`sk-cp-` 订阅 Key) | usage | `minimax.go` |
+| `open-design` | Open Design | OD | Browser session Cookie | usage | `opendesign.go` |
 
 ### Ollama Cloud 特殊说明
 
@@ -351,3 +354,11 @@ Ollama Cloud 当前没有公开的 quota API。`ollama.go` 请求 `GET https://o
 ### Command Code 特殊说明
 
 Command Code（commandcode.ai，AI 编码订阅）无公开额度查询 API。`commandcode.go` 逆向官方 CLI（npm 包 `command-code` 的 `dist/cli.mjs`），复用其私有路由：`GET https://api.commandcode.ai/alpha/whoami` 取 `orgId`，再 `GET /alpha/billing/credits`（团队用户带 `?orgId=`）取月度剩余 credits 与 5 小时/周滚动窗口。认证 `Authorization: Bearer <API Key>`；Key 在 Studio 生成（`user_...`），与官方 CLI 写入 `~/.commandcode/auth.json` 的 `apiKey` 相同——注册表 API Key 字段留空时自动读取该文件（用户已登录官方 CLI 则免填）。主展示 = 5 小时窗口用量（驱动球色），月度剩余与周窗口写入 `Remaining`，`ResetAt` 取 5 小时窗口的 `resetAt`（epoch 毫秒 → UTC ISO）。该接口为 CLI 内部路由，结构可能随 CLI 升级变化，失效时对照官方 cli.mjs 更新 `commandcode.go`。
+
+### MiniMax 特殊说明
+
+MiniMax 的 Token Plan 额度走开放平台私有路由 `GET {region}/v1/api/openplatform/coding_plan/remains`，认证 `Authorization: Bearer <Token Plan Key>`——必须是 `sk-cp-` 开头的订阅 Key（在 platform.minimaxi.com/console/plan 生成），按量计费的普通 API Key 读不到套餐额度。三个主机组成回退链，`minimax.go` 按 `api.minimaxi.com` → `www.minimaxi.com` → `api.minimax.io` 逐个尝试直到成功：实测（2026-10）`api.minimaxi.com` 对国内 Key 可用，`www.minimaxi.com` 偶发 TLS 握手超时，海外主机不认国内 Key（业务码 1004）；网络不通、HTTP 401/403/404、业务鉴权码都算该主机失败，全部失败时报第一个错误。响应是套餐卡数组 `model_remains[]`（general 主套餐在首位，视频/音乐等赠送卡在后），本实现取首位。**关键坑位**：字段是 `current_interval_remaining_percent` / `current_weekly_remaining_percent`，语义为**剩余百分比**，展示前必须反转为已用%（`100 - remaining`），照名字直用会让球色刚好反过来（minimax-status 1.2.5 的语义事故，本仓有回归测试守护）；部分套餐不返回绝对量（`current_*_total_count` 恒 0），此时退化为纯百分比展示。窗口语义与 Kimi/Ollama 一致：5 小时窗口驱动主展示与 `ResetAt`，`Percent` 取 5 小时与周窗口中更紧张者。该接口为 web 端私有路由，结构可能随官方升级变化，失效时对照 minimax-status 源码更新 `minimax.go`。
+
+### Open Design 特殊说明
+
+Open Design（open-design.ai，AMR Link 中转控制面）无公开额度 API，且没有可用的 API-key 通道：`sk-amr-` 形式的 API key 读不到任何额度，控制面对它一律返回 401，只能用**浏览器会话 Cookie**（注册表字段用 `textarea`，用户在 open-design.ai/cloud/dashboard 登录后按 F12 复制，或直接粘贴浏览器 “Copy as PowerShell” 内容，`config/cookie.go` 会自动提取）。`opendesign.go` 请求的是控制面 `amr-api.open-design.ai` 的 `/api/v1` 私有路由（不是数据面 `amr-link.open-design.ai` 的 `/v1`），两步 GET：先 `GET /api/v1/workspaces/current` 取 `workspaceId`，再 `GET /api/v1/workspaces/{workspaceId}/billing/coding-plan-usage` 取窗口用量。坑位：第二步**不能拿 `current` 当 id 用**（会返回 400 `workspace_member_required`），必须先取真实 id；窗口按 `durationSeconds` 识别而不按数组下标（18000 = 5 小时，604800 = 7 天，窗口集合归后端管，官方前端同样按 durationSeconds 匹配）；`usedCredits` / `limitCredits` / `remainingCredits` 是十进制字符串，按 `ParseFloat` 算百分比（credits 计数可能超出 float64 精确整数范围，不要转 int64）。5 小时窗口驱动 `Used` / `ResetAt`（`resetsAt` 官方给毫秒精度，规范化为秒精度 UTC），`Percent` 取 5 小时与 7 天窗口中更紧张者，两个窗口都写进 `Remaining`。Cookie 失效时控制面可能返 401 也可能 302 跳登录页，故 client 设了 `CheckRedirect: http.ErrUseLastResponse` 并把 302 并入 Cookie 失效分支——否则会跟随跳转拿到 200 登录页 HTML，报成「解析响应失败(响应结构可能已变化)」而丢掉「请重新登录」指引。该路由是官方前端的私有接口，无稳定性承诺，失效时对照 open-design.ai 的 web bundle 更新 `opendesign.go`。

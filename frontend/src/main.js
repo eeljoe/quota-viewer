@@ -183,11 +183,15 @@ function updateBall(results) {
     ball.classList.toggle("grid", n >= 4);
     // 列数交给 CSS(.ball.grid 按 --cols 等宽换行 + 末行居中)
     if (n >= 4) ball.style.setProperty("--cols", cols);
+    // 窄格场景(3 格单行 / 5+ 格三列):双字符缩写要降字号,否则顶到格边、相邻两格粘一起
+    ball.classList.toggle("narrow", n === 3 || n >= 5);
 
     results.forEach((r) => {
         const cell = document.createElement("span");
-        cell.className = "ball-cell " + getStatusColor(r);
-        cell.textContent = r.abbr || r.platform.slice(0, 1);
+        const abbr = r.abbr || r.platform.slice(0, 1);
+        // wide 标记多字符缩写(MX / OD / Go):窄格下由 CSS 降字号换净空
+        cell.className = "ball-cell " + getStatusColor(r) + (abbr.length > 1 ? " wide" : "");
+        cell.textContent = abbr;
         ball.appendChild(cell);
     });
 

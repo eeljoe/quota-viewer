@@ -103,6 +103,12 @@ html, body {
 .ball.cells-4-6 .ball-cell { font-size: 10px; }
 .ball.cells-7-9 .ball-cell { font-size: 9px; }
 
+/* 双字符缩写(MX / OD / Go)比单字符宽一倍半,在窄格里会顶到格子边界 ——
+   相邻两格各顶一边,文字净空只剩格间那 1px,看着像粘在一起(3 格 13px 时甚至溢出格子)。
+   窄格场景(3 格单行 / 5+ 格三列)给它们单独降到 8.5px,换回与单字符相当的呼吸空间;
+   宽格(1-2 格单行、4 格 2x2)空间充裕,不降。 */
+.ball.narrow .ball-cell.wide { font-size: 8.5px; }
+
 /* === 面板外壳(详情 / 配置共用) === */
 .panel, .settings {
     width: 340px;

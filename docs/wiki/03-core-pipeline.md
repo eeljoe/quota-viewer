@@ -9,7 +9,7 @@
 ### 刷新触发源（三条路径汇合到 `App.Refresh()`）
 
 ```
-① 定时器   startAutoRefresh()          [app.go:330]  每 RefreshIntervalMin 分钟
+① 定时器   startAutoRefresh()          [app.go:447]  每 RefreshIntervalMin 分钟
 ② 托盘     tray:refresh 事件           [app.go:69]   托盘"刷新"菜单
 ③ 前端     手动刷新按钮 → Refresh()    [main.js]     直接调用绑定
 ```
@@ -18,8 +18,8 @@
 
 ```
 App.Refresh()                          [app.go:101]
- └─ fetchAll()                         [app.go:303]
-     └─ 遍历 cfg.Providers 中 enabled 的(最多 3 个,注册表顺序)
+ └─ fetchAll()                         [app.go:404]
+     └─ 遍历 cfg.Providers 中 enabled 的(普通最多 3 个 / 扩展最多 9 个,注册表顺序)
          ├─ goroutine1: registry["kimi"].Build(creds).Fetch()
          ├─ goroutine2: registry["xfyun"].Build(creds).Fetch()
          └─ goroutine3: registry["opencode-go"].Build(creds).Fetch()
@@ -44,9 +44,10 @@ App.Refresh()                          [app.go:101]
 ### 配置保存链路
 
 ```
-前端 保存按钮 → App.SaveConfig(providers, refreshMin)   [app.go]
+前端 保存按钮 → App.SaveConfig(providers, refreshMin, extendedMode)   [app.go:171]
   providers: [{id, enabled, creds:{字段:输入值}, budget}]
-  → 后端钳制:0 个启用 → 全部启用;>3 → 保留前 3
+  → 后端钳制:0 个启用 → 全部启用;超过上限 → 保留前 N 个(N = 普通 3 / 扩展 9)
+  → 写回 ExtendedMode
   → 空字符串 creds = 不修改(避免掩码覆盖)
   → 所有凭证值过 NormalizeCookieInput(非 PS 格式原样返回)
   → 按注册表顺序重排 → config.Save() 写 %APPDATA%/quota-viewer/config.json
@@ -55,16 +56,16 @@ App.Refresh()                          [app.go:101]
 ### 连接测试链路
 
 ```
-前端 [测试] → App.TestConnection(platform)   [app.go]
-  platform ∈ 注册表 id: "kimi"|"xfyun"|"opencode-go"|"mimo"|"deepseek"|"ollama"
+前端 [测试] → App.TestConnection(platform)   [app.go:260]
+  platform ∈ 注册表 id(当前 10 个: kimi|xfyun|opencode-go|mimo|deepseek|ollama|command-code|factory-droid|minimax|open-design)
   → 按 id 查注册表 → Build(已存 creds).Fetch() → "成功: 剩余描述" 或 "失败: 错误"
 ```
 
 ### 窗口形态切换
 
 ```
-展开: 前端 → ExpandWindow(w, h)     [app.go:206] 首展记录 savedX/Y，fitToScreen 定位
-收起: 前端 → CollapseWindow()       [app.go:223] 恢复 savedX/Y（fitToScreen 转相对坐标）
+展开: 前端 → ExpandWindow(w, h)     [app.go:306] 首展记录 savedX/Y，fitToScreen 定位
+收起: 前端 → CollapseWindow()       [app.go:323] 恢复 savedX/Y（fitToScreen 转相对坐标）
 ```
 
 ---

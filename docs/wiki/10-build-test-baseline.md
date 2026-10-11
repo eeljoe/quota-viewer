@@ -6,14 +6,15 @@
 
 ## 核心内容
 
-### 当前基线（2026-08-04，工作区状态）
+### 当前基线（2026-10-11，`2d9031f` 工作区状态）
 
-- **Go 测试**：`go test ./...` 全绿
+- **Go 测试**：`go test ./...` 全绿（exit 0；顶层 PASS 120 条 + 子测试 5 条、0 FAIL；config ≈0.1s、fetcher ≈3.9s）
   - `quota-viewer`（无测试文件）
   - `internal/config` ok
   - `internal/fetcher` ok
   - `internal/tray`（无测试文件）
-- **工作区**：dirty（15 项变更，MiMo→OpenCode 替换 + fitToScreen 修复未提交），未验证 `wails build` 产物
+- **工作区**：Go/前端源码无未提交改动（同步当次 `git status` 只有 `docs/` 文档与未跟踪目录的变动）
+- **本次未跑 `wails build`**：这一轮只做 wiki 同步，构建产物未重新验证（上一次构建验证见附录 99 的会话记录）
 
 ### 构建流程
 

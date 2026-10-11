@@ -30,16 +30,16 @@
 | `main.go` | 入口 + Wails 运行时选项 |
 | `workarea_windows.go` | Win32 原生调用（DPI/工作区/窗口子类） |
 | `internal/config/` | 配置持久化（动态 Provider 列表）+ Cookie 解析 |
-| `internal/fetcher/` | Provider 注册表 + 八平台抓取器 |
+| `internal/fetcher/` | Provider 注册表 + 十平台抓取器 |
 | `internal/tray/` | 系统托盘 |
 | `frontend/src/` | 前端源码（index.html / main.js / style.css） |
 | `frontend/dist/` | 构建产物（Go embed） |
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "cc01446", "synced_at": "2026-09-30T22:30:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "2d9031f", "synced_at": "2026-10-11T15:16:00+08:00", "synced_files": 12} -->
 
-> **Wiki 同步状态**：最后同步于 `cc01446`（2026-09-30 22:30），共 11 个文件。
+> **Wiki 同步状态**：最后同步于 `2d9031f`（2026-10-11 15:16），共 12 个文件。上一同步点为 `cc01446`（2026-09-30，当时 8 家 Provider/11 个文件），此后补上 `b13a10a`（MiniMax，第 9 家 + 扩展模式）、`a74d370`/`bb276a7`（Open Design，第 10 家）。
 
 ## Wiki 文件索引
 
@@ -50,7 +50,7 @@
 | 02 | module-catalog | 全部模块职责与行数 |
 | 03 | core-pipeline | 刷新调用链、事件总线契约 |
 | 04 | window-positioning | 窗口定位、DPI、工作区、fitToScreen |
-| 05 | fetching-platforms | 八平台抓取器、注册表与 QuotaResult |
+| 05 | fetching-platforms | 十平台抓取器、注册表与 QuotaResult |
 | 06 | systray | 系统托盘实现与线程铁律 |
 | 07 | config-model | 动态 Provider 配置模型与旧格式迁移 |
 | 08 | api-contract | Wails 绑定 API（动态配置契约） |
@@ -66,6 +66,6 @@
 - `tray:refresh` / `tray:toggle` / `tray:settings` 事件名——托盘与 app.go 两端共用契约
 - `quota:update` / `ui:show-settings` 事件名——后端推给前端的契约
 - `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/balance/currency/remaining/reset_at/error）——前端渲染依赖
-- Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
-- 展示上限 3 / 下限 1 个 Provider——前后端都钳制
+- Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design，共 10 个）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
+- 展示上限普通 3 / 扩展 9 个、下限 1 个 Provider——前后端都钳制（9 = 前端 3×3 球格容量，不等于注册表长度）
 - 配置 JSON 结构（providers 数组）——已迁移用户配置兼容

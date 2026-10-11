@@ -11,14 +11,15 @@
 ### App 导出方法（Go 侧签名）
 
 ```go
-// 刷新: 并发抓取启用的 Provider(1-3), 写缓存, emit "quota:update", 返回结果
+// 刷新: 并发抓取启用的 Provider(普通 1-3 / 扩展 1-9), 写缓存, emit "quota:update", 返回结果
 func (a *App) Refresh() []fetcher.QuotaResult
 
-// 读配置: 全部 Provider 元数据 + 掩码凭证
+// 读配置: 全部 Provider 元数据 + 掩码凭证 + extended_mode
 func (a *App) GetConfig() map[string]interface{}
 
-// 存配置: 动态 Provider 列表(见下); 空字符串凭证 = 不修改; 数量钳制 1-3
-func (a *App) SaveConfig(providers []ProviderInput, refreshMin int) error
+// 存配置: 动态 Provider 列表(见下); 空字符串凭证 = 不修改;
+// 数量按 extendedMode 钳制(普通 1-3 / 扩展 1-9), 并写回 ExtendedMode
+func (a *App) SaveConfig(providers []ProviderInput, refreshMin int, extendedMode bool) error
 
 // 测试单平台连接: platform ∈ 注册表 id; 返回 "成功: ..." 或 "失败: ..."
 func (a *App) TestConnection(platform string) string
@@ -68,11 +69,12 @@ type ProviderInput struct {
   ],
   "refresh_interval_min": 15,
   "ball_x": -1,
-  "ball_y": -1
+  "ball_y": -1,
+  "extended_mode": false
 }
 ```
 
-- `providers` 按注册表返回 6 条（kimi/xfyun/opencode-go/mimo/deepseek/ollama），`enabled` 标记展示
+- `providers` 按注册表返回 10 条（kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design），`enabled` 标记展示
 - `fields` 驱动前端动态渲染凭证输入框（password/text/textarea）
 - `creds` 为掩码后值（前端放 placeholder）；`login_url` 空则不渲染"打开登录页"按钮
 
@@ -95,7 +97,7 @@ type ProviderInput struct {
 
 ```js
 const cfg = await window.go.main.App.GetConfig();
-await window.go.main.App.SaveConfig(providers, interval);
+await window.go.main.App.SaveConfig(providers, interval, extendedMode);
 const result = await window.go.main.App.TestConnection("deepseek");
 window.runtime.EventsOn("quota:update", (results) => render(results));
 ```
@@ -116,6 +118,6 @@ window.runtime.EventsOn("quota:update", (results) => render(results));
 ## Must NOT Change
 
 - 改 Go 方法签名后必须重新生成 wailsjs 绑定（`wails build` 自动），否则前端调用断裂
-- `TestConnection` 的 platform 字符串 = 注册表 id（"kimi"/"xfyun"/"opencode-go"/"mimo"/"deepseek"/"ollama"），是前后端契约
-- GetConfig 的 providers 数组结构（前端 main.js 渲染依赖）
-- SaveConfig 的钳制语义（0 个 → 全部启用;>3 → 保留前 3）
+- `TestConnection` 的 platform 字符串 = 注册表 id（当前 10 个：kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design），是前后端契约
+- GetConfig 的 providers 数组结构与 `extended_mode` 字段（前端 main.js 渲染依赖）
+- SaveConfig 的钳制语义（0 个 → 全部启用;超过上限 → 保留前 N 个;N 由 extendedMode 决定:普通 3 / 扩展 9）

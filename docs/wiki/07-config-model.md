@@ -14,6 +14,7 @@ type Config struct {                       // internal/config/config.go
     RefreshIntervalMin int              `json:"refresh_interval_min"`
     BallX              int              `json:"ball_x"`
     BallY              int              `json:"ball_y"`
+    ExtendedMode       bool             `json:"extended_mode,omitempty"` // 扩展模式:启用上限 9(默认 false = 3)
 }
 
 type ProviderConfig struct {
@@ -36,7 +37,9 @@ type ProviderConfig struct {
     {"id": "deepseek", "enabled": false, "budget": 300},
     {"id": "ollama", "enabled": false},
     {"id": "command-code", "enabled": false},
-    {"id": "factory-droid", "enabled": true}
+    {"id": "factory-droid", "enabled": true},
+    {"id": "minimax", "enabled": false},
+    {"id": "open-design", "enabled": false}
   ],
   "refresh_interval_min": 15,
   "ball_x": -1,
@@ -47,11 +50,17 @@ type ProviderConfig struct {
 ### 常量
 
 ```go
-var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid"}
+var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid", "minimax", "open-design"}
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启用前三个
+const (
+    maxEnabledNormal   = 3 // 普通模式上限
+    maxEnabledExtended = 9 // 扩展模式上限(前端 3x3 球格容量)
+)
+func EnabledLimit(extended bool) int // 扩展模式 9 / 普通模式 3
 ```
 
 > 清单与 fetcher 注册表的同步由 `config_test.go` 的 `TestAllProviderIDs_MatchesFetcherRegistry` 守护——注册表新增 Provider 时两处必须同步改。
+> **9 不是注册表长度**：注册表已有 10 家，9 是前端 3×3 球格容量（扩展模式是「10 选 9」）；普通模式上限仍是 3。
 
 ### 旧格式迁移（config v1 → v2，Load 时自动）
 
@@ -61,15 +70,15 @@ var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启�
 - 有值的旧字段 → 对应 Provider `enabled=true` + 凭证迁移（mimo_cookie 也会迁移保留）
 - 旧字段全空 → 默认启用前三个
 - 迁移后立即回写新格式（`_ = Save(cfg)`，失败静默）
-- 4 个以上有值 → 钳制：按注册表顺序保留前 3 个 enabled，其余凭证保留但关闭
+- 4 个以上有值 → 钳制：按注册表顺序保留前 3 个 enabled，其余凭证保留但关闭（旧格式无扩展模式，恒用普通上限 3）
 - 已有 v2 配置缺少新 Provider 时，`ensureKnownProviders` 在 Load 时追加默认关闭的条目并回写，保留用户原有启用状态与凭证
-- Load 末尾钳制：启用数 >3 时按顺序保留前 3 个关闭其余（凭证不动）——手工编辑配置/异常状态不可能再让面板渲染出「勾了 4 个」的不可能状态（2026-09-30 教训：外部改配置造成 4 启用，SaveConfig 静默钳掉新 Provider，用户反复保存才收敛）
+- Load 末尾钳制：启用数 > `EnabledLimit(cfg.ExtendedMode)`（普通 3 / 扩展 9）时按顺序保留前 N 个关闭其余（凭证不动）——手工编辑配置/异常状态不可能再让面板渲染出「勾了超过上限个」的不可能状态（2026-09-30 教训：外部改配置造成 4 启用，SaveConfig 静默钳掉新 Provider，用户反复保存才收敛）
 
 ### 存储位置
 
 - 路径：`%APPDATA%/quota-viewer/config.json`（`configDir()` 读 APPDATA 环境变量）
 - 文件不存在 → 返回 `Default()` 配置不报错；目录不存在 → Save 时 `MkdirAll`
-- 默认值：`RefreshIntervalMin=15`，`BallX/BallY=-1`（-1 = 未记录位置，启动不移动窗口）
+- 默认值：`RefreshIntervalMin=15`，`BallX/BallY=-1`（-1 = 未记录位置，启动不移动窗口），`ExtendedMode=false`（普通模式，上限 3）
 
 ### 凭证保护
 
@@ -96,10 +105,10 @@ $session.Cookies.Add((New-Object System.Net.Cookie("name", "value", "/", "domain
 
 | 文件 | 职责 |
 |---|---|
-| `internal/config/config.go` | Config/ProviderConfig 结构、Default、Load（含迁移 + 超限钳制）、Save |
+| `internal/config/config.go` | Config/ProviderConfig 结构（含 ExtendedMode）、Default、Load（含迁移 + 超限钳制）、Save、AllProviderIDs/EnabledLimit |
 | `internal/config/cookie.go` | NormalizeCookieInput + PS 转义还原 |
-| `internal/config/config_test.go` | 默认值、往返、旧格式迁移（含 mimo_cookie）、清单同步守护、超限钳制用例 |
-| `app.go` | GetConfig 掩码、SaveConfig 钳制与空串语义 |
+| `internal/config/config_test.go` | 默认值、往返、旧格式迁移（含 mimo_cookie）、清单同步守护、超限钳制（普通 3 / 扩展 9）用例 |
+| `app.go` | GetConfig 掩码与 extended_mode、SaveConfig 钳制(按模式 3/9)与空串语义 |
 
 ---
 
@@ -108,4 +117,4 @@ $session.Cookies.Add((New-Object System.Net.Cookie("name", "value", "/", "domain
 - `providers` 结构变更 = 破坏性变更；迁移逻辑在 config.Load 内,改结构必须同步迁移
 - `SaveConfig` 的空凭证"不修改"语义——前端掩码回显依赖它
 - Cookie 输入规范化必须始终经过 `NormalizeCookieInput`（xfyun 与 mimo 都走它）
-- 展示上限 3 / 下限 1:config Load(含迁移)与 app.SaveConfig 钳制;AllProviderIDs 与 fetcher 注册表必须同步(有守护测试)
+- 展示上限：普通 3 / 扩展 9，下限 1。config Load(含迁移)与 app.SaveConfig 按 `ExtendedMode` 钳制;AllProviderIDs 与 fetcher 注册表必须同步(有守护测试)

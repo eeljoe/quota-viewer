@@ -137,6 +137,19 @@ var registry = []ProviderDef{
 			return NewMiniMaxFetcher(creds["api_key"])
 		},
 	},
+	{
+		ID:          "open-design",
+		DisplayName: "Open Design",
+		Abbr:        "OD",
+		Kind:        KindUsage,
+		LoginURL:    "https://open-design.ai/cloud/dashboard",
+		Fields: []CredentialField{
+			{Key: "cookie", Label: "Cookie(登录 open-design.ai/cloud/dashboard 后 F12 复制)", Type: "textarea"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewOpenDesignFetcher(creds["cookie"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

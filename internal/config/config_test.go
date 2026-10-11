@@ -74,6 +74,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "command-code", Enabled: false},
 			{ID: "factory-droid", Enabled: false},
 			{ID: "minimax", Enabled: false},
+			{ID: "open-design", Enabled: false, Creds: map[string]string{"cookie": "session=od1"}},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -157,11 +158,11 @@ func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
 		t.Fatalf("expected %d providers after migration, got %d", len(AllProviderIDs), len(cfg.Providers))
 	}
 	last := cfg.Providers[len(cfg.Providers)-1]
-	if last.ID != "minimax" || last.Enabled {
-		t.Errorf("expected disabled minimax appended, got %+v", last)
+	if last.ID != "open-design" || last.Enabled {
+		t.Errorf("expected disabled open-design appended, got %+v", last)
 	}
-	// ollama / command-code / factory-droid 也应被补全且默认关闭
-	for _, id := range []string{"ollama", "command-code", "factory-droid"} {
+	// minimax / ollama / command-code / factory-droid 也应被补全且默认关闭
+	for _, id := range []string{"ollama", "command-code", "factory-droid", "minimax"} {
 		for _, p := range cfg.Providers {
 			if p.ID == id && p.Enabled {
 				t.Errorf("expected disabled %s appended, got %+v", id, p)
@@ -338,7 +339,8 @@ func TestLoad_ClampsEnabledOverThree(t *testing.T) {
 }
 
 // TestLoad_ExtendedMode_AllowsNineEnabled 验证扩展模式把启用上限从 3 放开到 9:
-// extended_mode=true 时全部 Provider 可同时启用;普通模式仍然钳回 3。
+// 注册表已 10 家,扩展模式是「10 选 9」——按顺序保留前 9 个,末位被钳制关闭;
+// 普通模式仍然钳回 3。
 func TestLoad_ExtendedMode_AllowsNineEnabled(t *testing.T) {
 	buildJSON := func(extended bool) string {
 		ids := make([]string, 0, len(AllProviderIDs))
@@ -365,8 +367,12 @@ func TestLoad_ExtendedMode_AllowsNineEnabled(t *testing.T) {
 			enabled++
 		}
 	}
-	if enabled != len(AllProviderIDs) {
-		t.Errorf("extended mode: expected all %d enabled, got %d", len(AllProviderIDs), enabled)
+	if enabled != 9 {
+		t.Errorf("extended mode: expected 9 enabled (10 providers, limit 9), got %d", enabled)
+	}
+	// 注册表末位(open-design)是第 10 个启用者,被钳制关闭
+	if last := cfg.Providers[len(cfg.Providers)-1]; last.Enabled {
+		t.Errorf("extended mode: expected last provider %s clamped off, got %+v", last.ID, last)
 	}
 
 	// 同样的启用状态,关闭扩展模式 → 钳回 3

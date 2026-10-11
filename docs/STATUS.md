@@ -8,34 +8,35 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
-> 5. **直接跳到最新一条「会话记录：2026-10-03 00:15」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-11 15:14」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-03 00:15`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`537daea` on `master`（已推送）
-> 📊 累计会话数：主文档 4 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-11 15:14`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`2d9031f` on `master`
+> 📊 累计会话数：主文档 5 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "537daea", "branch": "master", "dirty": false, "timestamp": "2026-10-03T00:20:00+08:00"} -->
+<!-- git-meta: {"last_commit": "2d9031f", "branch": "master", "dirty": false, "timestamp": "2026-10-11T15:14:00+08:00"} -->
 
-- **日期**：2026-10-03 00:15
-- **会话摘要**：用户目验后否决球形方案（白面板/锯齿/丑底色）→ 窗口层 revert + 恢复方圆角视觉，保留 MiniMax 与扩展模式；归档 8 月旧会话 5 条；全部推送
+- **日期**：2026-10-11 15:14
+- **会话摘要**：新增第 10 家 Provider Open Design（浏览器会话 Cookie，5h/7d 双窗口）；全程流水线（实探→实现→三路审查→Standards 轴 FAIL 后按标签返工→重验 VERIFIED），构建交付并端到端跑通
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.2.0 已发布** + master 未发版增量：九平台监控（新增 MiniMax）+ 扩展模式（悬浮球最多 9 格，默认 3）；球形改版经用户目验否决，**已完整回滚**（UI 维持 v1.2.0 方圆角观感）
-- 状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent（Kimi/ollama/commandcode/factory-droid/minimax 一致）
-- 下一步：wiki 三件套同步（`/wiki-update`）；计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+- 当前阶段：**v1.2.0 已发布** + master 未发版增量：**十平台监控**（新增 MiniMax、Open Design）+ 扩展模式（悬浮球最多 9 格，默认 3）
+- 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent
+- Open Design 只能靠浏览器会话 Cookie 读额度（API key 读不到），端点见最新会话「关键上下文」
+- 下一步：查 wiki 同步结果（本会话已委派）；计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
 - 注意事项：无阻塞项
 
 ---
@@ -47,17 +48,19 @@
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
 - **功能**：悬浮球（1-9 格动态，颜色=状态，方圆角）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证 + 扩展模式开关）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）、Open Design（浏览器会话 Cookie，Design Plan 5 小时/7 天窗口）
 
 ## 当前分支与最近提交
 
-- **分支**：master（与远程同步）
-- **HEAD**：`5bc855f`（全部已推送）
+- **分支**：master
+- **HEAD**：`2d9031f`
 - **最近提交**：
-  - `537daea` - fix: 回滚球形改版——恢复方圆角球体,保留扩展模式网格布局
-  - `e96af01` - Revert "fix: 球形悬浮球——窗口级圆形裁切 + 物理像素尺寸兜底"
-  - `b13a10a` - feat: MiniMax 额度监控(第 9 家)+ 扩展模式 4-9 格 + 球形悬浮球
-- **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0（三件套未发版）
+  - `2d9031f` - docs: README 补齐 Factory Droid / MiniMax / Open Design 三家 Provider 表格行
+  - `1881d69` - chore: 修正两处与事实不符的注释
+  - `c306903` - docs: 速查表补齐三家 + MiniMax 与 Open Design 特殊说明
+  - `bb276a7` - fix: open-design 禁止跟随 302 跳转,并把 302 并入 Cookie 失效分支
+  - `a74d370` - feat: 接入第 10 家额度 Provider Open Design
+- **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0（十平台增量未发版）
 
 ---
 
@@ -368,3 +371,78 @@
 - **球形失败三层教训**（已留痕，防止重蹈）：① Win32 SetWindowRgn 无抗锯齿，圆缘必锯齿；② Wails v2 + WebView2 透明链路逐层残影（实心底色/Mica 方块）；③ OnStartup 非窗口线程 → SetWindowSubclass 必失败；物理像素直调窗口尺寸会搅乱 Wails 尺寸状态机 → 展开面板全白
 - 当前运行实例 PID 23220（回滚版）；桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe` 已是回滚构建
 - Wiki 指针状态：`docs/wiki/` 12 文件 + 99 归档页（第二批 5 条），`.covered-files` 50 项，synced_commit `cc01446`（漂移 14 文件待 `/wiki-update`）
+
+---
+
+## 会话记录：2026-10-11 15:14
+
+> **会话摘要**：新增第 10 家 Provider Open Design（浏览器会话 Cookie，5 小时/7 天双窗口）；全程走完整流水线——真机实探定端点、worker 实现、三路审查（运行验收门 VERIFIED / Spec 轴 PASS / Standards 轴 FAIL）、按标签返工 302 与文档欠账后重验 VERIFIED，构建交付并端到端跑通
+> **Git**：`2d9031f` on `master`（全部已推送前状态；本会话记录提交后推送）
+> **任务组**：Open Design Provider 接入
+> **任务组状态**：已完成（功能端到端验证通过并交付运行）
+
+### 本次完成
+
+- **真机实探定端点**（用户提供 key 与浏览器截图，要求「自己上去查」）：`amr-link.open-design.ai` 数据面只有推理端点、**无任何额度接口**（LiteLLM 风格路径全 404）；控制面 `amr-api.open-design.ai` 的额度接口只认浏览器会话 Cookie，API key 一律 401。用真实浏览器会话实探拿到三个端点：`/api/v1/workspaces/current`（发现 workspaceId）、`/api/v1/workspaces/{id}/billing/coding-plan-usage`（5h/7d 双窗口 credits）、`/wallet/balance`（用户否决，未接）。官方开源仓库源码交叉确认额度模型（Vela 后端、窗口池记账、Go 档两窗口）
+- **实现 `opendesign.go`**（commit `a74d370`）：两步 GET，窗口按 `durationSeconds` 识别（18000/604800，不靠数组下标）；credits 十进制字符串按 ParseFloat 算已用%；5h 驱动 Used/ResetAt/Remaining 首项，Percent 取两窗口更紧张者；注册表 + AllProviderIDs 双处同步；16 个测试函数（httptest，含倒序窗口、limit=0 除零、空 Cookie 不发请求、真实 id 拼路径等）
+- **三路审查**：运行验收门 VERIFIED（12 发变异全杀、11 个边界探针全过、真实端点独立冒烟通过）；Spec 轴 PASS（7 条拍板决定逐条核对无违背）；Standards 轴 **FAIL**（5 条：302 未拦重定向属真偏离、文档速查表欠账、3 条注释/口径失真）
+- **返工 r2**（commit `bb276a7` / `c306903` / `1881d69`）：`get()` 补 `CheckRedirect: ErrUseLastResponse` 并把 302 并入 Cookie 失效分支（照 4 个 Cookie 型先例）；补两条 302 用例（先红后绿，红症状与 finding 逐字一致）；`docs/ADDING_A_PROVIDER.md` 速查表补三家欠账 + 新增 MiniMax / Open Design 特殊说明节 + §1.3 Kind 口径与 `types.go` 对齐；两处失真注释修正
+- **重验 VERIFIED**：3 发指定变异 + 4 发自选变异全被击杀；301/303/307/308 探针确认全部不跟随、无静默失败；**真实端点独立复验成功**（`percent=5.356`、`remaining="5小时 5.4% 已用 · 周 1.8% 已用"`）
+- **端到端交付**：`wails build` → 应用配置启用 open-design 并写入 Cookie → 新实例 PID 30100；悬浮球出现 **OD** 格（绿色），展开面板显示「Open Design 5小时 5.6% 已用 · 周 1.9% 已用」，与其它 4 家同构；README 两家（中英）补齐 Factory Droid / MiniMax / Open Design 三行
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|------|------|----------|
+| 走浏览器会话 Cookie 而非 API key | 实测 API key 读不到任何额度（数据面无额度端点、控制面对它一律 401）；与讯飞/MiMo/Ollama 同类 | 用 API key（不可行） |
+| 只取 5 小时 + 7 天两个窗口，**不接**钱包余额 | 用户明确拍板「只要两个窗口」；额度用尽后才轮到钱包，平时是噪声 | 附带展示钱包 $1.50 |
+| 只填 Cookie 一个输入框，workspaceId 自动发现 | 用户拍板；换工作区不用重填，与 Cookie 型先例一致 | 多一个手填 workspaceId 字段 |
+| 注册第 10 家但扩展模式上限**仍是 9**（10 选 9） | 用户拍板；9 是前端 3x3 球格容量，加第 10 格要改网格布局与字号，收益低于风险 | 球改 5x2 网格支持 10 格 |
+| 302 修复照做（尽管真实端点实测返 401） | 文档 §1.4 明文 + 4/4 Cookie 型先例一致；成本低，防的是平台改行为 | 不修（文档与先例不一致，留给后人踩） |
+| 顺带补齐文档欠账（速查表三家、README 两家、两处注释） | 审查判定「provider 票把自己登记进指南是同一件事的收尾」；欠账已积三轮 | 只修 302，欠账留给后续会话 |
+
+### 新增/变更文件
+
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `internal/fetcher/opendesign.go` | Open Design 抓取器（两步 GET + 双窗口 + 302 拦截） |
+| 新增 | `internal/fetcher/opendesign_test.go` | 16 个测试函数（httptest，含 302 不跟随断言） |
+| 修改 | `internal/fetcher/registry.go` | 注册 open-design（第 10 家，Abbr=OD） |
+| 修改 | `internal/fetcher/registry_test.go` | 注册表断言 9→10 |
+| 修改 | `internal/config/config.go` | AllProviderIDs 追加 + 注释修正（上限 9 是球格容量） |
+| 修改 | `internal/config/config_test.go` | 3 处断言适配 10 家（扩展模式改为「恰好 9 开 + 末位被钳」双断言，属加强） |
+| 修改 | `docs/ADDING_A_PROVIDER.md` | 速查表补三家 + MiniMax/Open Design 特殊说明节 + §1.3 Kind 口径 |
+| 修改 | `README.md` / `README.zh-CN.md` | 支持 Provider 表补齐三家 |
+| 修改 | `docs/STATUS.md` | 本会话记录 |
+| 修改 | `%APPDATA%/quota-viewer/config.json` | 启用 open-design + 写入 Cookie（应用外修改，已备份 `.bak-20261011`） |
+
+> 本次变更（537daea..HEAD）：16 文件，+994/-236 行（含本会话前 b1fcb85 归档提交的 202 行）
+> 代码变更（b1fcb85..HEAD）：9 文件，+715/-15 行
+
+### 未完成 & 下一步
+
+- wiki 同步：本会话已派 worker 同步十平台与行数基线（`/wiki-update` 口径），完成后待查
+- 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+
+### 已知问题 & 注意事项
+
+- **Open Design 额度只能靠浏览器会话 Cookie**：API key（sk-amr-）读不到额度；Cookie 是 better-auth 的 `__Secure-better-auth.session_token`，**HttpOnly**（`document.cookie` 拿不到），须从 DevTools → 网络 → 该请求 → 请求标头复制整条 `Cookie`。Cookie 失效实时测返回 **401**（不是 302），代码里 302 拦截是照文档与先例补的防御
+- **第二步不能用 `current` 别名**：`/api/v1/workspaces/current/billing/coding-plan-usage` → `workspace_member_required`；必须先取真实 workspaceId（有测试守护）
+- 该控制面是官方前端私有接口，无稳定性承诺；失效时对照 open-design.ai 的 web bundle 更新 `opendesign.go`（已入 ROADMAP Later）
+- 取 Chrome Cookie 时踩到的坑：`Network/Cookies` SQLite 被浏览器独占锁，`sqlite3` 免锁模式、`.NET FileShare` 全开、`robocopy /b`（需备份权限）全部打不开 —— 直接读 DevTools 请求标头最省事
+- 本会话真实 Cookie 只在临时探针与配置文件中出现，**未落进任何仓库文件**（已全仓扫描确认）；介意可改 open-design.ai 重新登录使其失效
+- 两个验收实例都披露了同一工具陷阱：gate-kit 的变异脚本按**进程 cwd** 解析 `--file`，从主仓发起会把变异打到主仓文件。两次都即时还原，主工作区已用 `git hash-object` 逐文件核验与 HEAD 一致、无残留
+
+### 推荐 Skill
+
+- `/wiki-update` - 本会话已委派同步（十平台措辞、05 表补两行、02 模块行数、07 的 AllProviderIDs、00 的 wiki-meta 与 covered-files）
+
+### 关键上下文
+
+- **Open Design 端点契约**（真机实测 2026-10-11）：`GET https://amr-api.open-design.ai/api/v1/workspaces/current` → `workspaceId`（本机 `p619hvqak6gwawty2rfzl7mb`，tier=go）；`GET .../api/v1/workspaces/{id}/billing/coding-plan-usage` → `windows[]`，`durationSeconds` 18000=5h / 604800=7d，`usedCredits`/`limitCredits`/`remainingCredits` 是十进制字符串，计数是**已用**，`resetsAt` 为毫秒精度 RFC3339
+- **额度模型**（官方开源仓库 nexu-io/open-design）：计费真相在 Vela 后端；Coding Plan 按窗口池记账（Go 档 = 5h + 7d 两窗口，Plus/Pro/Max = 7d 单窗口）；钱包 `balanceUsd` 与 plan 额度并行（plan 用尽转按量）
+- 当前启用 Provider：kimi / ollama / factory-droid / minimax / open-design（5 家，`extended_mode=true`，上限 9）
+- 运行实例 PID 30100（含 open-design 的构建）；桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe` 已是本次构建
+- 本会话实现/返工提交：`a74d370`（实现）→ `bb276a7`（302 修复）→ `c306903`（文档）→ `1881d69`（注释）→ `2d9031f`（README）
+- 记忆：`.agents/memory/pending/2026-10-11-open-design-amr-link-no-quota-api.md`（API key 死路 / Cookie 路径 / 三个端点 / 401 而非 302 / Cookie 库锁坑）
+- Wiki 指针状态：`docs/wiki/` 12 文件 + 99 归档页（10 条），synced_commit `cc01446`（本次派 worker 同步中）

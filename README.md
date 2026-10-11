@@ -32,6 +32,9 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 | DeepSeek | API Key (`sk-...`) | Account balance (balance type) |
 | Ollama | Browser session Cookie | Cloud 5-hour Session usage / weekly usage (settings page) |
 | Command Code | API Key (`user_...`, or auto-read `~/.commandcode/auth.json` if empty) | 5-hour / weekly rolling window usage + remaining credits |
+| Factory Droid | API Key (`fk-...`, or auto-read `~/.factory/.env` if empty) | 5-hour / weekly / monthly windows + Core pool usage |
+| MiniMax | Subscription Key (`sk-cp-...`) | 5-hour / weekly window usage (Token Plan) |
+| Open Design | Browser session Cookie | Design Plan 5-hour / 7-day quota usage |
 
 > Tip: For Cookie-based providers, you can paste the entire "Copy as PowerShell" script from your browser's F12 → Network tab, and it will be automatically parsed into a Cookie header on save.
 

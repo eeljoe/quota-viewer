@@ -32,6 +32,9 @@
 | DeepSeek | API Key (`sk-...`) | 账户余额（余额型） |
 | Ollama | 浏览器会话 Cookie | Cloud 5 小时 Session 用量 / 周用量（设置页） |
 | Command Code | API Key (`user_...`,留空自动读 `~/.commandcode/auth.json`) | 5 小时 / 周滚动窗口用量 + 剩余 credits |
+| Factory Droid | API Key (`fk-...`,留空自动读 `~/.factory/.env`) | 5 小时 / 周 / 月窗口 + Core 池用量 |
+| MiniMax | 订阅 Key (`sk-cp-...`) | 5 小时 / 周窗口用量（Token Plan） |
+| Open Design | 浏览器会话 Cookie | Design Plan 5 小时 / 7 天额度用量 |
 
 > 提示：Cookie 类凭证支持在浏览器 F12 → 网络标签 → 复制请求头后，直接粘贴 "Copy as PowerShell" 格式的整段脚本，保存时自动解析为 Cookie 请求头。
 

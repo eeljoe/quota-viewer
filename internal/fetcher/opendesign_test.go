@@ -66,6 +66,67 @@ func newODServer(t *testing.T, windowsJSON string) (*httptest.Server, *[]odReque
 		http.StatusOK, `{"workspaceId":"`+odWorkspaceID+`","eligible":true,"tier":"go","windows":`+windowsJSON+`}`)
 }
 
+// odLoginPath 是假登录页:Cookie 过期时控制面用 302 把请求甩到这里。
+// httptest 里 302 需要 Location 头才像真跳转,用例显式指向这个假登录页。
+const odLoginPath = "/cloud/login"
+
+// odAssertCookieExpired 断言错误是「Cookie 失效」语义(与 401/403 同一句提示)。
+func odAssertCookieExpired(t *testing.T, what, errMsg string) {
+	t.Helper()
+	if errMsg == "" {
+		t.Fatalf("%s: expected Cookie-expired error, got empty", what)
+	}
+	for _, want := range []string{"Cookie", "过期", "open-design.ai"} {
+		if !strings.Contains(errMsg, want) {
+			t.Errorf("%s: expected %q in error, got '%s'", what, want, errMsg)
+		}
+	}
+}
+
+// odAssertNotFollowed 断言实现没有跟随 302 到登录页(请求记录里不得出现 odLoginPath)。
+func odAssertNotFollowed(t *testing.T, requests []odRequest) {
+	t.Helper()
+	for _, req := range requests {
+		if req.path == odLoginPath {
+			t.Errorf("跟随了 302 跳转请求 %s,应禁止自动重定向: %+v", odLoginPath, requests)
+		}
+	}
+}
+
+// newODRedirectServer 起一个假控制面,在指定的那一步返回 302 → Location 假登录页。
+// 假登录页回 200 HTML(平台跳登录页的真实形态):跟随跳转的实现会把这段 HTML 当 JSON
+// 解析,报成「解析响应失败」而丢掉「请重新登录」指引 —— 正是本用例要拦的行为。
+// redirectDiscovery=true 时发现接口即 302;false 时发现正常、额度接口 302。
+func newODRedirectServer(t *testing.T, redirectDiscovery bool) (*httptest.Server, *[]odRequest) {
+	t.Helper()
+	got := &[]odRequest{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*got = append(*got, odRequest{path: r.URL.Path, cookie: r.Header.Get("Cookie")})
+		switch r.URL.Path {
+		case odLoginPath:
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`<html><body>Sign in to open-design.ai</body></html>`))
+		case odDiscoveryPath:
+			if redirectDiscovery {
+				w.Header().Set("Location", odLoginPath)
+				w.WriteHeader(http.StatusFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"workspaceId":"` + odWorkspaceID + `"}`))
+		case odUsagePath:
+			w.Header().Set("Location", odLoginPath)
+			w.WriteHeader(http.StatusFound)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"unexpected_path"}`))
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server, got
+}
+
 // odFetch 用给定 baseURL 与 Cookie 跑一次 Fetch(注入 httptest server)。
 func odFetch(t *testing.T, serverURL, cookie string) QuotaResult {
 	t.Helper()
@@ -244,6 +305,34 @@ func TestOpenDesignFetcher_403OnUsage_ReturnsCookieExpired(t *testing.T) {
 	}
 	if !strings.Contains(result.Error, "Cookie") {
 		t.Errorf("expected Cookie hint for 403, got '%s'", result.Error)
+	}
+}
+
+// 第一步就 302(平台把过期 Cookie 甩到登录页)→ 必须按 Cookie 失效处理:
+// 既不能跟随跳转拿 200 HTML 报成「解析响应失败」,也不能落成裸 HTTP 302;
+// 且发现步骤失败后不再去请求额度接口。
+func TestOpenDesignFetcher_302OnDiscovery_ReturnsCookieExpiredAndDoesNotFollow(t *testing.T) {
+	server, requests := newODRedirectServer(t, true)
+
+	result := odFetch(t, server.URL, "c=1")
+
+	odAssertCookieExpired(t, "discovery 302", result.Error)
+	odAssertNotFollowed(t, *requests)
+	if len(*requests) != 1 {
+		t.Errorf("expected only the discovery request, got %d: %+v", len(*requests), *requests)
+	}
+}
+
+// 第二步 302 → 同样按 Cookie 失效处理,且不跟随跳转到登录页。
+func TestOpenDesignFetcher_302OnUsage_ReturnsCookieExpiredAndDoesNotFollow(t *testing.T) {
+	server, requests := newODRedirectServer(t, false)
+
+	result := odFetch(t, server.URL, "c=1")
+
+	odAssertCookieExpired(t, "usage 302", result.Error)
+	odAssertNotFollowed(t, *requests)
+	if len(*requests) != 2 {
+		t.Errorf("expected discovery + usage requests only, got %d: %+v", len(*requests), *requests)
 	}
 }
 

@@ -66,7 +66,7 @@ type opendesignUsageWindow struct {
 }
 
 // opendesignUsageResp 对应 coding-plan-usage 的成功响应。
-// eligible / tier 仅作容错参考,不参与展示。
+// eligible / tier 仅为响应结构文档化,不参与任何逻辑(缺字段或取值变化都不影响展示)。
 type opendesignUsageResp struct {
 	WorkspaceID string                  `json:"workspaceId"`
 	Eligible    bool                    `json:"eligible"`
@@ -193,7 +193,9 @@ func opendesignResetAt(raw string) string {
 }
 
 // get 发起一次带 Cookie 头的 GET,返回 200 的响应体。
-// 401/403 统一按 Cookie 失效提示(控制面对 API key 与过期 Cookie 都返回 401)。
+// Cookie 失效时控制面可能返回 401(API key 或过期 Cookie)或 302 跳转登录页,
+// 两者统一按 Cookie 失效提示;因此必须禁止自动重定向,否则 302 会被跟随成
+// 200 登录页 HTML,报成「解析响应失败」而丢掉「请重新登录」指引。
 func (f *OpenDesignFetcher) get(path string) ([]byte, error) {
 	url := strings.TrimRight(f.baseURL, "/") + path
 	req, err := http.NewRequest("GET", url, nil)
@@ -203,7 +205,12 @@ func (f *OpenDesignFetcher) get(path string) ([]byte, error) {
 	req.Header.Set("Cookie", f.cookie)
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %v", err)
@@ -211,7 +218,7 @@ func (f *OpenDesignFetcher) get(path string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	switch {
-	case resp.StatusCode == 401 || resp.StatusCode == 403:
+	case resp.StatusCode == 401 || resp.StatusCode == 403 || resp.StatusCode == 302:
 		return nil, fmt.Errorf("Cookie 已过期或无效,请重新登录 open-design.ai/cloud/dashboard 后更新")
 	case resp.StatusCode != 200:
 		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)

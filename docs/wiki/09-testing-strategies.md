@@ -27,7 +27,7 @@
 | 窗口定位 | 无测试 | 依赖真实显示器环境，手工验证（多屏/DPI 需实测） |
 | 前端 | 无测试 | 手工验证（当前无测试框架） |
 
-**当前规模（2026-10-11，`go test ./... -v` 实测）**：120 个 Test 函数（fetcher 111 + config 9），顶层 PASS 120 条 + 子测试 5 条，0 FAIL；耗时 config ≈0.1s、fetcher ≈3.9s。分布：kimi 8 / xfyun 6 / opencode_go 16 / mimo 6 / deepseek 11 / ollama 16 / commandcode 8 / factorydroid 11 / minimax 9 / opendesign 16 / registry 4 / config 9。
+**当前规模（2026-10-13，`go test ./... -count=1 -v` 实测）**：顶层 PASS 150 条 + 子测试 PASS 37 条，0 FAIL；耗时 config ≈0.18s、fetcher ≈4.2s、probe ≈0.11s。包级分布：`internal/fetcher` 113 顶层、`internal/config` 10 顶层、`internal/probe` 27 顶层；`cmd/quotaviewer`、根包与 `internal/tray` 无测试文件。（2026-10-11 的旧口径为 120 条；逐家 Provider 的子分布本次未重算——`opencode_go` 与 `factorydroid` 两家的用例在 2026-10-13 各重写/大幅新增过。）
 
 ### 约定
 

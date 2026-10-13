@@ -17,9 +17,10 @@
 
 | 命令 | 用途 |
 |---|---|
-| `go test ./...` | 全部 Go 测试（当前全绿） |
+| `go test ./...` | 全部 Go 测试（当前全绿：顶层 150 + 子测试 37） |
+| `go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer` | 构建无界面 `--json` 探针（console 子系统；契约见 `internal/probe/probe.go`，用法见 10-build-test-baseline） |
 | `cd frontend && npm run build` | 构建前端产物到 `frontend/dist/` |
-| `wails build` | 完整构建 exe（产物 `build/bin/quota-viewer.exe`） |
+| `C:\Users\joe\go\bin\wails.exe build` | 完整构建 exe（产物 `build/bin/quota-viewer.exe`；`wails` 不在 PATH） |
 | `wails dev` | 开发模式（热重载） |
 
 ## 目录速览
@@ -31,15 +32,17 @@
 | `workarea_windows.go` | Win32 原生调用（DPI/工作区/窗口子类） |
 | `internal/config/` | 配置持久化（动态 Provider 列表）+ Cookie 解析 |
 | `internal/fetcher/` | Provider 注册表 + 十平台抓取器 |
+| `internal/probe/` | 无界面探针的 JSON 契约与归一（`--json` 用；不 import wails） |
+| `cmd/quotaviewer/` | 探针的独立 main（console 子系统；`main` 只调 `probe.Run`） |
 | `internal/tray/` | 系统托盘 |
 | `frontend/src/` | 前端源码（index.html / main.js / style.css） |
 | `frontend/dist/` | 构建产物（Go embed） |
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "9760924", "synced_at": "2026-10-11T16:11:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "6d8cdee", "synced_at": "2026-10-13T13:35:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `9760924`（2026-10-11 16:11），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99；上一行记的 12 = 这 11 页 + 99）。本轮同步内容为两笔悬浮球格子布局修复（`757f4fd` 扩展模式末行居中、`9760924` 窄格双字符缩写降字号），只改了 02（前端行数 377→382 / 391→402）与 03（球格渲染补 flex-wrap 与窄格字号档）。上一同步点为 `cc01446`（2026-09-30，当时 8 家 Provider/11 个文件），此后补上 `b13a10a`（MiniMax，第 9 家 + 扩展模式）、`a74d370`/`bb276a7`（Open Design，第 10 家）。
+> **Wiki 同步状态**：最后同步于 `6d8cdee`（2026-10-13 13:35），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：OpenCode Go 换官方 API Key 通道（05 改端点/凭证/失败面、02 行数）、Factory Droid 在 Standard 顶格且超额走 Core 时展示主体切 Core（05 展示契约、02）、config 旧扁平死 key 删除（07 迁移口径、02）、新增 `cmd/quotaviewer` 与 `internal/probe`（本页目录速览 + 02 模块表 + 09/10 测试条数）。上一同步点为 `9760924`（2026-10-11 16:11，悬浮球格布局两笔修复）。
 
 ## Wiki 文件索引
 

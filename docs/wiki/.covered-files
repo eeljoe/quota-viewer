@@ -1,21 +1,20 @@
 app.go
 balance
 ballSize
+C:\Users\joe\go\bin\wails.exe build
 cd frontend && npm run build
+cmd/quotaviewer/
 command-code
 deepseek
-extended_mode
-ExtendedMode
 factory-droid
 frontend/dist/
 frontend/src/
 frontend/src/*
-frontend/src/index.html
 frontend/src/main.js
-frontend/src/style.css
 frontend/vite.config.js
 frontend/wailsjs/go/main/App.d.ts
 frontend/wailsjs/go/models.ts
+go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer
 go test ./...
 go.mod
 id
@@ -27,30 +26,13 @@ internal/config/cookie.go
 internal/fetcher/
 internal/fetcher/*.go
 internal/fetcher/budget.go
-internal/fetcher/commandcode_test.go
-internal/fetcher/commandcode.go
-internal/fetcher/deepseek_test.go
-internal/fetcher/deepseek.go
-internal/fetcher/factorydroid_test.go
-internal/fetcher/factorydroid.go
 internal/fetcher/format.go
 internal/fetcher/kimi_test.go
 internal/fetcher/kimi.go
-internal/fetcher/mimo_test.go
-internal/fetcher/mimo.go
-internal/fetcher/minimax_test.go
-internal/fetcher/minimax.go
-internal/fetcher/ollama_test.go
-internal/fetcher/ollama.go
-internal/fetcher/opencode_go_test.go
-internal/fetcher/opencode_go.go
-internal/fetcher/opendesign_test.go
-internal/fetcher/opendesign.go
 internal/fetcher/registry_test.go
 internal/fetcher/registry.go
 internal/fetcher/types.go
-internal/fetcher/xfyun_test.go
-internal/fetcher/xfyun.go
+internal/probe/
 internal/tray/
 internal/tray/assets/
 internal/tray/tray.go
@@ -65,9 +47,9 @@ ollama
 open-design
 opencode-go
 quota:update
+Remaining
 screenMargin
 ui:show-settings
-wails build
 wails dev
 wails.json
 workarea_other.go

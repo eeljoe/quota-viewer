@@ -64,10 +64,12 @@ func EnabledLimit(extended bool) int // 扩展模式 9 / 普通模式 3
 
 ### 旧格式迁移（config v1 → v2，Load 时自动）
 
-旧扁平字段 `kimi_api_key` / `xfyun_cookie` / `mimo_cookie` / `opencode_go_workspace_id` / `opencode_go_session_token`：
+旧扁平字段 `kimi_api_key` / `xfyun_cookie` / `mimo_cookie`：
 
 - 检测：JSON 中 `providers` 数组非空 → 新格式；否则按旧格式解析
 - 有值的旧字段 → 对应 Provider `enabled=true` + 凭证迁移（mimo_cookie 也会迁移保留）
+- **`opencode_go_workspace_id` / `opencode_go_session_token` 自 2026-10-13 起不再迁移**：该家凭证已换成单字段 `api_key`（走官方 `/zen/go/v1/usage`），旧的 `auth` Cookie 通道已废、无可迁价值；这两个旧 key 与对应结构体字段已删除，迁移时被忽略（该家仍按 `DefaultProviderIDs` 默认启用，只是 creds 为空）
+- **已知取舍**：已落盘的 v2 配置里若残留注册表未声明的 cred key（例如升级前存下的那两个旧 opencode-go key），`Load`/`Save` 会原样读入回写、不会自动剔除；设置面板保存只更新注册表声明的字段。含旧敏感凭证的配置需手工清理（清理批次见 `ROADMAP.md`）
 - 旧字段全空 → 默认启用前三个
 - 迁移后立即回写新格式（`_ = Save(cfg)`，失败静默）
 - 4 个以上有值 → 钳制：按注册表顺序保留前 3 个 enabled，其余凭证保留但关闭（旧格式无扩展模式，恒用普通上限 3）

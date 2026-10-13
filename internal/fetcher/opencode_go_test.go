@@ -35,7 +35,7 @@ func window(percent string, resetsAt string) string {
 }
 
 // newUsageServer 起一个 httptest 服务返回给定响应体,并校验请求契约
-// (Bearer 头、路径 /zen/go/v1/usage、User-Agent)。
+// (Bearer 头、路径 /zen/go/v1/usage、User-Agent 头名与值)。
 func newUsageServer(t *testing.T, body string, status int) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,8 +45,10 @@ func newUsageServer(t *testing.T, body string, status int) *httptest.Server {
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
 			t.Errorf("expected Authorization Bearer header, got %q", r.Header.Get("Authorization"))
 		}
-		if r.Header.Get("User-Agent") == "" {
-			t.Error("expected non-empty User-Agent header")
+		// 头名与值都要钉死:只断言"某个 UA 头非空"时,把实现改成 X-User-Agent 仍会
+		// 通过(Go 的 http.Header.Get 不区分大小写,但换名后取值会落空 → 这里必须红)。
+		if got, want := r.Header.Get("User-Agent"), "quota-viewer/1.0"; got != want {
+			t.Errorf("expected User-Agent header %q, got %q", want, got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if status != 0 {
@@ -384,7 +386,8 @@ func TestOpenCodeGoFetcher_NetworkError(t *testing.T) {
 	}
 }
 
-// AC-8 相关:Fetch 结果字段与仓库惯例一致(Kind 留空 = usage)。
+// Fetch 结果字段与仓库惯例一致:用量型显式声明 Kind=KindUsage
+// (见 docs/ADDING_A_PROVIDER.md:131,与 commandcode/factorydroid/minimax/opendesign 同形)。
 func TestOpenCodeGoFetcher_ResultFields(t *testing.T) {
 	server := newUsageServer(t, usageJSON(window("5", `"2026-10-13T08:51:47.097Z"`), "", ""), 200)
 	defer server.Close()
@@ -394,7 +397,7 @@ func TestOpenCodeGoFetcher_ResultFields(t *testing.T) {
 	if result.LastUpdated.Before(before) {
 		t.Errorf("expected LastUpdated >= test start, got %v", result.LastUpdated)
 	}
-	if result.Kind != "" {
-		t.Errorf("expected Kind left empty (usage default), got %q", result.Kind)
+	if result.Kind != KindUsage {
+		t.Errorf("expected Kind=%q (explicitly declared), got %q", KindUsage, result.Kind)
 	}
 }

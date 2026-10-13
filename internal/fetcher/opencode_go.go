@@ -92,6 +92,7 @@ type openCodeGoAuthFile map[string]struct {
 func (f *OpenCodeGoFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
 		Platform:    "OpenCode Go",
+		Kind:        KindUsage,
 		Total:       100,
 		LastUpdated: time.Now(),
 	}

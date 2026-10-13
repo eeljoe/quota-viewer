@@ -9,7 +9,7 @@
 ### 刷新触发源（三条路径汇合到 `App.Refresh()`）
 
 ```
-① 定时器   startAutoRefresh()          [app.go:447]  每 RefreshIntervalMin 分钟
+① 定时器   startAutoRefresh()          [app.go:455]  每 RefreshIntervalMin 分钟
 ② 托盘     tray:refresh 事件           [app.go:69]   托盘"刷新"菜单
 ③ 前端     手动刷新按钮 → Refresh()    [main.js]     直接调用绑定
 ```
@@ -17,8 +17,8 @@
 ### 刷新链路（一次完整周期）
 
 ```
-App.Refresh()                          [app.go:101]
- └─ fetchAll()                         [app.go:404]
+App.Refresh()                          [app.go:109]
+ └─ fetchAll()                         [app.go:412]
      └─ 遍历 cfg.Providers 中 enabled 的(普通最多 3 个 / 扩展最多 9 个,注册表顺序)
          ├─ goroutine1: registry["kimi"].Build(creds).Fetch()
          ├─ goroutine2: registry["xfyun"].Build(creds).Fetch()
@@ -55,7 +55,7 @@ App.Refresh()                          [app.go:101]
 ### 配置保存链路
 
 ```
-前端 保存按钮 → App.SaveConfig(providers, refreshMin, extendedMode)   [app.go:171]
+前端 保存按钮 → App.SaveConfig(providers, refreshMin, extendedMode)   [app.go:179]
   providers: [{id, enabled, creds:{字段:输入值}, budget}]
   → 后端钳制:0 个启用 → 全部启用;超过上限 → 保留前 N 个(N = 普通 3 / 扩展 9)
   → 写回 ExtendedMode
@@ -67,7 +67,7 @@ App.Refresh()                          [app.go:101]
 ### 连接测试链路
 
 ```
-前端 [测试] → App.TestConnection(platform)   [app.go:260]
+前端 [测试] → App.TestConnection(platform)   [app.go:268]
   platform ∈ 注册表 id(当前 10 个: kimi|xfyun|opencode-go|mimo|deepseek|ollama|command-code|factory-droid|minimax|open-design)
   → 按 id 查注册表 → Build(已存 creds).Fetch() → "成功: 剩余描述" 或 "失败: 错误"
 ```
@@ -75,8 +75,8 @@ App.Refresh()                          [app.go:101]
 ### 窗口形态切换
 
 ```
-展开: 前端 → ExpandWindow(w, h)     [app.go:306] 首展记录 savedX/Y，fitToScreen 定位
-收起: 前端 → CollapseWindow()       [app.go:323] 恢复 savedX/Y（fitToScreen 转相对坐标）
+展开: 前端 → ExpandWindow(w, h)     [app.go:314] 首展记录 savedX/Y，fitToScreen 定位
+收起: 前端 → CollapseWindow()       [app.go:331] 恢复 savedX/Y（fitToScreen 转相对坐标）
 ```
 
 ---

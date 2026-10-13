@@ -10,9 +10,11 @@
 
 **2026-10-11 16:11 复核**（`2d9031f` → `9760924`）：本轮只有前端两处代码变更，按同一口径（`(Get-Content <文件> | Measure-Object -Line).Lines`）重数——`frontend/src/main.js` 377→382、`frontend/src/style.css` 391→402；`frontend/src/index.html`（59）、`frontend/vite.config.js`（8）以及全部 Go 文件未变（`git diff --name-only 2d9031f..HEAD` 无 `.go` 条目）。
 
+**2026-10-14 01:40 复核**（`6d8cdee` → `b5537c2`）：托盘单击唤出改动只碰 Go 与 README，按同一口径重数——`app.go` 427→**435**、`internal/tray/tray.go` 85→**87**；其余 Go 文件行数未变（`internal/probe/probe.go` 254、`internal/fetcher/registry.go` 164 实测复核）。
+
 | 模块 | 文件 | 行数 | 职责 |
 |---|---|---|---|
-| 应用编排 | `app.go` | 427 | 启动/刷新/动态配置/窗口定位/事件转发 |
+| 应用编排 | `app.go` | 435 | 启动/刷新/动态配置/窗口定位/事件转发（含 `tray:activate` 唤出到前台） |
 | 入口 | `main.go` | 34 | Wails 运行时选项、embed 前端产物 |
 | Win32 辅助 | `workarea_windows.go` | 112 | 工作区查询、DPI、工具窗样式、最小宽度子类 |
 | Win32 桩 | `workarea_other.go` | 10 | 非 Windows 编译桩 |
@@ -48,7 +50,7 @@
 | 探针契约 | `internal/probe/probe.go` | 254 | `--json` 的 JSON 契约：顶层 7 键 + 记录 8 键、结果归一（四句 + `def.Kind` 兜底）、`reset_at` 三条规则、失败信封、退出码三分（0/2/1） |
 | 探针测试（契约/入口） | `internal/probe/report_test.go` | 614 | 契约逐字比对、失败信封、退出码矩阵（含 stderr 与写失败） |
 | 探针测试（归一） | `internal/probe/probe_test.go` | 67 | `reset_at` 三条规则（亚秒→UTC 秒、无时区串按 +08:00、非未来→null） |
-| 系统托盘 | `internal/tray/tray.go` | 85 | 托盘菜单 + 事件转发 + LockOSThread |
+| 系统托盘 | `internal/tray/tray.go` | 87 | 托盘菜单 + 事件转发（单击图标发 `tray:activate`）× LockOSThread |
 | 托盘图标 | `internal/tray/assets/` | - | icon.ico / icon.png（embed） |
 | 前端 HTML | `frontend/src/index.html` | 59 | 悬浮球/面板/动态配置面板结构 |
 | 前端逻辑 | `frontend/src/main.js` | 382 | 视图状态机、动态球格(列数 `--cols` / 窄格 `narrow` 标记)、配置渲染、刷新倒计时 |

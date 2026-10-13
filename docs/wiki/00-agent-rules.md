@@ -40,9 +40,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "4939cdd", "synced_at": "2026-10-13T22:03:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "b5537c2", "synced_at": "2026-10-14T01:40:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `4939cdd`（2026-10-13 22:03），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。**本轮为空同步**：`6d8cdee..4939cdd` 的全部变更只有 `docs/STATUS.md`、`ROADMAP.md` 与 wiki 自身，零代码文件，故没有页面内容需要修改，仅刷新锚点与 `.covered-files` 缓存（57 项复核不变）。内容基准仍是上一轮（2026-10-13 13:29 提交 `a65b48b`）：OpenCode Go 换官方 API Key 通道（05 改端点/凭证/失败面、02 行数）、Factory Droid 在 Standard 顶格且超额走 Core 时展示主体切 Core（05 展示契约、02）、config 旧扁平死 key 删除（07 迁移口径、02）、新增 `cmd/quotaviewer` 与 `internal/probe`（本页目录速览 + 02 模块表 + 09/10 测试条数）。上一同步点为 `9760924`（2026-10-11 16:11，悬浮球格布局两笔修复）。
+> **Wiki 同步状态**：最后同步于 `b5537c2`（2026-10-14 01:40），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：托盘图标单击唤出窗口到前台（06 事件表改为「单击图标 → `tray:activate`」并补双击撤销的原因与库分派事实、00 契约清单补 `tray:activate`）、行号锚点漂移（02 的 `app.go` 427→435 / `tray.go` 85→87、03 与 04 的 `app.go` 引用整体 +8）。上一同步点为 `4939cdd`（2026-10-13 22:03，空同步：自 `6d8cdee` 起只有文档变更）。
 
 ## Wiki 文件索引
 
@@ -66,7 +66,7 @@
 ## Must NOT Change
 
 - `ballSize`/`screenMargin` 常量（app.go）与前端 `SIZES.ball` 的一致性——改了必须两边同步
-- `tray:refresh` / `tray:toggle` / `tray:settings` 事件名——托盘与 app.go 两端共用契约
+- `tray:activate` / `tray:refresh` / `tray:toggle` / `tray:settings` 事件名——托盘与 app.go 两端共用契约
 - `quota:update` / `ui:show-settings` 事件名——后端推给前端的契约
 - `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/balance/currency/remaining/reset_at/error）——前端渲染依赖
 - Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design，共 10 个）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约

@@ -19,12 +19,12 @@
 ### 关键函数
 
 ```
-fitToScreen(ctx, ballX, ballY, w, h) → (x, y, ok)   [app.go:342]
+fitToScreen(ctx, ballX, ballY, w, h) → (x, y, ok)   [app.go:350]
   ① Windows 精确路径: workAreaForPoint(ballX, ballY) → 物理像素工作区 + DPI
      逻辑尺寸 w/h × dpi/96 → 物理像素 → anchoredPos 定位 → 减工作区原点 (ax-wx, ay-wy)
   ② 回退路径（非 Windows/查询失败）: ScreenGetAll 逻辑像素近似（球心越界则放弃钳制）
 
-anchoredPos(ballX, ballY, w, h, ballPhys, rx, ry, rw, rh, margin) → (x, y)  [app.go:389]
+anchoredPos(ballX, ballY, w, h, ballPhys, rx, ry, rw, rh, margin) → (x, y)  [app.go:397]
   默认从球位置向右下展开; 放不下则翻转（球右缘对齐面板右缘/上缘对齐）
   最后整体钳制在 (rx,ry,rw,rh) 内并保留 margin
 
@@ -44,8 +44,8 @@ workAreaForPoint(px, py) → (x, y, w, h, dpi, ok)   [workarea_windows.go:106]
 
 | 常量 | 值 | 位置 |
 |---|---|---|
-| `ballSize` | 60 | app.go:298（与前端 SIZES.ball 一致） |
-| `screenMargin` | 8 | app.go:301（面板与屏幕边缘间距） |
+| `ballSize` | 60 | app.go:306（与前端 SIZES.ball 一致） |
+| `screenMargin` | 8 | app.go:309（面板与屏幕边缘间距） |
 | `monitorDefaultToNearest` | 2 | workarea_windows.go |
 | `mdtEffectiveDPI` | 0 | workarea_windows.go |
 

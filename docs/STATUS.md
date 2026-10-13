@@ -8,36 +8,36 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
-> 5. **直接跳到最新一条「会话记录：2026-10-13 13:30」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-14 01:40」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-13 13:30`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`6d8cdee` on `master`
-> 📊 累计会话数：主文档 7 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-14 01:40`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`b5537c2` on `master`（v1.3.0 的代码点；其后只有文档提交）
+> 📊 累计会话数：主文档 8 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "6d8cdee", "branch": "master", "dirty": false, "timestamp": "2026-10-13T13:30:00+08:00"} -->
+<!-- git-meta: {"last_commit": "b5537c2", "branch": "master", "dirty": false, "timestamp": "2026-10-14T01:40:00+08:00"} -->
 
-- **日期**：2026-10-13 13:30
-- **会话摘要**：OpenCode Go 换 API Key 通道（旧 `auth` cookie 已废）+ Factory Droid 在 Standard 顶格且 Core 接管时展示主体切 Core + 新增无界面 `--json` 探针（对端 handoff 交付）；两条 spec 的逐票门与整体门全部 VERIFIED，exe 已重建交付
+- **日期**：2026-10-14 01:40
+- **会话摘要**：托盘图标单击唤出窗口到前台（撤销双击切换）——走完整流水线（三轴审票 → 1 票实现 → 逐票验收门 VERIFIED → 全范围静态双轴），并把这批 25 个提交推到 GitHub、发布 **v1.3.0**（附 exe）
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.2.0 已发布** + master 未发版增量：十平台监控 + 扩展模式（球最多 9 格）+ 格布局打磨 + **OpenCode Go 换 API Key 通道**（旧的 `auth` cookie 通道已废）+ **Factory Droid 在 Core 接管时展示切 Core** + **无界面 `--json` 探针**（`build/bin/quota-viewer-cli.exe`）；2026-10-13 已重建 exe 并交付
+- 当前阶段：**v1.3.0 已发布（2026-10-14，附 exe）**，master 与 origin/master 同步；本轮增量 = 托盘图标单击唤出窗口到前台（撤销双击切换）
 - 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key 读不到），端点见最新会话「关键上下文」
-- 下一步：`/wiki-update` 同步 6 页（05/07/02/00/09/10）；非阻断清理批次 9 条待用户拍板；对端告知（探针可用 + 偏离清单）属仓外动作
-- 注意事项：Droid 的 Standard 周限与 Core 5h 双双顶格、mcode 通道 Token Plan 上限未恢复 ⇒ 非 DSH 侧子代理派发会阵亡；Gate Kit 的 `mutate` 在本机报假绿，变异协议改「手动施加 + sha1 核验」
+- 下一步：非阻断清理批次 12 条待用户拍板（见 ROADMAP「Now」）；对端告知（探针可用 + 偏离清单）属仓外动作；STATUS 已超归档阈值（600+ 行），下个会话宜按任务组整组归档
+- 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建，worktree/副本里重建的 hash 必然不同；Gate Kit 的 `mutate` 在本机报假绿，变异协议用「手动施加 + sha1 核验」；Droid 当天实测可用（CLI 探针读 factory-droid 53%），非 DSH 侧子代理派发不再是死路
 
 ---
 
@@ -80,15 +80,17 @@
 - 无
 
 ### 📋 待办
-- wiki 同步本次三件套（05 端点细节 / 02 模块表 / 07 钳制契约+扩展模式 / 09 测试 / 00 元数据），`/wiki-update` 顺手刷
+- 非阻断清理批次 12 条待用户拍板（清单见本文件「已知问题」与 ROADMAP「Now」）
+- STATUS 已 600+ 行，超归档阈值，下个会话宜按任务组整组归档
 - 计划级事项见 `ROADMAP.md`
 
 ---
 
 ## 未完成 & 下一步
 
-1. wiki 三件套同步（05 端点细节 / 02 模块表 / 07 钳制契约+扩展模式 / 09 测试 / 00 元数据），`/wiki-update` 顺手刷
-2. 计划级事项见 `ROADMAP.md`（Next: Wails 版本升级对齐）
+1. 非阻断清理批次 12 条待用户拍板（改代码的几条会作废对应票的 VERIFIED、需重验）
+2. 计划级事项见 `ROADMAP.md`（Now: 清理批次 + 对端告知；Next: Wails 版本升级对齐）
+3. STATUS 超归档阈值，下个会话按任务组整组归档
 
 ---
 
@@ -100,6 +102,9 @@
 - Ollama 依赖 ollama.com/settings 页面 HTML 结构（无公开 quota API），页面改版 → "页面结构可能已变化"错误，需更新 `ollama.go` 解析
 - Command Code 依赖官方 CLI 私有 `/alpha/*` API（无公开额度 API），CLI 升级可能改结构 → 需对照官方 cli.mjs 更新 `commandcode.go`；API Key 留空自动读 `~/.commandcode/auth.json`（与本机官方 CLI 复用同一凭证，Key 变更会同时影响两者）
 - 余额型（DeepSeek）经 ApplyBudget 按预算换算消耗百分比（默认预算 300）；取首个非零余额币种（CNY→¥ / USD→$），全部为 0 才报错
+- **构建可复现性口径**：`wails build` 的产物字节与**构建目录**绑定（未加 `-trimpath` 时 Go 嵌入源码绝对路径）——`worktree`/副本里重建必然与主工作区交付件 hash 不同；核验"交付 exe 出自这个 commit"必须在**同一目录**重建比对，或用 `wails build -trimpath`（换了 flag 就是另一份字节，发版中途别换）
+- **托盘库语义（`energye/systray@v1.0.3` Windows 后端）**：真双击会依次触发 `onClick(0x202) → onDClick(0x203) → onClick(0x202)`；`onClick == nil` 时库对单击什么都不做；注册 `onRClick` 会顶掉默认右键弹菜单；图标标识 = 类 `SystrayClass` + `uID=100` + 回调消息 `0x401`（`Shell_NotifyIconGetRect` 可跨进程取图标物理矩形）
+- **注入点击类探针的硬坑**：本机主屏 2880x1800 @200%，未声明 DPI 感知的进程自报 1440x900 ⇒ 注入前必须 `SetThreadDpiAwarenessContext(-4)`，否则坐标 2 倍错位、点击落空；PowerShell 的 `$PID` 是只读变量，进程参数只能叫别的名字（本项目用 `-ProcId`）
 
 ---
 
@@ -133,11 +138,11 @@
 
 ## Wiki
 
-- **位置**：`docs/wiki/`（已初始化 2026-08-04，2026-08-13 同步至 cc82c71）
+- **位置**：`docs/wiki/`（已初始化 2026-08-04；最近同步 2026-10-14，锚点 `b5537c2`）
 - **文件数**：12 个（00-agent-rules ~ 10-build-test-baseline + 99 归档页已启用）
 - **入口**：先读 `docs/wiki/00-agent-rules.md`（含索引与 wiki-meta 同步状态）
-- **缓存**：`docs/wiki/.covered-files`（49 项）
-- **未同步文件**：04-window-positioning、06-systray、10-build-test-baseline（近期未改动相关代码）
+- **缓存**：`docs/wiki/.covered-files`（57 项；本轮无新增/删除覆盖文件，缓存未变）
+- **本轮同步**：`00`（契约清单补 `tray:activate`）、`02`（app.go 427→435 / tray.go 85→87）、`03`（app.go 行号锚点 +8）、`04`（app.go 350/397/306/309）、`06`（事件表把"双击图标"改成"单击图标 → `tray:activate`"并补双击撤销的原因）；`08` 经核不需要改（它记的是后端→前端方向的事件表）
 
 ---
 
@@ -574,3 +579,58 @@
 - **对端告知报文要点**：二进制名 `quota-viewer-cli.exe`、开关名 `--json`（另接受 `-json`、`--json=1`）、构建命令 `go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer`；已知字面偏离——`internal/probe/probe.go` 的四句归一扩成「空 `Kind` 先取注册表声明」（对真实注册表取值等价）、`-json` 别名、`--json=1` 判为「未知参数 + 同时声明 JSON 模式」、退出码三态（0 含信封 / 2 usage / 1 写 stdout 失败）、单家失败不写 stderr、`APPDATA` 存在但路径不可用时退化为默认配置的「成功形状」。
 - **未决疑问**：本次有一次观察到工作区里**未提交**的 `registry.go` 改动（`password`→`text`、label 简化成 `API Key`），非任何 worker 所为，随后被某次变异还原覆盖、现已不在工作区；是否要做待用户确认（若做，顺带修 `oc_sk-` 笔误）。
 - Wiki 指针状态：`docs/wiki/` 12 文件（00–10 + 99），本轮需同步 6 页；99 归档页 10 条。
+
+---
+
+## 会话记录：2026-10-14 01:40
+
+> **会话摘要**：托盘图标单击唤出窗口到前台（撤销双击切换）——三轴审票 → 1 票实现 → 逐票验收门 VERIFIED → 全范围静态双轴；同批把这 25 个提交推到 GitHub 并发 **v1.3.0**（附 exe）
+> **Git**：`b5537c2` on `master`（v1.3.0 的代码点；其后仅文档提交）
+> **任务组**：托盘单击唤出（`.scratch/tray-activate/`）
+> **任务组状态**：已完成
+
+### 本次完成
+
+- **需求与决策**（用户拍板）：多会话时球可能被盖住/已隐藏，而托盘图标单击没反应 ⇒ ① 单击 = 唤出到前台（显示 + 激活 + 重申置顶），幂等；② 撤销双击切换（显示/隐藏留在右键菜单）；③ 范围只做唤出 + 重申置顶；④ 改完推 GitHub 并发 v1.3.0。
+- **seam 与实现**（`3530e59`，4 文件 +17/−7）：`internal/tray/tray.go` 注册 `SetOnClick` → 发新事件 `tray:activate`（删掉 `SetOnDClick`）；`app.go` 新增 handler（`visible.Store(true)` → `WindowShow` → `WindowSetAlwaysOnTop(true)`）；README 两版同步。**不需要自写 Win32 抢焦点**——出票前亲核 Wails v2.12 的 `WindowShow` 内部已含 `SetForegroundWindow` + `SetFocus`（`windows/frontend.go:958-991`）。
+- **逐票验收门 VERIFIED**（独立实例、真机证据）：① 单击唤出（`hidden` 红→绿；基线 `89a04fa` 干净重建对照 `visible=false`）② 被盖住到前台（`before_fg=explorer(89212)` → `after_fg=球窗(64956, wailsWindow)`）③ 幂等（间隔 650ms 两次单击仍可见且前台）④ 双击不隐藏（真双击对拍 + 50ms 采样 0 次翻转；基线同注入 t=358ms 隐藏）⑤ AC5a/5b/6/7/8/9 逐条亲验。变异 A（注释掉 `WindowShow`）令场景变红 ⇒ 绿灯非恒真。
+- **全范围静态双轴**（整体门）：规范轴 0 blocking（无 Must NOT Change 违规、精确暂存、凭证扫描零命中、提交内 blob 与 gofmt 输出逐字节一致；并确认"托盘无 Go 测试"属本仓既有惯例）；规格轴 0 blocking（seam 逐字落地、AC1–AC9 有落点、0 越界、0 少做）。
+- **文档/注释订正**（`b5537c2`，纯注释 + README，**重建 exe 字节未变** `98173463…`）：托盘注释把"删双击"的理由改成实测机制（真双击 = `onClick→onDClick→onClick`，净效果是唤出→隐藏→再唤出、球闪一下）；包注释订正事件转发去向；README 两版补明"双击不再切换"。
+- **交付**：推 master（25 个提交）+ tag `v1.3.0` + GitHub Release（附 `quota-viewer.exe`；notes 只写可见能力、不提 bug 细节）。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 单击 = 唤出、双击撤销 | 实测保留双击的净效果是"唤出→隐藏→再唤出"（闪一下）而非净隐藏，且语义歧义 | 保留双击（多一次无意义的状态翻转） |
+| 不自写 Win32 抢焦点 | Wails `WindowShow` 已含 `SetForegroundWindow` + `SetFocus` | 自写 `AttachThreadInput` 兜底（本票不需要） |
+| 探针不入库 | 本仓 `.scratch/` 与 `.agents/` 都不在 git（公开仓库，内部笔记不发布） | 移进 `probes/` 入库 |
+| 集成轴中止 | 该轴在这张 17 行的小票上反复起实例、耗时失控；它的三个目标（exe 溯源 / AC5c 退出 / 集成面无副作用）已由逐票门 + 出票方复核覆盖 | 跑完为止 |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 修改 | `internal/tray/tray.go` | `SetOnClick` → `tray:activate`；删 `SetOnDClick`；包注释订正 |
+| 修改 | `app.go` | 新增 `tray:activate` handler（唤出三步） |
+| 修改 | `README.md` / `README.zh-CN.md` | 托盘行为描述（单击唤出、双击不再切换） |
+| 新增 | `.scratch/tray-activate/{spec.md, issues/01-tray-click-activate.md, review-leads.md}` | spec / 票 / 审票产物（未入库） |
+| 新增 | `.scratch/tray-activate/verifier-probes/` | worker 与验收门各自的探针与日志（未入库） |
+
+### 未完成 & 下一步
+
+- **v1.3.0 已发布**；ROADMAP「Now」仍是清理批次 12 条 + 对端告知。
+- 逐票门三条非阻断 findings 的处置：exe 字节溯源 = **已证伪**（构建目录差异，同目录重建逐字节一致）；`dclick` 探针场景零牙齿 = 门已给出有牙齿的手法（50ms 采样抓翻转），探针不入库故无仓内遗留；AC5c「退出」项 = 门刻意未点（怕关掉常驻应用），静态路径已核，用户手点一次即可闭环。
+- 整体门的集成轴被中止（见决策），是否补跑由下一会话定。
+
+### 已知问题 & 注意事项
+
+- 见上方「已知问题与注意事项」新增的三条：构建字节与构建目录绑定、托盘库点击语义（双击三段/`onClick==nil`/`onRClick` 顶菜单）、注入点击探针的 DPI 与参数名硬坑。
+- STATUS 已超归档阈值（≥400 行），本轮未归档。
+
+### 关键上下文
+
+- **交付态**：`build/bin/quota-viewer.exe` sha1 `98173463E712B14F648D157CE602FDA81D650947`（主工作区重建可逐字节复现），桌面 `Quota Viewer.lnk` 指向该文件。
+- **v1.3.0 覆盖的可见变化**（自 v1.2.0）：MiniMax 与 Open Design 两家新平台、扩展模式最多 9 格、无界面 `--json` 探针 `quota-viewer-cli.exe`、OpenCode Go 官方 API Key 通道、Factory Droid 在 Standard 限流时展示 Core 池、托盘单击唤出到前台（双击不再切换）。
+- **探针与日志**：worker 探针 `.scratch/tray-activate/verifier-probes/tray-activate.ps1`（`-ProcId` / `-Scenario hidden|covered|idempotent|dclick`）；验收门探针 `.scratch/tray-activate/verifier-probes/gate-r1/`（含 `dclick-fine.ps1` 真双击采样手法与库侧插桩日志）。
+- Wiki 指针状态：`docs/wiki/` 12 文件（00–10 + 99），本轮同步 00/02/03/04/06 五页，锚点刷到 `b5537c2`；99 归档页 10 条。

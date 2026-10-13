@@ -33,10 +33,12 @@ func (t *TrayHandler) Start() {
 | 刷新 | `tray:refresh` | `a.Refresh()` |
 | 显示/隐藏 | `tray:toggle` | visible 标志 + WindowHide/WindowShow |
 | 打开配置 | `tray:settings` | 先 Show 窗口再 emit `ui:show-settings` |
-| 双击图标 | `tray:toggle` | 同上 |
+| **单击图标** | `tray:activate` | `visible=true` + `WindowShow`（内部已含 `SetForegroundWindow` + `SetFocus`）+ `WindowSetAlwaysOnTop(true)`：唤出到前台，幂等（不会隐藏） |
 | 退出 | 直接 `wailsruntime.Quit` | OnShutdown → tray.Quit() |
 
-事件监听在 `app.go OnStartup` 里 `wailsruntime.EventsOn` 注册。
+**双击已撤销（2026-10-13，`3530e59`）**：只注册 `systray.SetOnClick`，不注册 `SetOnDClick`。原因是库的 Windows 后端按 `lParam` 独立分派（`systray_windows.go:354-371`，本机该版本未设 `NOTIFYICON_VERSION_4`）：真双击会依次触发 `0x202 onClick → 0x203 onDClick → 0x202 onClick`，若两个回调都注册，净效果是**唤出 → 隐藏 → 再唤出**（球闪一下、多两次无意义的状态翻转）。**注意**：只注册 `SetOnClick` 时单击链路是通的；`onClick == nil` 时库对单击什么都不做（不是"没走到"）。显示/隐藏仍走右键菜单那一项。
+
+事件监听在 `app.go OnStartup` 里 `wailsruntime.EventsOn` 注册。四个 `tray:*` 事件都由 `app.go` 消费；前端只额外监听 `tray:refresh`（`main.js:423`）。
 
 ### 图标
 
@@ -57,6 +59,6 @@ func (t *TrayHandler) Start() {
 
 ## Must NOT Change
 
-- `tray:refresh` / `tray:toggle` / `tray:settings` 事件名（两端契约）
+- `tray:activate` / `tray:refresh` / `tray:toggle` / `tray:settings` 事件名（两端契约）
 - `systray.Run` 必须包在 `runtime.LockOSThread()` goroutine 中
 - 退出路径：托盘"退出"→ `wailsruntime.Quit` → OnShutdown → `tray.Quit()`

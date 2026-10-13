@@ -29,13 +29,13 @@ const reportTimeLayout = "2006-01-02 15:04:05"
 
 // Report 是探针输出的一行 JSON 的顶层结构(成功与失败同形状)。
 type Report struct {
-	Schema        int            `json:"schema"`
-	GeneratedAt   string         `json:"generated_at"`
-	ExtendedMode  bool           `json:"extended_mode"`
-	EnabledLimit  int            `json:"enabled_limit"`
-	EnabledCount  int            `json:"enabled_count"`
-	Providers     []ProviderLine `json:"providers"`
-	Error         string         `json:"error"`
+	Schema       int            `json:"schema"`
+	GeneratedAt  string         `json:"generated_at"`
+	ExtendedMode bool           `json:"extended_mode"`
+	EnabledLimit int            `json:"enabled_limit"`
+	EnabledCount int            `json:"enabled_count"`
+	Providers    []ProviderLine `json:"providers"`
+	Error        string         `json:"error"`
 }
 
 // ProviderLine 是每家 Provider 的记录(8 个键始终存在)。

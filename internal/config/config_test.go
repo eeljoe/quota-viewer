@@ -67,7 +67,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 		Providers: []ProviderConfig{
 			{ID: "kimi", Enabled: true, Creds: map[string]string{"api_key": "k1"}},
 			{ID: "xfyun", Enabled: false},
-			{ID: "opencode-go", Enabled: true, Creds: map[string]string{"workspace_id": "w1", "session_token": "s1"}},
+			{ID: "opencode-go", Enabled: true, Creds: map[string]string{"api_key": "oc_sk_test"}},
 			{ID: "mimo", Enabled: false},
 			{ID: "deepseek", Enabled: true, Creds: map[string]string{"api_key": "d1"}, Budget: 500.00},
 			{ID: "ollama", Enabled: false, Creds: map[string]string{"cookie": "wos-session=o1"}},
@@ -174,76 +174,116 @@ func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
 	}
 }
 
-// 旧版扁平格式(含 mimo_cookie 与 opencode_go 字段)迁移到 providers 结构。
+// 旧版扁平格式(含 mimo_cookie 与已废弃的 opencode_go_* 死 key)迁移到 providers 结构。
+// 两个子场景都断言:opencode_go_workspace_id/session_token 不再被读取 ——
+// opencode-go 迁移后 enabled 状态照旧、creds 为空(TDD 红先于绿)。
 func TestLoad_MigrateLegacyJSON(t *testing.T) {
-	writeConfig(t, `{
-	  "kimi_api_key": "k",
-	  "xfyun_cookie": "x",
-	  "mimo_cookie": "session=abc",
-	  "opencode_go_workspace_id": "ws1",
-	  "opencode_go_session_token": "tok1",
-	  "refresh_interval_min": 5,
-	  "ball_x": 10,
-	  "ball_y": 20
-	}`)
+	t.Run("dead_keys_with_other_creds", func(t *testing.T) {
+		writeConfig(t, `{
+		  "kimi_api_key": "k",
+		  "xfyun_cookie": "x",
+		  "mimo_cookie": "session=abc",
+		  "opencode_go_workspace_id": "ws1",
+		  "opencode_go_session_token": "tok1",
+		  "refresh_interval_min": 5,
+		  "ball_x": 10,
+		  "ball_y": 20
+		}`)
 
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error: %v", err)
+		}
 
-	// 有凭证的 provider 都 enabled,凭证迁移正确
-	byID := map[string]ProviderConfig{}
-	for _, p := range cfg.Providers {
-		byID[p.ID] = p
-	}
+		// 有凭证的 provider 都 enabled,凭证迁移正确
+		byID := map[string]ProviderConfig{}
+		for _, p := range cfg.Providers {
+			byID[p.ID] = p
+		}
 
-	if !byID["kimi"].Enabled || byID["kimi"].Creds["api_key"] != "k" {
-		t.Errorf("kimi migrate wrong: %+v", byID["kimi"])
-	}
-	if !byID["xfyun"].Enabled || byID["xfyun"].Creds["cookie"] != "x" {
-		t.Errorf("xfyun migrate wrong: %+v", byID["xfyun"])
-	}
-	// mimo 有凭证但被钳制(4 个 enabled 超上限,按注册表顺序保留前 3):
-	// 凭证保留,enabled 为 false,用户可在设置中重新启用
-	if byID["mimo"].Enabled {
-		t.Errorf("mimo should be clamped to disabled (4 enabled > 3): %+v", byID["mimo"])
-	}
-	if byID["mimo"].Creds["cookie"] != "session=abc" {
-		t.Errorf("mimo creds should survive clamping: %+v", byID["mimo"])
-	}
-	oc := byID["opencode-go"]
-	if !oc.Enabled || oc.Creds["workspace_id"] != "ws1" || oc.Creds["session_token"] != "tok1" {
-		t.Errorf("opencode-go migrate wrong: %+v", oc)
-	}
-	// deepseek 无旧字段 → 不启用
-	if byID["deepseek"].Enabled {
-		t.Errorf("deepseek should not be enabled after migration: %+v", byID["deepseek"])
-	}
-	// 通用项保留
-	if cfg.RefreshIntervalMin != 5 {
-		t.Errorf("RefreshIntervalMin mismatch: got %d", cfg.RefreshIntervalMin)
-	}
-	if cfg.BallX != 10 || cfg.BallY != 20 {
-		t.Errorf("Ball position mismatch: got %d,%d", cfg.BallX, cfg.BallY)
-	}
+		if !byID["kimi"].Enabled || byID["kimi"].Creds["api_key"] != "k" {
+			t.Errorf("kimi migrate wrong: %+v", byID["kimi"])
+		}
+		if !byID["xfyun"].Enabled || byID["xfyun"].Creds["cookie"] != "x" {
+			t.Errorf("xfyun migrate wrong: %+v", byID["xfyun"])
+		}
+		// mimo 有凭证但被钳制(4 个 enabled 超上限,按注册表顺序保留前 3):
+		// 凭证保留,enabled 为 false,用户可在设置中重新启用
+		if byID["mimo"].Enabled {
+			t.Errorf("mimo should be clamped to disabled (4 enabled > 3): %+v", byID["mimo"])
+		}
+		if byID["mimo"].Creds["cookie"] != "session=abc" {
+			t.Errorf("mimo creds should survive clamping: %+v", byID["mimo"])
+		}
+		// opencode-go 是默认启用的前三个之一;旧死 key 不再被读取 ⇒ creds 必须为空
+		oc := byID["opencode-go"]
+		if !oc.Enabled {
+			t.Errorf("opencode-go should stay enabled (default provider), got %+v", oc)
+		}
+		if len(oc.Creds) != 0 {
+			t.Errorf("opencode-go creds must be empty (dead legacy keys ignored), got %+v", oc.Creds)
+		}
+		// deepseek 无旧字段 → 不启用
+		if byID["deepseek"].Enabled {
+			t.Errorf("deepseek should not be enabled after migration: %+v", byID["deepseek"])
+		}
+		// 通用项保留
+		if cfg.RefreshIntervalMin != 5 {
+			t.Errorf("RefreshIntervalMin mismatch: got %d", cfg.RefreshIntervalMin)
+		}
+		if cfg.BallX != 10 || cfg.BallY != 20 {
+			t.Errorf("Ball position mismatch: got %d,%d", cfg.BallX, cfg.BallY)
+		}
 
-	// 迁移后文件已回写为新格式
-	tmpDir := os.Getenv("APPDATA")
-	newPath := filepath.Join(tmpDir, "quota-viewer", "config.json")
-	data, err := os.ReadFile(newPath)
-	if err != nil {
-		t.Fatalf("migrated config not written back: %v", err)
-	}
-	var probe struct {
-		Providers []ProviderConfig `json:"providers"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		t.Fatalf("migrated config not valid JSON: %v", err)
-	}
-	if len(probe.Providers) == 0 {
-		t.Error("migrated config missing providers key")
-	}
+		// 迁移后文件已回写为新格式
+		tmpDir := os.Getenv("APPDATA")
+		newPath := filepath.Join(tmpDir, "quota-viewer", "config.json")
+		data, err := os.ReadFile(newPath)
+		if err != nil {
+			t.Fatalf("migrated config not written back: %v", err)
+		}
+		var probe struct {
+			Providers []ProviderConfig `json:"providers"`
+		}
+		if err := json.Unmarshal(data, &probe); err != nil {
+			t.Fatalf("migrated config not valid JSON: %v", err)
+		}
+		if len(probe.Providers) == 0 {
+			t.Error("migrated config missing providers key")
+		}
+	})
+
+	// 只有死 key 有值的旧配置:不启用 opencode-go(它不再算"有凭证"),
+	// 也不写任何 creds ⇒ 落到"全部为空"的默认路径(默认启用前三个)。
+	t.Run("only_dead_keys", func(t *testing.T) {
+		writeConfig(t, `{
+		  "opencode_go_workspace_id": "ws1",
+		  "opencode_go_session_token": "tok1",
+		  "refresh_interval_min": 15,
+		  "ball_x": -1,
+		  "ball_y": -1
+		}`)
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error: %v", err)
+		}
+		byID := map[string]ProviderConfig{}
+		for _, p := range cfg.Providers {
+			byID[p.ID] = p
+		}
+		oc := byID["opencode-go"]
+		if !oc.Enabled {
+			t.Errorf("opencode-go should be enabled as a default provider, got %+v", oc)
+		}
+		if len(oc.Creds) != 0 {
+			t.Errorf("opencode-go creds must be empty (dead legacy keys ignored), got %+v", oc.Creds)
+		}
+		if byID["kimi"].Enabled != true || byID["xfyun"].Enabled != true {
+			t.Errorf("expected default enabled providers (kimi/xfyun) to stay enabled: kimi=%v xfyun=%v",
+				byID["kimi"].Enabled, byID["xfyun"].Enabled)
+		}
+	})
 }
 
 // 旧格式全部字段为空 → 默认启用前三个。

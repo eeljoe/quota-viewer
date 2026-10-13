@@ -59,14 +59,12 @@ func clampEnabled(providers []ProviderConfig, limit int) {
 
 // legacyConfig 旧版扁平配置结构(仅用于 Load 时迁移)。
 type legacyConfig struct {
-	KimiAPIKey             string `json:"kimi_api_key"`
-	XfyunCookie            string `json:"xfyun_cookie"`
-	MimoCookie             string `json:"mimo_cookie"`
-	OpenCodeGoWorkspaceID  string `json:"opencode_go_workspace_id"`
-	OpenCodeGoSessionToken string `json:"opencode_go_session_token"`
-	RefreshIntervalMin     int    `json:"refresh_interval_min"`
-	BallX                  int    `json:"ball_x"`
-	BallY                  int    `json:"ball_y"`
+	KimiAPIKey         string `json:"kimi_api_key"`
+	XfyunCookie        string `json:"xfyun_cookie"`
+	MimoCookie         string `json:"mimo_cookie"`
+	RefreshIntervalMin int    `json:"refresh_interval_min"`
+	BallX              int    `json:"ball_x"`
+	BallY              int    `json:"ball_y"`
 }
 
 func configDir() (string, error) {
@@ -210,14 +208,9 @@ func migrateFromLegacy(l legacyConfig) *Config {
 	set("xfyun", l.XfyunCookie != "", map[string]string{"cookie": l.XfyunCookie})
 	set("mimo", l.MimoCookie != "", map[string]string{"cookie": l.MimoCookie})
 
-	oc := map[string]string{}
-	if l.OpenCodeGoWorkspaceID != "" {
-		oc["workspace_id"] = l.OpenCodeGoWorkspaceID
-	}
-	if l.OpenCodeGoSessionToken != "" {
-		oc["session_token"] = l.OpenCodeGoSessionToken
-	}
-	set("opencode-go", len(oc) > 0, oc)
+	// opencode-go 无旧扁平字段可迁移:它改用 API Key 通道后,旧版的
+	// opencode_go_workspace_id / opencode_go_session_token 已无人读取(死 key),
+	// 故不在此处 set —— 该家保持默认启用状态、creds 为空。
 
 	// 钳制最多 3 个启用(展示上限;旧格式无扩展模式)
 	clampEnabled(cfg.Providers, EnabledLimit(false))

@@ -238,14 +238,14 @@ func TestBuildReport_EveryRecordHas8Keys(t *testing.T) {
 	if len(arr) != 2 {
 		t.Fatalf("providers 条数: got %d, want 2", len(arr))
 	}
-	for _, want := range []string{"id", "kind", "percent", "remaining_percent", "reset_at", "balance", "currency", "error"} {
-		for i, rec := range arr {
+	for i, rec := range arr {
+		if len(rec) != 8 {
+			t.Errorf("第 %d 条记录应恰好 8 个键, 实际 %d 个(%v)", i, len(rec), rec)
+		}
+		for _, want := range []string{"id", "kind", "percent", "remaining_percent", "reset_at", "balance", "currency", "error"} {
 			if _, ok := rec[want]; !ok {
 				t.Errorf("第 %d 条记录缺键 %q(实际键:%v)", i, want, rec)
 			}
-		}
-		if len(arr[0]) != 8 {
-			t.Errorf("每条记录应恰好 8 个键")
 		}
 	}
 }

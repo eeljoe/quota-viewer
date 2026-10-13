@@ -8,12 +8,12 @@
 
 ### 当前基线（2026-10-13，新增无界面探针后 `01c1920` 工作区状态）
 
-- **Go 测试**：`go test ./... -count=1` 全绿（exit 0；顶层 PASS 145 条 + 子测试 5 条、0 FAIL；config ≈0.3s、fetcher ≈4.0s、probe ≈0.1s）
+- **Go 测试**：`go test ./... -count=1` 全绿（exit 0；顶层 PASS 143 条 + 子测试 PASS 28 条、0 FAIL；config ≈0.4s、fetcher ≈5.0s、probe ≈1.0s）
   - `quota-viewer`（无测试文件）
   - `cmd/quotaviewer`（入口包，逻辑在 `internal/probe`，无测试文件）
   - `internal/config` ok
   - `internal/fetcher` ok
-  - `internal/probe` ok（20 条：契约单测 + `reset_at` 归一 + 入口 `Run`）
+  - `internal/probe` ok（21 条：契约单测 + `reset_at` 归一 + 入口 `Run`）
   - `internal/tray`（无测试文件）
 - **构建**：`go build ./...` exit 0；`go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer` exit 0（console 子系统）
 - **工作区**：Go/前端源码无未提交改动（同步当次 `git status` 只有 `docs/` 文档与未跟踪目录的变动）

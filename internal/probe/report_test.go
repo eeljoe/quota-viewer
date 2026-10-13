@@ -437,23 +437,56 @@ func TestRun_NoAppData_FailureEnvelope(t *testing.T) {
 	}
 }
 
-// TestRun_JSONWithRealLookup_BuildsFromConfig --json 走真配置+真注册表时,
-// providers 条数 = 钳制后已启用集合、且每条都在注册表里。
-func TestRun_JSONWithRealLookup_BuildsFromConfig(t *testing.T) {
-	t.Setenv("APPDATA", t.TempDir()) // 隔离:用空目录的默认配置,不碰真实配置
+// TestBuildReport_DefaultConfig_IdsInRealRegistry 默认配置(纯内存构造,不读
+// 配置文件、不读凭证)的已启用集合:条数 = 3,且每家 id 都能在真注册表里查到。
+// 注册表命中直接查 fetcher.Get(不经 DefaultLookup);抓取一律走夹具——
+// 单测层不真打上游(spec.md:114),这条用例因此与 USERPROFILE / 真实
+// ~/.local/share/opencode/auth.json 无关。
+func TestBuildReport_DefaultConfig_IdsInRealRegistry(t *testing.T) {
 	cfg := config.Default()
-	rep := BuildReport(testNow(), cfg, DefaultLookup)
+	defs := map[string]fetcher.ProviderDef{}
+	for _, p := range cfg.Providers {
+		if !p.Enabled {
+			continue
+		}
+		if _, ok := fetcher.Get(p.ID); !ok {
+			t.Errorf("默认启用集合里的 id=%q 不在注册表里", p.ID)
+		}
+		defs[p.ID] = fakeDef(p.ID, "", fetcher.QuotaResult{Percent: 1})
+	}
+
+	start := time.Now()
+	rep := BuildReport(testNow(), cfg, fakeLookup(defs))
+	elapsed := time.Since(start)
 
 	if rep.EnabledCount != 3 {
 		t.Fatalf("默认配置应启用 3 家: got %d", rep.EnabledCount)
 	}
+	errs := make([]string, 0, len(rep.Providers))
 	for _, l := range rep.Providers {
 		if _, ok := fetcher.Get(l.ID); !ok {
 			t.Errorf("记录 id=%q 不在注册表里", l.ID)
 		}
+		errs = append(errs, l.ID+"="+l.Error)
 	}
+	t.Logf("耗时 %v, 各家 error: %v", elapsed, errs)
 	if rep.GeneratedAt != "2026-10-13T10:45:00+08:00" {
 		t.Errorf("generated_at: got %q", rep.GeneratedAt)
+	}
+}
+
+// TestDefaultLookup_ProductionTableIsRegistry 生产查表函数 DefaultLookup 就是
+// fetcher.Get(同源取值)。只查注册表,不发网络请求。
+func TestDefaultLookup_ProductionTableIsRegistry(t *testing.T) {
+	def, ok := DefaultLookup("kimi")
+	if !ok {
+		t.Fatal("DefaultLookup 查不到 kimi")
+	}
+	if def.ID != "kimi" {
+		t.Errorf("DefaultLookup 返回的 def.ID: got %q, want %q", def.ID, "kimi")
+	}
+	if byID, ok2 := fetcher.Get("kimi"); !ok2 || byID.ID != def.ID {
+		t.Errorf("DefaultLookup 与 fetcher.Get 不同源: def.ID=%q, fetcher.Get.ID=%q", def.ID, byID.ID)
 	}
 }
 

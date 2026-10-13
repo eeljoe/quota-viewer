@@ -17,7 +17,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 - **Expandable Panel**: Progress bars + remaining quota details (thousands-separated numbers), auto-refresh (default 15 min), refresh countdown timer (e.g. Kimi 5-hour window reset)
 - **Budget Progress Bar**: Balance-type providers (e.g. DeepSeek) support a configurable budget — progress bar shows consumption as `(budget - balance) / budget`, default budget ¥300
 - **Config Panel**: Check which providers to display (**max 3, min 1**), each provider has its own credential inputs (API Key / Cookie), supports pasting browser "Copy as PowerShell" format directly
-- **System Tray**: Refresh / Show-Hide / Open Config / Quit; click the tray icon to bring the floating ball to the front
+- **System Tray**: Refresh / Show-Hide / Open Config / Quit; click the tray icon to bring the floating ball to the front (show/hide lives in the tray menu; double-click no longer toggles it)
 - **Window Positioning**: Expand without going off-screen (smart corner flipping, multi-monitor / DPI scaling adaptive), collapse precisely back to original position
 - Close to tray, does not exit the process
 

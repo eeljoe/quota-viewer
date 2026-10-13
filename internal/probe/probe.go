@@ -203,7 +203,9 @@ func NowLocal() time.Time {
 }
 
 // Run 是 CLI 的入口逻辑(可测):参数不合法 → usage 打到 stderr 并返回 2;
-// --json → 一行 JSON 打到 wout 并返回 0(参数/配置失败也返回 0,失败写在 error 字段里)。
+// --json → 一行 JSON 打到 wout 并返回 0(参数/配置失败也返回 0,失败写在 error
+// 字段里);写 stdout 失败(成功路径与失败信封路径一视同仁)返回 1——
+// 空 stdout + exit 0 是 spec 约束 8 明令禁止的形状。
 func Run(args []string, wout, werr io.Writer, lookup Lookup) int {
 	wantJSON := false
 	for _, a := range args {
@@ -223,7 +225,9 @@ func Run(args []string, wout, werr io.Writer, lookup Lookup) int {
 	now := NowLocal()
 	cfg, lookupFn, err := loadConfig(lookup)
 	if err != nil {
-		WriteReport(wout, FailReport(now, err.Error()))
+		if !WriteReport(wout, FailReport(now, err.Error())) {
+			return 1
+		}
 		return 0
 	}
 

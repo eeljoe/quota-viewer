@@ -2,6 +2,7 @@ package probe
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -375,6 +376,33 @@ func TestRun_JSONArgs_OneLineExit0(t *testing.T) {
 			t.Fatalf("%s: stdout 不是合法 JSON:%v", flag, err)
 		}
 	}
+}
+
+// brokenWriter 模拟 stdout 写失败(如管道断开)。
+type brokenWriter struct{}
+
+func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("probe: write failed") }
+
+// TestRun_WriteFailure_ExitNonZero stdout 写失败时,成功路径与失败信封路径
+// 都必须退出非 0:spec 约束 8 明写「绝不允许空 stdout + exit 0」——消费者
+// 只见空 stdout,分不清是失败信封没写出去还是探针根本没跑。
+func TestRun_WriteFailure_ExitNonZero(t *testing.T) {
+	defs := map[string]fetcher.ProviderDef{"kimi": fakeDef("kimi", "", fetcher.QuotaResult{Percent: 26})}
+
+	t.Run("成功路径", func(t *testing.T) {
+		var errBuf strings.Builder
+		if code := Run([]string{"--json"}, brokenWriter{}, &errBuf, fakeLookup(defs)); code == 0 {
+			t.Errorf("stdout 写失败必须退出非 0: got 0(stderr=%q)", errBuf.String())
+		}
+	})
+
+	t.Run("失败信封路径", func(t *testing.T) {
+		t.Setenv("APPDATA", "")
+		var errBuf strings.Builder
+		if code := Run([]string{"--json"}, brokenWriter{}, &errBuf, nil); code == 0 {
+			t.Errorf("失败信封写失败也必须退出非 0: got 0, 而 stdout 是空的")
+		}
+	})
 }
 
 // TestRun_NoAppData_FailureEnvelope —— A7 的靶子。

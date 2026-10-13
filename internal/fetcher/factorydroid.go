@@ -58,6 +58,8 @@ type factoryLimitsResp struct {
 		Core     *factoryPool `json:"core"`
 	} `json:"limits"`
 	ExtraUsageBalanceCents *float64 `json:"extraUsageBalanceCents"`
+	// OveragePreference 是上游给出的"超额走哪管血"显式信号("droidCore" = 走 Core 池)。
+	OveragePreference string `json:"overagePreference"`
 }
 
 type factoryLegacyBucket struct {
@@ -127,6 +129,10 @@ func (f *FactoryDroidFetcher) Fetch() QuotaResult {
 // Total=100、Used=5h 百分比;Percent 取全部窗口(含 Core 池)最紧张的一个。
 // Remaining 与 Kimi/Ollama 展示对齐:常驻 5小时/周;月度/Core 仅在成为最紧张窗口
 // (驱动球色告警)时追加说明——长窗口耗尽不能只算不显示,但平时不做展示噪音。
+//
+// Core 接管:Standard 池顶格(>=100%)且上游 overagePreference 表明超额走 Core 时,
+// 展示主体(Percent/Used/ResetAt/Remaining)整体切到 Core 池——否则 Standard 的 100%
+// 会把球面钉死成"用满",用户看不出 Core(第二管血)还剩多少量(2026-10-13 误判事故)。
 func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *factoryLimitsResp) QuotaResult {
 	std := limits.Limits.Standard
 	fiveHour := std.FiveHour
@@ -145,39 +151,66 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 	}
 	stdMax := poolMax(std)
 	// Core 池是独立计费窗口,仅在确实有数据时纳入告警与展示。
-	coreMax := 0.0
-	if core := limits.Limits.Core; core != nil {
+	coreHasData := false
+	core := limits.Limits.Core
+	if core != nil {
 		for _, w := range []*factoryWindow{core.FiveHour, core.Weekly, core.Monthly} {
 			if w != nil && w.UsedPercent != nil {
-				coreMax = poolMax(core)
+				coreHasData = true
 				break
 			}
 		}
 	}
+	coreMax := 0.0
+	if coreHasData {
+		coreMax = poolMax(core)
+	}
+	// 接管 = Standard 顶格(含等于 100) + Core 有数据 + 超额确实走 Core
+	// (overagePreference 为空视为上游未表态,沿用"会走 Core"的老行为)。
+	takesOver := stdMax >= 100 && coreHasData &&
+		(limits.OveragePreference == "" || limits.OveragePreference == "droidCore")
 
 	if fiveHour == nil || fiveHour.UsedPercent == nil {
 		result.Error = "未找到 5 小时窗口额度,响应结构可能已变化"
 		return result
 	}
 
-	result.Used = clampPercent(*fiveHour.UsedPercent)
 	result.Total = 100
+	result.Used = clampPercent(*fiveHour.UsedPercent)
 	result.Percent = stdMax
-	if coreMax > result.Percent {
+	// 接管时驱动窗口与重置时间都跟 Core 最紧张的那个窗口走(它才是主体)。
+	driver := fiveHour
+	if takesOver {
+		driver = factoryDrivingWindow(core, coreMax)
+		result.Percent = coreMax
+		if driver != nil && driver.UsedPercent != nil {
+			result.Used = clampPercent(*driver.UsedPercent)
+		}
+	} else if coreMax > result.Percent {
 		result.Percent = coreMax
 	}
-	if fiveHour.SecondsRemaining != nil && *fiveHour.SecondsRemaining > 0 {
+	// 重置时间一律由 secondsRemaining 推算:真机里 windowEnd 可能是过期值,不可信。
+	if driver != nil && driver.SecondsRemaining != nil && *driver.SecondsRemaining > 0 {
 		result.ResetAt = time.Now().
-			Add(time.Duration(*fiveHour.SecondsRemaining * float64(time.Second))).
+			Add(time.Duration(*driver.SecondsRemaining * float64(time.Second))).
 			UTC().Format(time.RFC3339)
 	}
 
-	remain := []string{fmt.Sprintf("5小时 %.1f%% 已用", result.Used)}
+	var remain []string
+	if takesOver {
+		// Core 打头写明接管;驱动窗口的百分比已在首段,后面不再重复。
+		remain = []string{fmt.Sprintf("Core %.1f%% 已用（Standard 已限流）", coreMax)}
+	} else {
+		remain = []string{fmt.Sprintf("5小时 %.1f%% 已用", result.Used)}
+	}
 	if std.Weekly != nil && std.Weekly.UsedPercent != nil {
 		remain = append(remain, fmt.Sprintf("周 %.1f%% 已用", clampPercent(*std.Weekly.UsedPercent)))
 	}
 	// 常驻展示窗口(5h/周)中最紧张者;月度仅在严格超过它时才需要补充说明
 	shownMax := result.Used
+	if takesOver {
+		shownMax = coreMax
+	}
 	if std.Weekly != nil && std.Weekly.UsedPercent != nil {
 		if p := clampPercent(*std.Weekly.UsedPercent); p > shownMax {
 			shownMax = p
@@ -188,9 +221,9 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 			remain = append(remain, fmt.Sprintf("月 %.1f%% 已用", p))
 		}
 	}
-	if coreMax > 0 {
+	if coreMax > 0 && !takesOver {
 		// Core 仓只在 Standard 限流后接管计费,一有消耗就值得展示
-		// (用户常驻开源模型 + overage 回退 Core 的场景)。
+		// (用户常驻开源模型 + overage 回退 Core 的场景);接管时主体就是 Core,不再重复。
 		remain = append(remain, fmt.Sprintf("Core %.1f%% 已用", coreMax))
 	}
 	if limits.ExtraUsageBalanceCents != nil && *limits.ExtraUsageBalanceCents > 0 {
@@ -264,6 +297,26 @@ func factoryLegacyPercent(b *factoryLegacyBucket) (float64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// factoryDrivingWindow 在池内挑出"最紧张"的窗口(已用百分比最大,平手按
+// fiveHour → weekly → monthly 取先者),它决定接管后的 Used 与 ResetAt。
+// max 为池内最大值(0-100);无任何有数据的窗口时返回 nil。
+func factoryDrivingWindow(p *factoryPool, max float64) *factoryWindow {
+	if p == nil {
+		return nil
+	}
+	var driver *factoryWindow
+	for _, w := range []*factoryWindow{p.FiveHour, p.Weekly, p.Monthly} {
+		if w == nil || w.UsedPercent == nil {
+			continue
+		}
+		if driver == nil || clampPercent(*w.UsedPercent) >= max {
+			driver = w
+			max = clampPercent(*w.UsedPercent)
+		}
+	}
+	return driver
 }
 
 func clampPercent(v float64) float64 {

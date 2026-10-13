@@ -288,6 +288,230 @@ func TestFactoryDroid_BadJSON_ReturnsError(t *testing.T) {
 	}
 }
 
+// realFactoryLimitsJSON 是 2026-10-13 11:54 真机 /api/billing/limits 的逐字响应
+// (事故现场:Standard 周 100% 顶格,超额已在走 Core)。
+// 注意 core.fiveHour.windowEnd 是过期值、standard.fiveHour.secondsRemaining 是 null
+// ⇒ 重置时间只能由 secondsRemaining 推算,不能信 windowEnd。
+const realFactoryLimitsJSON = `{"usesTokenRateLimitsBilling":true,
+ "limits":{"standard":{"fiveHour":{"usedPercent":0,"windowEnd":null,"secondsRemaining":null},
+                       "weekly":{"usedPercent":100,"windowEnd":"2026-10-14T16:41:58.478Z","secondsRemaining":132577},
+                       "monthly":{"usedPercent":82,"windowEnd":"2026-10-30T08:36:58.540Z","secondsRemaining":1485877}},
+           "core":{"fiveHour":{"usedPercent":100,"windowEnd":"2026-10-13T06:05:15.349Z","secondsRemaining":7974},
+                   "weekly":{"usedPercent":53,"windowEnd":"2026-10-19T20:04:35.466Z","secondsRemaining":576734},
+                   "monthly":{"usedPercent":40,"windowEnd":"2026-11-11T20:04:35.466Z","secondsRemaining":2563934}}},
+ "overagePreference":"droidCore","canManageOverage":true,"extraUsageBalanceCents":0,"extraUsageAllowed":true}`
+
+// TestFactoryDroid_CoreTakeover_SwitchesDisplay 验证 Standard 顶格且超额走 Core 时,
+// 展示主体(Percent/Used/ResetAt/Remaining)切到 Core 池;不满足接管条件时与现状逐字一致。
+func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
+	cases := []struct {
+		name       string
+		body       string
+		percent    float64
+		used       float64
+		resetSecs  float64 // <0 表示不校验 ResetAt
+		remaining  string  // 期望全串(空串表示只校验前缀/tail)
+		hasPrefix  string
+		hasTail    string
+		coreCounts int // >=0 时校验 "Core" 出现次数;-1 表示不校验
+	}{
+		{
+			// AC-1:真机夹具 → 接管,重置时间取 Core 5h 的 7974s
+			name: "AC1_真机夹具接管", body: realFactoryLimitsJSON,
+			percent: 100, used: 100, resetSecs: 7974,
+			remaining:  "Core 100.0% 已用（Standard 已限流） · 周 100.0% 已用",
+			coreCounts: 1,
+		},
+		{
+			// AC-2:本票核心判据——球面必须反映出 Core 还有 80 的量
+			name: "AC2_Core还有80的量", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0, "secondsRemaining": 111}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 20, "secondsRemaining": 600}, "weekly": {"usedPercent": 12}}
+  }
+}`,
+			percent: 20, used: 20, resetSecs: 600,
+			remaining:  "Core 20.0% 已用（Standard 已限流） · 周 100.0% 已用",
+			coreCounts: -1,
+		},
+		{
+			// AC-3:Standard 未顶格 → 不接管,Core 只作为附带说明
+			name: "AC3_Standard未顶格不接管", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 50, "secondsRemaining": 300}, "weekly": {"usedPercent": 50}},
+    "core": {"fiveHour": {"usedPercent": 80}}
+  }
+}`,
+			percent: 80, used: 50, resetSecs: 300,
+			remaining:  "5小时 50.0% 已用 · 周 50.0% 已用 · Core 80.0% 已用",
+			coreCounts: -1,
+		},
+		{
+			// AC-4:Core 无数据(全 null)→ 不接管,Percent 不许掉成 0
+			name: "AC4_Core全null不接管", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0, "secondsRemaining": 300}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": null, "secondsRemaining": null}, "weekly": {"usedPercent": null}}
+  }
+}`,
+			percent: 100, used: 0, resetSecs: 300,
+			remaining: "5小时 0.0% 已用 · 周 100.0% 已用", coreCounts: 0,
+		},
+		{
+			// AC-4':Core 整体缺失 → 同样不接管
+			name: "AC4b_Core缺失不接管", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "limits": {"standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}}}
+}`,
+			percent: 100, used: 0, resetSecs: -1,
+			remaining: "5小时 0.0% 已用 · 周 100.0% 已用", coreCounts: 0,
+		},
+		{
+			// AC-5:顶格判据是 >= 100,99.9 不算顶格
+			name: "AC5_99.9不算顶格", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 30}, "weekly": {"usedPercent": 99.9}},
+    "core": {"fiveHour": {"usedPercent": 60}}
+  }
+}`,
+			percent: 99.9, used: 30, resetSecs: -1,
+			remaining:  "5小时 30.0% 已用 · 周 99.9% 已用 · Core 60.0% 已用",
+			coreCounts: -1,
+		},
+		{
+			// AC-6:超额没走 Core(走 extraUsage)→ 不许把主体切过去
+			name: "AC6_extraUsage不接管", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "extraUsage",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 60}}
+  }
+}`,
+			percent: 100, used: 0, resetSecs: -1,
+			remaining:  "5小时 0.0% 已用 · 周 100.0% 已用 · Core 60.0% 已用",
+			coreCounts: -1,
+		},
+		{
+			// AC-7:字段缺失(老上游)按空串处理 → 接管
+			name: "AC7_字段缺失仍接管", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0, "secondsRemaining": 900}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 60, "secondsRemaining": 1800}}
+  }
+}`,
+			percent: 60, used: 60, resetSecs: 1800,
+			hasPrefix:  "Core 60.0% 已用（Standard 已限流）",
+			coreCounts: -1,
+		},
+		{
+			// AC-8:Core 也顶住了 → 接管,球熄灭是对的
+			name: "AC8_Core也顶格", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0, "secondsRemaining": 77}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 100, "secondsRemaining": 5000}}
+  }
+}`,
+			percent: 100, used: 100, resetSecs: 5000,
+			hasPrefix:  "Core 100.0% 已用（Standard 已限流）",
+			coreCounts: -1,
+		},
+		{
+			// 驱动窗口是 Core 周而非 Core 5h(tie-break 按 fiveHour→weekly→monthly;ResetAt 跟驱动窗口走)
+			name: "Core周最紧张时接管", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 10, "secondsRemaining": 111}, "weekly": {"usedPercent": 70, "secondsRemaining": 4321}, "monthly": {"usedPercent": 65}}
+  }
+}`,
+			percent: 70, used: 70, resetSecs: 4321,
+			hasPrefix:  "Core 70.0% 已用（Standard 已限流）",
+			coreCounts: -1,
+		},
+		{
+			// 驱动窗口的 secondsRemaining 为 null → ResetAt 留空串(不许用 windowEnd 顶)
+			name: "接管但驱动窗口无秒数", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0, "secondsRemaining": 3600}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 45, "windowEnd": "2026-10-13T06:05:15.349Z", "secondsRemaining": null}}
+  }
+}`,
+			percent: 45, used: 45, resetSecs: -1,
+			hasPrefix:  "Core 45.0% 已用（Standard 已限流）",
+			coreCounts: -1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer server.Close()
+
+			f := NewFactoryDroidFetcher("fk_test")
+			f.baseURL = server.URL
+			result := f.Fetch()
+			if result.Error != "" {
+				t.Fatalf("unexpected error: %s", result.Error)
+			}
+			if result.Percent != tc.percent {
+				t.Errorf("Percent = %f, want %f", result.Percent, tc.percent)
+			}
+			if result.Used != tc.used {
+				t.Errorf("Used = %f, want %f", result.Used, tc.used)
+			}
+			if result.Total != 100 {
+				t.Errorf("Total = %f, want 100", result.Total)
+			}
+			if tc.resetSecs < 0 {
+				if result.ResetAt != "" {
+					t.Errorf("ResetAt = '%s', want empty", result.ResetAt)
+				}
+			} else {
+				reset, err := time.Parse(time.RFC3339, result.ResetAt)
+				if err != nil {
+					t.Fatalf("ResetAt '%s' 不可解析: %v", result.ResetAt, err)
+				}
+				if want := time.Duration(tc.resetSecs * float64(time.Second)); reset.Before(time.Now().Add(want-time.Minute)) ||
+					reset.After(time.Now().Add(want+time.Minute)) {
+					t.Errorf("ResetAt = '%s'(%.0fs 后), want ~%.0fs 后", result.ResetAt, time.Until(reset).Seconds(), tc.resetSecs)
+				}
+			}
+			if tc.remaining != "" && result.Remaining != tc.remaining {
+				t.Errorf("Remaining = '%s', want '%s'", result.Remaining, tc.remaining)
+			}
+			if tc.hasPrefix != "" && !strings.HasPrefix(result.Remaining, tc.hasPrefix) {
+				t.Errorf("Remaining = '%s', want prefix '%s'", result.Remaining, tc.hasPrefix)
+			}
+			if tc.hasTail != "" && !strings.HasSuffix(result.Remaining, tc.hasTail) {
+				t.Errorf("Remaining = '%s', want suffix '%s'", result.Remaining, tc.hasTail)
+			}
+			if tc.coreCounts >= 0 {
+				if got := strings.Count(result.Remaining, "Core"); got != tc.coreCounts {
+					t.Errorf("Remaining 出现 Core %d 次, want %d: '%s'", got, tc.coreCounts, result.Remaining)
+				}
+			}
+		})
+	}
+}
+
 // validFactoryLimitsJSON 是真实 /api/billing/limits 返回结构的代表
 // (token-rate limits 计费:5h/周/月窗口 + 预付 Extra Usage 余额)。
 const validFactoryLimitsJSON = `{

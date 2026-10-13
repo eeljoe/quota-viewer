@@ -305,16 +305,15 @@ const realFactoryLimitsJSON = `{"usesTokenRateLimitsBilling":true,
 // 展示主体(Percent/Used/ResetAt/Remaining)切到 Core 池;不满足接管条件时与现状逐字一致。
 func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 	cases := []struct {
-		name           string
-		body           string
-		percent        float64
-		used           float64
-		resetSecs      float64 // <0 表示不校验 ResetAt
-		wantResetEmpty bool    // true 表示 ResetAt 必须为空串(驱动窗口无剩余秒数)
-		remaining      string  // 期望全串(空串表示只校验前缀/tail)
-		hasPrefix      string
-		hasTail        string
-		coreCounts     int // >=0 时校验 "Core" 出现次数;-1 表示不校验
+		name       string
+		body       string
+		percent    float64
+		used       float64
+		resetSecs  float64 // 期望的剩余秒数;<0 表示 ResetAt 必须是空串(驱动窗口无剩余秒数)
+		remaining  string  // 期望全串(空串表示只校验前缀/tail)
+		hasPrefix  string
+		hasTail    string
+		coreCounts int // >=0 时校验 "Core" 出现次数;-1 表示不校验
 	}{
 		{
 			// AC-1:真机夹具 → 接管,重置时间取 Core 5h 的 7974s
@@ -348,7 +347,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   }
 }`,
 			percent: 80, used: 50, resetSecs: 300,
-			remaining:  "5小时 50.0% 已用 · 周 50.0% 已用 · Core 80.0% 已用",
+			hasTail:    "Core 80.0% 已用",
 			coreCounts: -1,
 		},
 		{
@@ -362,7 +361,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   }
 }`,
 			percent: 100, used: 0, resetSecs: 300,
-			remaining: "5小时 0.0% 已用 · 周 100.0% 已用", coreCounts: 0,
+			coreCounts: 0, hasTail: "周 100.0% 已用",
 		},
 		{
 			// AC-4':Core 整体缺失 → 同样不接管
@@ -370,7 +369,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   "usesTokenRateLimitsBilling": true,
   "limits": {"standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}}}
 }`,
-			percent: 100, used: 0, resetSecs: -1, wantResetEmpty: true,
+			percent: 100, used: 0, resetSecs: -1,
 			remaining: "5小时 0.0% 已用 · 周 100.0% 已用", coreCounts: 0,
 		},
 		{
@@ -383,7 +382,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": 60}}
   }
 }`,
-			percent: 99.9, used: 30, resetSecs: -1, wantResetEmpty: true,
+			percent: 99.9, used: 30, resetSecs: -1,
 			remaining:  "5小时 30.0% 已用 · 周 99.9% 已用 · Core 60.0% 已用",
 			coreCounts: -1,
 		},
@@ -452,9 +451,39 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": 45, "windowEnd": "2026-10-13T06:05:15.349Z", "secondsRemaining": null}}
   }
 }`,
-			percent: 45, used: 45, resetSecs: -1, wantResetEmpty: true,
+			percent: 45, used: 45, resetSecs: -1,
 			hasPrefix:  "Core 45.0% 已用（Standard 已限流）",
 			coreCounts: -1,
+		},
+		{
+			// 平手取先者(a):Core 5h 与周同为 60 → 驱动窗口必须是 5h,
+			// ResetAt 跟它走(≈now+111s),不许落到更靠后的 weekly(4321s)。
+			name: "Core平手取先者_reset来自5h", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 60, "secondsRemaining": 111}, "weekly": {"usedPercent": 60, "secondsRemaining": 4321}}
+  }
+}`,
+			percent: 60, used: 60, resetSecs: 111,
+			remaining:  "Core 60.0% 已用（Standard 已限流） · 周 100.0% 已用",
+			coreCounts: 1,
+		},
+		{
+			// 平手取先者(b):Core 5h(无秒数)与周同为 60 → 驱动窗口是 5h,
+			// 它没有秒数 ⇒ ResetAt 必须空串,不许借用 weekly 的 4321s。
+			name: "Core平手取先者_5h无秒数则空串", body: `{
+  "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
+  "limits": {
+    "standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}},
+    "core": {"fiveHour": {"usedPercent": 60, "secondsRemaining": null}, "weekly": {"usedPercent": 60, "secondsRemaining": 4321}}
+  }
+}`,
+			percent: 60, used: 60, resetSecs: -1,
+			remaining:  "Core 60.0% 已用（Standard 已限流） · 周 100.0% 已用",
+			coreCounts: 1,
 		},
 	}
 
@@ -468,7 +497,9 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 
 			f := NewFactoryDroidFetcher("fk_test")
 			f.baseURL = server.URL
+			t0 := time.Now()
 			result := f.Fetch()
+			t1 := time.Now()
 			if result.Error != "" {
 				t.Fatalf("unexpected error: %s", result.Error)
 			}
@@ -481,22 +512,22 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 			if result.Total != 100 {
 				t.Errorf("Total = %f, want 100", result.Total)
 			}
-			if tc.wantResetEmpty {
+			if tc.resetSecs < 0 {
 				if result.ResetAt != "" {
 					t.Errorf("ResetAt = '%s', want empty (驱动窗口无剩余秒数)", result.ResetAt)
 				}
-			} else if tc.resetSecs < 0 {
-				if result.ResetAt != "" {
-					t.Errorf("ResetAt = '%s', want empty", result.ResetAt)
-				}
 			} else {
+				// 亚秒夹逼:ResetAt 只能落在 [t0+want-1s, t1+want] 内。下界那 1s 是
+				// RFC3339 秒级截断的必然损耗,不是容差;上界不留松弛 ⇒ 秒数换算
+				// 差 30s 这类变异(如把秒当毫秒用)照样被夹死。
 				reset, err := time.Parse(time.RFC3339, result.ResetAt)
 				if err != nil {
 					t.Fatalf("ResetAt '%s' 不可解析: %v", result.ResetAt, err)
 				}
-				if want := time.Duration(tc.resetSecs * float64(time.Second)); reset.Before(time.Now().Add(want-time.Minute)) ||
-					reset.After(time.Now().Add(want+time.Minute)) {
-					t.Errorf("ResetAt = '%s'(%.0fs 后), want ~%.0fs 后", result.ResetAt, time.Until(reset).Seconds(), tc.resetSecs)
+				want := time.Duration(tc.resetSecs * float64(time.Second))
+				if reset.Before(t0.Add(want-time.Second)) || reset.After(t1.Add(want)) {
+					t.Errorf("ResetAt = '%s'(抓取时刻后 %.0fs), want 抓取时刻 + %.0fs 的亚秒夹逼(下界 -1s)",
+						result.ResetAt, reset.Sub(t0).Seconds(), tc.resetSecs)
 				}
 			}
 			if tc.remaining != "" && result.Remaining != tc.remaining {

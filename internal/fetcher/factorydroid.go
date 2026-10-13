@@ -181,7 +181,7 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 	// 接管时驱动窗口与重置时间都跟 Core 最紧张的那个窗口走(它才是主体)。
 	driver := fiveHour
 	if takesOver {
-		driver = factoryDrivingWindow(core, coreMax)
+		driver = factoryDrivingWindow(core)
 		result.Percent = coreMax
 		if driver != nil && driver.UsedPercent != nil {
 			result.Used = clampPercent(*driver.UsedPercent)
@@ -299,10 +299,10 @@ func factoryLegacyPercent(b *factoryLegacyBucket) (float64, bool) {
 	}
 }
 
-// factoryDrivingWindow 在池内挑出"最紧张"的窗口(已用百分比最大,平手按
-// fiveHour → weekly → monthly 取先者),它决定接管后的 Used 与 ResetAt。
-// max 为池内最大值(0-100);无任何有数据的窗口时返回 nil。
-func factoryDrivingWindow(p *factoryPool, max float64) *factoryWindow {
+// factoryDrivingWindow 在池内挑出"最紧张"的窗口(已用百分比最大;平手按
+// fiveHour → weekly → monthly 取先者,故比较用严格大于,相等时保留先出现的那个),
+// 它决定接管后的 Used 与 ResetAt。无任何有数据的窗口时返回 nil。
+func factoryDrivingWindow(p *factoryPool) *factoryWindow {
 	if p == nil {
 		return nil
 	}
@@ -311,9 +311,8 @@ func factoryDrivingWindow(p *factoryPool, max float64) *factoryWindow {
 		if w == nil || w.UsedPercent == nil {
 			continue
 		}
-		if driver == nil || clampPercent(*w.UsedPercent) >= max {
+		if driver == nil || clampPercent(*w.UsedPercent) > clampPercent(*driver.UsedPercent) {
 			driver = w
-			max = clampPercent(*w.UsedPercent)
 		}
 	}
 	return driver

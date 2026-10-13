@@ -4,8 +4,8 @@
 // (options.SystemTray / runtime.SetTrayMenu 在该版本中均不存在),
 // 因此这里使用第三方库 github.com/energye/systray(支持与其它 UI
 // 工具包共用事件循环,适合与 Wails 集成)。菜单点击通过 Wails 事件总线
-// 发送给前端(与 task brief 的事件名保持一致):tray:refresh、
-// tray:toggle、tray:settings。
+// 发送给前端(与 task brief 的事件名保持一致):tray:activate、
+// tray:refresh、tray:toggle、tray:settings。
 package tray
 
 import (
@@ -65,9 +65,11 @@ func (t *TrayHandler) onReady() {
 	systray.SetTitle("QV")
 	systray.SetTooltip("Quota Viewer")
 
-	// 双击托盘图标:切换悬浮球显示/隐藏
-	systray.SetOnDClick(func(menu systray.IMenu) {
-		wailsruntime.EventsEmit(t.ctx, "tray:toggle")
+	// 单击托盘图标:唤出悬浮球到前台(显示 + 激活 + 重申置顶)。
+	// 不注册 SetOnDClick:真双击时系统先发一次单击再发双击,
+	// 保留双击回调会把"唤出"变成"先唤出再隐藏"。显示/隐藏统一走右键菜单。
+	systray.SetOnClick(func(menu systray.IMenu) {
+		wailsruntime.EventsEmit(t.ctx, "tray:activate")
 	})
 
 	// 刷新

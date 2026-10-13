@@ -69,6 +69,14 @@ func (a *App) OnStartup(ctx context.Context) {
 	wailsruntime.EventsOn(ctx, "tray:refresh", func(...interface{}) {
 		a.Refresh()
 	})
+	// 单击托盘图标 = 唤出到前台:显示 + 激活 + 重申置顶,幂等(不会隐藏)。
+	// 前台激活交给 Wails 的 WindowShow:它内部先 ShowWindow(必要时还原最小化),
+	// 再调 SetForegroundWindow + SetFocus,因此不需要自己写 Win32 抢焦点。
+	wailsruntime.EventsOn(ctx, "tray:activate", func(...interface{}) {
+		a.visible.Store(true)
+		wailsruntime.WindowShow(ctx)
+		wailsruntime.WindowSetAlwaysOnTop(ctx, true)
+	})
 	wailsruntime.EventsOn(ctx, "tray:toggle", func(...interface{}) {
 		// Wails v2.12.0 无 WindowIsVisible,用本地可见性状态切换
 		if a.visible.Load() {

@@ -6,14 +6,14 @@
 
 ## 核心内容
 
-### 当前基线（2026-10-13，新增无界面探针后 `6f51b2b` 工作区状态）
+### 当前基线（2026-10-13，返工 r3 后的工作区实测）
 
-- **Go 测试**：`go test ./... -count=1` 全绿（exit 0；顶层 PASS 145 条 + 子测试 PASS 32 条、0 FAIL；config ≈0.1s、fetcher ≈3.9s、probe ≈0.1s。数字取自本票返工 r2 后的工作区实测；`internal/fetcher` 侧另有并发提交，条数会随其变动）
+- **Go 测试**：`go test ./... -count=1` 全绿（exit 0；顶层 PASS 150 条 + 子测试 PASS 37 条、0 FAIL；config ≈0.2s、fetcher ≈4.2s、probe ≈0.1s。数字取自本票返工 r3 后的工作区实测；`internal/fetcher` 侧另有并发提交，条数会随其变动）
   - `quota-viewer`（无测试文件）
   - `cmd/quotaviewer`（入口包，逻辑在 `internal/probe`，无测试文件）
   - `internal/config` ok
   - `internal/fetcher` ok
-  - `internal/probe` ok（23 条：契约单测 + `reset_at` 归一 + 入口 `Run`）
+  - `internal/probe` ok（27 条：契约单测 + `reset_at` 归一 + 入口 `Run`）
   - `internal/tray`（无测试文件）
 - **构建**：`go build ./...` exit 0；`go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer` exit 0（console 子系统）
 - **工作区**：Go/前端源码无未提交改动（同步当次 `git status` 只有 `docs/` 文档与未跟踪目录的变动）
@@ -47,12 +47,17 @@ go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer
 # 运行(正常路径):一行合法 JSON 打到 stdout 并退出 0
 build/bin/quota-viewer-cli.exe --json
 
-# 无参 / 未知参数:stderr 打 usage 并退出 2(不进 GUI、不抓取)
+# 无参 / 不带 --json 的未知参数:stderr 打 usage 并退出 2(不进 GUI、不抓取)
 build/bin/quota-viewer-cli.exe
 ```
 
 - `go build ./...` 编译全部包（含 `cmd/quotaviewer`）exit 0；不加 `-H windowsgui`，产物就是 `Subsystem=3`（console），stdout / stderr / 退出码在 `Start-Process -Wait -PassThru -Redirect*` 与 `node spawnSync` 下均可读。
-- 退出码（R1 口径）：**无参 / 未知参数 → stderr 打 usage + 退出 `2`**（不进 GUI、不抓取）；**`--json` 调用内**的某家抓取失败或配置读取失败 → 失败信封（`providers: []` + 顶层 `error` 带文本）+ **退出 `0`**，业务失败不体现在退出码上（spec 约束 8：绝不允许空 stdout + exit 0）；唯一的非 0 例外是**写 stdout 失败 → 退出 `1`**。
+- 退出码完整口径（2026-10-13 返工 r3 定的最终行为）：
+  - `--json` **正常路径** → stdout 一行合法 JSON + 退出 `0`。
+  - `--json` 调用内**参数失败**（`--json --nope`、`--json=1`、多余位置参数）或**配置读取失败**（`APPDATA` 缺失 / 配置文件读不出来）→ 失败信封（顶层 7 键齐全、`providers: []`、`error` 带文本）打到 stdout，**同时**往 stderr 写一行诊断，退出 `0`（spec 约束 8 与 §二「诊断旁路」：失败同时写 `error` 字段与 stderr，退出码仍为 0）。
+  - **无参 / 不带 `--json` 的未知参数** → stderr 打 usage、stdout 一个字节都不写，退出 `2`（契约不适用，不进 GUI、不抓取）。
+  - **写 stdout 失败**（成功路径与失败信封路径一视同仁）→ 退出 `1`：约束 8 明写「绝不允许空 stdout + exit 0」，那是唯一的非 0 例外。
+  - 单家抓取失败属业务失败，**不写 stderr**、不改退出码（仍是 `0`），失败文本由该家记录里的 `error` 字段承载（spec 约束 5）。
 - `--json` 输出一行合法 JSON（内部无换行）。
 - 契约与字段定义见 `internal/probe/probe.go`（顶层 7 键 + 每条记录 8 键）。
 

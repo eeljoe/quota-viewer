@@ -40,9 +40,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "6d8cdee", "synced_at": "2026-10-13T13:35:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "4939cdd", "synced_at": "2026-10-13T22:03:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `6d8cdee`（2026-10-13 13:35），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：OpenCode Go 换官方 API Key 通道（05 改端点/凭证/失败面、02 行数）、Factory Droid 在 Standard 顶格且超额走 Core 时展示主体切 Core（05 展示契约、02）、config 旧扁平死 key 删除（07 迁移口径、02）、新增 `cmd/quotaviewer` 与 `internal/probe`（本页目录速览 + 02 模块表 + 09/10 测试条数）。上一同步点为 `9760924`（2026-10-11 16:11，悬浮球格布局两笔修复）。
+> **Wiki 同步状态**：最后同步于 `4939cdd`（2026-10-13 22:03），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。**本轮为空同步**：`6d8cdee..4939cdd` 的全部变更只有 `docs/STATUS.md`、`ROADMAP.md` 与 wiki 自身，零代码文件，故没有页面内容需要修改，仅刷新锚点与 `.covered-files` 缓存（57 项复核不变）。内容基准仍是上一轮（2026-10-13 13:29 提交 `a65b48b`）：OpenCode Go 换官方 API Key 通道（05 改端点/凭证/失败面、02 行数）、Factory Droid 在 Standard 顶格且超额走 Core 时展示主体切 Core（05 展示契约、02）、config 旧扁平死 key 删除（07 迁移口径、02）、新增 `cmd/quotaviewer` 与 `internal/probe`（本页目录速览 + 02 模块表 + 09/10 测试条数）。上一同步点为 `9760924`（2026-10-11 16:11，悬浮球格布局两笔修复）。
 
 ## Wiki 文件索引
 

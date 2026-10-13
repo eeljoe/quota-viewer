@@ -8,36 +8,36 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
-> 5. **直接跳到最新一条「会话记录：2026-10-11 16:10」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-13 13:30」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-11 16:10`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`9760924` on `master`
-> 📊 累计会话数：主文档 6 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-13 13:30`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`6d8cdee` on `master`
+> 📊 累计会话数：主文档 7 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "9760924", "branch": "master", "dirty": true, "timestamp": "2026-10-11T16:10:00+08:00"} -->
+<!-- git-meta: {"last_commit": "6d8cdee", "branch": "master", "dirty": false, "timestamp": "2026-10-13T13:30:00+08:00"} -->
 
-- **日期**：2026-10-11 16:10
-- **会话摘要**：悬浮球格布局两笔修正——5 格末行居中（五环式，7/8 格同受益）、窄格里双字符缩写（MX/OD）降字号不再粘连；探针量测验证后构建交付
+- **日期**：2026-10-13 13:30
+- **会话摘要**：OpenCode Go 换 API Key 通道（旧 `auth` cookie 已废）+ Factory Droid 在 Standard 顶格且 Core 接管时展示主体切 Core + 新增无界面 `--json` 探针（对端 handoff 交付）；两条 spec 的逐票门与整体门全部 VERIFIED，exe 已重建交付
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.2.0 已发布** + master 未发版增量：**十平台监控**（新增 MiniMax、Open Design）+ 扩展模式（悬浮球最多 9 格，默认 3）+ 格布局打磨（末行居中、窄格双字符不粘连）
+- 当前阶段：**v1.2.0 已发布** + master 未发版增量：十平台监控 + 扩展模式（球最多 9 格）+ 格布局打磨 + **OpenCode Go 换 API Key 通道**（旧的 `auth` cookie 通道已废）+ **Factory Droid 在 Core 接管时展示切 Core** + **无界面 `--json` 探针**（`build/bin/quota-viewer-cli.exe`）；2026-10-13 已重建 exe 并交付
 - 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key 读不到），端点见最新会话「关键上下文」
-- 下一步：无待办；计划见 `ROADMAP.md`（Next: Wails 版本升级对齐）
-- 注意事项：无阻塞项
+- 下一步：`/wiki-update` 同步 6 页（05/07/02/00/09/10）；非阻断清理批次 9 条待用户拍板；对端告知（探针可用 + 偏离清单）属仓外动作
+- 注意事项：Droid 的 Standard 周限与 Core 5h 双双顶格、mcode 通道 Token Plan 上限未恢复 ⇒ 非 DSH 侧子代理派发会阵亡；Gate Kit 的 `mutate` 在本机报假绿，变异协议改「手动施加 + sha1 核验」
 
 ---
 
@@ -504,3 +504,73 @@
 - 运行实例 PID 35032（含两笔布局修复）；桌面 `Quota Viewer.lnk` → `build/bin/quota-viewer.exe` 已是本次构建
 - 本会话布局提交：`757f4fd`（末行居中）→ `9760924`（双字符间距）
 - Wiki 指针状态：`docs/wiki/` 12 文件 + 99 归档页（10 条），本次布局变更已派 worker 增量同步（02/03/08）
+
+---
+
+## 会话记录：2026-10-13 13:30
+
+> **会话摘要**：给 quota viewer 加无界面 `--json` 探针（对端 handoff 交付）+ 修两家 Provider 的漂移——OpenCode Go 换 API Key 通道（旧 `auth` cookie 已废）、Factory Droid 在 Standard 顶格且 Core 接管时把展示主体切到 Core；两条 spec 各走完整流水线（逐票验收门 + 整体验收门全部 VERIFIED），并交付重建的 exe
+> **Git**：`6d8cdee` on `master`（工作区 tracked 干净）
+> **任务组**：Provider 漂移修复 + `--json` 探针交付
+> **任务组状态**：已完成
+
+### 本次完成
+
+- **OpenCode Go 换通道**（票 01，`9ea337b`，门 VERIFIED）：opencode.ai 把 dashboard 页面换成了 console，旧 `auth` cookie 通道全废（真机取证：带旧 cookie 与匿名请求**完全同形**，都是 302 → `/console/login`）。改走官方 `GET https://opencode.ai/zen/go/v1/usage` + `Authorization: Bearer <API Key>`；registry 收成单字段 `api_key`（留空自动读 `~/.local/share/opencode/auth.json`），HTML/SSR/data-slot 解析整段删除；401 / 403(`EntitlementError`) / 其他 403 / 500 / 非 JSON 五档文案。门真机跑通 200/401/403 三路径并逐字段对拍。
+- **Factory Droid Core 接管展示**（票 02，`6b980e4`+`c115324`+`e2b7356`，门 VERIFIED）：上游有 `overagePreference: "droidCore"` 显式信号（原先代码没解析）；Standard 顶格（`stdMax >= 100`）且超额走 Core 时，`Percent`/`Used`/`ResetAt`/`Remaining` 全部切到 Core 池（文案 `Core X.X% 已用（Standard 已限流） · 周 …`），重置时间取 Core 驱动窗口的 `secondsRemaining`。返工 r2 修掉平手 tie-break 写反（`>=`→`>`，平手应取先出现者）并把 ResetAt 断言从 ±60s 收紧成亚秒夹逼。门用 28 夹具矩阵 + 600 条随机对拍 + 14 发变异全杀。
+- **加固与残留清理**（票 03，`35254f4`+`a3b09c5`+`6847da0`，门 VERIFIED）：`Fetch()` 显式声明 `Kind: KindUsage`、`User-Agent` 断言补牙、删掉 `internal/config` 里两个已被坐实无人读取的旧扁平格式死 key。
+- **无界面 `--json` 探针**（json-mode spec，13 笔提交 `73ab272`…`6d8cdee`，整体门 VERIFIED）：新增 `cmd/quotaviewer`（console 子系统独立 main）+ `internal/probe`——一行合法 JSON（顶层 7 键、每条记录 8 键、`reset_at` 三条规则、失败记录五字段 `null`、极性不反转、`remaining_percent` 钳制）、退出码三分（0 含失败信封 / 2 usage / 1 写 stdout 失败）、顶层失败同时写 stderr。过程：r1 门 REJECTED（单测层真读真实凭证、真打上游）→ r2 VERIFIED → 整体门 Spec 轴又查出两处 spec 明写未达成（失败未写 stderr；`--json` 内参数失败未出信封）→ r3 补齐，整体门 VERIFIED。
+- **交付**：`wails build`（13:18）出 `build/bin/quota-viewer.exe`，新实例 PID 45528 在跑，球面 Go 那格已由红转绿；CLI 探针 13:22 重建并复验 r3 六态；用户 2026-10-13 新订阅的 API Key 已写进 `%APPDATA%\quota-viewer\config.json`（旧的 `session_token`/`workspace_id` 一并清掉，改前备份 `config.json.bak-20261013-opencodekey`）。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| OpenCode Go 用 API Key，不走 console cookie | 官方 API 不随浏览器 session 轮换过期；console cookie 通道还要 `x-org-id` 且会过期 | 抓 `/console/api/go/status`（`__Host-console_session` + 微分字段） |
+| 不给 `ResetsAt`/`Percent` 加类型容错 | 上游改字段类型就是漂移，本仓惯例是响亮报错；静默降级会把漂移藏起来 | `json.RawMessage` + 自定义 `UnmarshalJSON` |
+| 接管判定 = `stdMax>=100 && coreHasData && overagePreference ∈ {"", "droidCore"}` | 上游有显式信号就不猜；`extraUsage` 时不把主体切过去 | 维持 `Percent = max(std, core)`（会把球面钉死在 100%） |
+| `--json` 内参数失败出信封 + 退 0；不带 `--json` / 无参 → usage + 2 | spec 约束 8 字面（参数失败仍出同形 JSON 并退 0）+ 契约不适用于非 `--json` 调用 | 一律 usage + 2（r1 老口径，与约束 8 字面冲突） |
+| 失败只写顶层 stderr、单家失败不写 | spec §二「诊断旁路」+ 约束 5（单家失败由记录里的 `error` 承载，写 stderr 只是噪声） | 每家失败都写 stderr |
+| 探针四句归一扩成「空 `Kind` 先取注册表声明」 | 对真实注册表十家取值等价（5 家空 Kind 的声明全是 `usage`，deepseek 自设 `balance`），且让「归一顺序」变异可被杀 | 逐字照抄 `app.go` 四句（则顺序变异不可杀） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 新增 | `cmd/quotaviewer/main.go` | CLI 入口（console 子系统；逻辑在 `internal/probe`） |
+| 新增 | `internal/probe/probe.go`、`report_test.go`、`probe_test.go` | JSON 契约、结果归一、`reset_at` 归一、失败信封、退出码 |
+| 修改 | `internal/fetcher/opencode_go.go` + `_test.go` | 换 `/zen/go/v1/usage` + API Key（老 HTML 解析全删） |
+| 修改 | `internal/fetcher/factorydroid.go` + `_test.go` | `overagePreference` 解析 + Core 接管时切展示主体 |
+| 修改 | `internal/fetcher/registry.go`、`internal/config/config.go`、`docs/wiki/10-build-test-baseline.md` | 单字段 `api_key`、删死 key、构建基线补探针节 |
+
+> 本次变更（代码基准 `01c1920`）：15 文件，+1863/−427，20 个提交
+> 文档基准 `9760924` 起算：19 文件，+1944/−440
+
+### 未完成 & 下一步
+
+- **wiki 同步（6 页，`/wiki-update` 一次做完）**：`05`（opencode-go 改写成 API Key + `/zen/go/v1/usage`；droid 段补 Core 接管语义）、`07`（删旧字段清单与「有值的旧字段 → 凭证迁移」）、`02`（模块表补 `cmd/quotaviewer`/`internal/probe`）、`00`（目录速览 + `wiki-meta` + 测试条数）、`09`（120 条 → 现行口径）、`10`（条数漂移 + 契约落点）。
+- **非阻断清理批次（待用户拍板，9 条见「关键上下文」）**：多数会作废对应票的 VERIFIED、需重验。
+- **对端告知（仓外动作，本仓做不到）**：探针可用 + 偏离清单，要点见「关键上下文」。
+- 计划级事项见 `ROADMAP.md`。
+
+### 已知问题 & 注意事项
+
+- **Gate Kit 的 `mutate` 子命令在本机不可信**：同一发变异经它报「存活」、手动施加后立刻 16 处红（两发复现，根因未定位）；返工 r3 也自曝过「变异脚本没把 `go test` 的 cwd 切进副本 ⇒ 11 发假绿」。**后续变异协议以手动施加 + sha1 核验为准。**
+- **`APPDATA` 指向不存在的盘符时探针输出「成功形状」**（exit 0、`error=""`、各记录「未配置」）：`config.Load()` 在 `configPath()` 出错时吞错返回 `Default()`，而预检只能判空字符串。spec 只要求「判空即可」，故不阻断，已列入对端告知。
+- `secondsRemaining` 若漂移成毫秒/超大值（门实测 `1e18`）→ `ResetAt` 会显示 1734 年。非阻断。
+- `go test -race` 在本机跑不了（MinGW 缺 `crt2.o`）；`wails` 不在 PATH，用 `C:\Users\joe\go\bin\wails.exe`。
+- 本机 Droid 的 Standard 周限与 Core 5h 双双顶格、mcode 通道 Token Plan 用量上限也未恢复 ⇒ 非 DSH 侧的子代理派发全线阵亡（当天实测）。
+
+### 推荐 Skill
+
+- `/wiki-update` - 检测到 wiki 覆盖文件自 `synced_commit`（`9760924`）后有代码变更：`internal/fetcher/{opencode_go,factorydroid,registry}.go`、`internal/config/config.go`，另有新增包 `cmd/quotaviewer/`、`internal/probe/`（README×2 与 `docs/ADDING_A_PROVIDER.md` 不属 wiki 覆盖面）
+
+### 关键上下文
+
+- **交付现状**：`build/bin/quota-viewer.exe` 13:18 构建、PID 45528 在跑；球面 K 绿 / **Go 绿** / O 黄(69.5%) / F·MX·OD 灰(100%)。CLI 探针 13:22 重建（`--json` → 退 0、单行、stderr 空）。
+- **OpenCode Go 新通道**：`GET https://opencode.ai/zen/go/v1/usage` + `Authorization: Bearer oc_sk_…`（**前缀是下划线**）；响应 `usage.{rolling,weekly,monthly}.{status,percent,resetsAt}`，`percent` 是 0–100，**重置时间是 `resetsAt` 绝对时间**（社区文档写的 `resetInSec` 是旧通道字段，别照抄）。失败面：无效 key→401 `AuthError`；旧订阅 key→403 `EntitlementError`。若将来需要 cookie 通道：`GET https://opencode.ai/console/api/go/status`，cookie **`__Host-console_session`**（`st_` 开头）+ 头 `x-org-id`，响应是微分字段。
+- **Factory Droid 口径**：`overagePreference: "droidCore"` 是上游显式信号；Standard 顶格 + 超额走 Core 时展示主体切 Core；重置时间一律用 `secondsRemaining`（`windowEnd` 与它同源、只差约 1s）。
+- **待用户拍板的 9 条清理项**：① `registry_test.go` 补「声明键 == 实际读取键」与「敏感字段 `Type==password`」断言（门实测 `api_key`→`session_token`、`password`→`text` 两发变异全量套件仍绿）② `Save`/`Load` 剔除未声明 cred key + 用例（门实测该修法无测试）③ `oc_sk-` → `oc_sk_`（`registry.go:55` + README×2 + `ADDING_A_PROVIDER.md:341`，改它会作废票 01/03）④ `factorydroid.go:192` 与测试注释「windowEnd 是过期值」改正 + 补 `secondsRemaining ≤ 0` 夹具（改它作废票 02）⑤ wiki 3 页 ⑥ `factorydroid.go` 三处窗口枚举合并的归属（票 02/03 互相指、无人做）⑦ `ADDING_A_PROVIDER.md:131` 的「必须显式设 Kind」对另外 4 家仍不成立 ⑧ `opencode_go.go:189` 不填 `Used`（基线即如此、前端不消费）⑨ `35254f4` 用了 `test+fix:` 双类型提交。
+- **对端告知报文要点**：二进制名 `quota-viewer-cli.exe`、开关名 `--json`（另接受 `-json`、`--json=1`）、构建命令 `go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer`；已知字面偏离——`internal/probe/probe.go` 的四句归一扩成「空 `Kind` 先取注册表声明」（对真实注册表取值等价）、`-json` 别名、`--json=1` 判为「未知参数 + 同时声明 JSON 模式」、退出码三态（0 含信封 / 2 usage / 1 写 stdout 失败）、单家失败不写 stderr、`APPDATA` 存在但路径不可用时退化为默认配置的「成功形状」。
+- **未决疑问**：本次有一次观察到工作区里**未提交**的 `registry.go` 改动（`password`→`text`、label 简化成 `API Key`），非任何 worker 所为，随后被某次变异还原覆盖、现已不在工作区；是否要做待用户确认（若做，顺带修 `oc_sk-` 笔误）。
+- Wiki 指针状态：`docs/wiki/` 12 文件（00–10 + 99），本轮需同步 6 页；99 归档页 10 条。

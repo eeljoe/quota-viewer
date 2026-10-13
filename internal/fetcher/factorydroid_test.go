@@ -305,15 +305,16 @@ const realFactoryLimitsJSON = `{"usesTokenRateLimitsBilling":true,
 // 展示主体(Percent/Used/ResetAt/Remaining)切到 Core 池;不满足接管条件时与现状逐字一致。
 func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 	cases := []struct {
-		name       string
-		body       string
-		percent    float64
-		used       float64
-		resetSecs  float64 // <0 表示不校验 ResetAt
-		remaining  string  // 期望全串(空串表示只校验前缀/tail)
-		hasPrefix  string
-		hasTail    string
-		coreCounts int // >=0 时校验 "Core" 出现次数;-1 表示不校验
+		name           string
+		body           string
+		percent        float64
+		used           float64
+		resetSecs      float64 // <0 表示不校验 ResetAt
+		wantResetEmpty bool    // true 表示 ResetAt 必须为空串(驱动窗口无剩余秒数)
+		remaining      string  // 期望全串(空串表示只校验前缀/tail)
+		hasPrefix      string
+		hasTail        string
+		coreCounts     int // >=0 时校验 "Core" 出现次数;-1 表示不校验
 	}{
 		{
 			// AC-1:真机夹具 → 接管,重置时间取 Core 5h 的 7974s
@@ -369,7 +370,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   "usesTokenRateLimitsBilling": true,
   "limits": {"standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}}}
 }`,
-			percent: 100, used: 0, resetSecs: -1,
+			percent: 100, used: 0, resetSecs: -1, wantResetEmpty: true,
 			remaining: "5小时 0.0% 已用 · 周 100.0% 已用", coreCounts: 0,
 		},
 		{
@@ -382,7 +383,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": 60}}
   }
 }`,
-			percent: 99.9, used: 30, resetSecs: -1,
+			percent: 99.9, used: 30, resetSecs: -1, wantResetEmpty: true,
 			remaining:  "5小时 30.0% 已用 · 周 99.9% 已用 · Core 60.0% 已用",
 			coreCounts: -1,
 		},
@@ -451,7 +452,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": 45, "windowEnd": "2026-10-13T06:05:15.349Z", "secondsRemaining": null}}
   }
 }`,
-			percent: 45, used: 45, resetSecs: -1,
+			percent: 45, used: 45, resetSecs: -1, wantResetEmpty: true,
 			hasPrefix:  "Core 45.0% 已用（Standard 已限流）",
 			coreCounts: -1,
 		},
@@ -480,7 +481,11 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 			if result.Total != 100 {
 				t.Errorf("Total = %f, want 100", result.Total)
 			}
-			if tc.resetSecs < 0 {
+			if tc.wantResetEmpty {
+				if result.ResetAt != "" {
+					t.Errorf("ResetAt = '%s', want empty (驱动窗口无剩余秒数)", result.ResetAt)
+				}
+			} else if tc.resetSecs < 0 {
 				if result.ResetAt != "" {
 					t.Errorf("ResetAt = '%s', want empty", result.ResetAt)
 				}

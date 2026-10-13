@@ -110,7 +110,12 @@ func buildLine(now time.Time, p config.ProviderConfig, def fetcher.ProviderDef) 
 	r.ID = def.ID
 	r.Abbr = def.Abbr
 	if r.Kind == "" {
-		r.Kind = fetcher.KindUsage
+		// 空串按 usage 归一(app.go:434-435);注册表声明了 balance 时以注册表为准
+		// ——10 家里 5 家连 Kind 都不设,注册表是同源口径的落点。
+		r.Kind = def.Kind
+		if r.Kind == "" {
+			r.Kind = fetcher.KindUsage
+		}
 	}
 	fetcher.ApplyBudget(&r, p.Budget)
 

@@ -68,13 +68,15 @@ func mustEncode(t *testing.T, rep Report) []byte {
 
 // ---- AC-6:归一四句 + 顺序 ----
 
-// TestBuildReport_BalanceKind_PercentFromBudget —— A1 / A2 的靶子。
-// ApplyBudget 是余额型 percent 的唯一产出处;删掉它或把 Kind 归一挪到它之后,
-// percent 都恒为 0,本条必红。
+// TestBuildReport_BalanceKind_PercentFromBudget —— A1 的靶子。
+// ApplyBudget 是余额型 percent 的唯一产出处;删掉它这条必红。
+// 夹具的 Result.Kind 留空(只有 def 说是余额型),所以它同时是 A2 的靶子:
+// 把 `if r.Kind == "" { r.Kind = KindUsage }` 挪到 ApplyBudget 之后,
+// r.Kind 会先变成 "usage",ApplyBudget 直接早退(percent 恒 0),本条必红。
 func TestBuildReport_BalanceKind_PercentFromBudget(t *testing.T) {
 	defs := map[string]fetcher.ProviderDef{
 		"balance-x": fakeDef("balance-x", fetcher.KindBalance, fetcher.QuotaResult{
-			Kind: fetcher.KindBalance, Balance: 150, Currency: "CNY",
+			Balance: 150, Currency: "CNY",
 		}),
 	}
 	cfg := testConfig(false, "balance-x")
@@ -83,6 +85,9 @@ func TestBuildReport_BalanceKind_PercentFromBudget(t *testing.T) {
 	rep := BuildReport(testNow(), cfg, fakeLookup(defs))
 	line := findLine(t, rep, "balance-x")
 
+	if line.Kind == fetcher.KindUsage {
+		t.Fatalf("kind 被先归一成 usage;Kind 归一必须在 ApplyBudget 之前: %+v", line)
+	}
 	if line.Kind != fetcher.KindBalance {
 		t.Errorf("kind: got %q, want %q", line.Kind, fetcher.KindBalance)
 	}
@@ -92,14 +97,43 @@ func TestBuildReport_BalanceKind_PercentFromBudget(t *testing.T) {
 	if *line.Percent != 50 {
 		t.Errorf("percent: got %v, want 50(预算 300 扣掉余额 150)", *line.Percent)
 	}
-	if line.RemainingPercent == nil || *line.RemainingPercent != 50 {
-		t.Errorf("remaining_percent: got %v, want 50", line.RemainingPercent)
+	if line.RemainingPercent == nil {
+		t.Fatal("remaining_percent 为 null")
 	}
-	if line.Balance == nil || *line.Balance != 150 {
-		t.Errorf("balance: got %v, want 150", line.Balance)
+	if *line.RemainingPercent != 50 {
+		t.Errorf("remaining_percent: got %v, want 50", *line.RemainingPercent)
 	}
-	if line.Currency == nil || *line.Currency != "CNY" {
-		t.Errorf("currency: got %v, want CNY", line.Currency)
+	if line.Balance == nil {
+		t.Fatal("balance 为 null")
+	}
+	if *line.Balance != 150 {
+		t.Errorf("balance: got %v, want 150", *line.Balance)
+	}
+	if line.Currency == nil {
+		t.Fatal("currency 为 null")
+	}
+	if *line.Currency != "CNY" {
+		t.Errorf("currency: got %v, want CNY", *line.Currency)
+	}
+}
+
+// TestBuildReport_KindSetByFetcher_Kept 实况路径:fetcher 自己设了 Kind(deepseek
+// 就是如此)时按原值保留,余额型仍走预算口径。
+func TestBuildReport_KindSetByFetcher_Kept(t *testing.T) {
+	defs := map[string]fetcher.ProviderDef{
+		"deepseek": fakeDef("deepseek", fetcher.KindBalance, fetcher.QuotaResult{
+			Kind: fetcher.KindBalance, Balance: 150, Currency: "CNY",
+		}),
+	}
+	cfg := testConfig(false, "deepseek")
+	cfg.Providers[0].Budget = 300
+
+	line := findLine(t, BuildReport(testNow(), cfg, fakeLookup(defs)), "deepseek")
+	if line.Kind != fetcher.KindBalance {
+		t.Errorf("kind: got %q, want %q", line.Kind, fetcher.KindBalance)
+	}
+	if line.Percent == nil || *line.Percent != 50 {
+		t.Errorf("percent: got %v, want 50", line.Percent)
 	}
 }
 

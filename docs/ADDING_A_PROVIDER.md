@@ -338,7 +338,7 @@ wails build
 |----|--------|------|----------|------|----------|
 | `kimi` | Kimi | K | API Key (Bearer) | usage | `kimi.go` |
 | `xfyun` | 讯飞星辰 | 讯 | Cookie | usage | `xfyun.go` |
-| `opencode-go` | OpenCode Go | Go | Workspace ID + Session Token | usage | `opencode_go.go` |
+| `opencode-go` | OpenCode Go | Go | API Key (Bearer, `oc_sk-...`；留空自动读 `~/.local/share/opencode/auth.json`) | usage | `opencode_go.go` |
 | `mimo` | 小米 MiMo | M | Cookie | usage | `mimo.go` |
 | `deepseek` | DeepSeek | D | API Key (Bearer) | balance | `deepseek.go` |
 | `ollama` | Ollama | O | Browser session Cookie | usage | `ollama.go` |

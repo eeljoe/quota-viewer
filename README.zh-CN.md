@@ -27,7 +27,7 @@
 |----------|------|----------|
 | Kimi | API Key (`sk-kimi-xxx`) | 5 小时窗口 / 周额度用量 |
 | 讯飞星辰 | Cookie | 套餐总量用量 |
-| OpenCode Go | Workspace ID + Session Token | 滚动窗口额度百分比 |
+| OpenCode Go | API Key (`oc_sk-...`,留空自动读 `~/.local/share/opencode/auth.json`) | 滚动窗口额度百分比 |
 | 小米 MiMo | Cookie | 套餐 Token 用量 |
 | DeepSeek | API Key (`sk-...`) | 账户余额（余额型） |
 | Ollama | 浏览器会话 Cookie | Cloud 5 小时 Session 用量 / 周用量（设置页） |

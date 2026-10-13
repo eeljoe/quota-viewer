@@ -52,11 +52,10 @@ var registry = []ProviderDef{
 		Kind:        KindUsage,
 		LoginURL:    "https://opencode.ai",
 		Fields: []CredentialField{
-			{Key: "workspace_id", Label: "Workspace ID", Type: "text"},
-			{Key: "session_token", Label: "Session Token", Type: "password"},
+			{Key: "api_key", Label: "API Key(oc_sk- 开头；留空自动读 ~/.local/share/opencode/auth.json)", Type: "password"},
 		},
 		Build: func(creds map[string]string) Fetcher {
-			return NewOpenCodeGoFetcher(creds["workspace_id"], creds["session_token"])
+			return NewOpenCodeGoFetcher(creds["api_key"])
 		},
 	},
 	{

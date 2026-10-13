@@ -27,7 +27,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 |----------|------------|----------|
 | Kimi | API Key (`sk-kimi-xxx`) | 5-hour window / weekly quota usage |
 | Xfyun (讯飞星辰) | Cookie | Package total usage |
-| OpenCode Go | Workspace ID + Session Token | Rolling window quota percentage |
+| OpenCode Go | API Key (`oc_sk-...`, or auto-read `~/.local/share/opencode/auth.json` if empty) | Rolling window quota percentage |
 | Xiaomi MiMo | Cookie | Package token usage |
 | DeepSeek | API Key (`sk-...`) | Account balance (balance type) |
 | Ollama | Browser session Cookie | Cloud 5-hour Session usage / weekly usage (settings page) |

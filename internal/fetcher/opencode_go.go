@@ -1,39 +1,41 @@
 package fetcher
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
-	"regexp"
-	"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
-// OpenCodeGoFetcher 通过抓取 OpenCode Dashboard 页面获取 Go 套餐的滚动窗口额度百分比。
-// 端点: GET https://opencode.ai/workspace/{workspaceID}/go
-// 认证: auth Cookie(与 Xfyun/MiMo 相同通过 Cookie 头传递)
+// OpenCodeGoFetcher 通过官方 JSON API 获取 OpenCode Go 套餐的窗口额度百分比。
+// 端点: GET https://opencode.ai/zen/go/v1/usage
+// 认证: Authorization: Bearer <API Key>
 type OpenCodeGoFetcher struct {
-	workspaceID  string
-	sessionToken string
+	apiKey       string
 	baseURL      string // 可重写,用于测试
+	readAuthFile bool   // apiKey 为空时是否尝试读取 OpenCode CLI 的 auth.json
+	authFile     string // 覆盖 auth.json 默认路径(测试注入)
 }
 
 // NewOpenCodeGoFetcher 创建一个新的 OpenCodeGoFetcher。
-func NewOpenCodeGoFetcher(workspaceID string, sessionToken string) *OpenCodeGoFetcher {
+// apiKey 为空时,凭证会在 Fetch 里回退到 OpenCode CLI 保存的 auth.json。
+func NewOpenCodeGoFetcher(apiKey string) *OpenCodeGoFetcher {
 	return &OpenCodeGoFetcher{
-		workspaceID:  workspaceID,
-		sessionToken: sessionToken,
+		apiKey:       apiKey,
 		baseURL:      "https://opencode.ai",
+		readAuthFile: true,
 	}
 }
 
 // windowInfo 描述一个配额窗口。
 type windowInfo struct {
 	windowType   string  // "rolling", "weekly", "monthly"
-	usagePercent float64 // OpenCode 页面返回浮点百分比(如 3.1)
-	resetInSec   int
+	usagePercent float64 // API 直接返回的百分比(0-100)
+	resetsAt     string  // 原始 resetsAt(可能为空)
 }
 
 // windowTypeOrder 用于 tiebreaker: 相同百分比时 rolling > weekly > monthly。
@@ -56,20 +58,37 @@ func windowLabel(wt string) string {
 	return wt
 }
 
-// ssrPattern 匹配内嵌在 HTML 中的 SSR hydration 配额数据。
-// 格式: rollingUsage:$R[10]={usagePercent:7,resetInSec:18000}
-var ssrPattern = regexp.MustCompile(`(rolling|weekly|monthly)Usage:\$R\[\d+\]=\{([^}]+)\}`)
-
-// slotPattern 是 data-slot HTML 备选解析模式。
-var slotPattern = regexp.MustCompile(`<div data-slot="usage-item">\s*<span data-slot="usage-label">(Rolling Usage|Weekly Usage|Monthly Usage)</span>\s*<span data-slot="usage-value"><!--\$-->(\d+)<!--/-->%</span>\s*</div>`)
-
-// slotNameMap 将 data-slot label 映射到内部窗口类型。
-var slotNameMap = map[string]string{
-	"Rolling Usage": "rolling",
-	"Weekly Usage":  "weekly",
-	"Monthly Usage": "monthly",
+// openCodeGoWindow 是 /zen/go/v1/usage 响应里单个窗口的结构。
+// percent 是 0-100 的百分比单位(1 = 1%),resetsAt 是绝对时间(可能为 null/缺失)。
+type openCodeGoWindow struct {
+	Status   string   `json:"status"` // 语义未知,不用于过滤窗口
+	Percent  *float64 `json:"percent"`
+	ResetsAt *string  `json:"resetsAt"`
 }
 
+type openCodeGoUsageResp struct {
+	Usage *struct {
+		Rolling *openCodeGoWindow `json:"rolling"`
+		Weekly  *openCodeGoWindow `json:"weekly"`
+		Monthly *openCodeGoWindow `json:"monthly"`
+	} `json:"usage"`
+}
+
+// openCodeGoErrorResp 是错误响应里的 error.type 结构(用于区分未订阅)。
+type openCodeGoErrorResp struct {
+	Error *struct {
+		Type string `json:"type"`
+	} `json:"error"`
+}
+
+// openCodeGoAuthFile 是 OpenCode CLI 的 ~/.local/share/opencode/auth.json 结构:
+// {"opencode-go":{"type":"api","key":"..."}} 之类。为容错只取 key 字段。
+type openCodeGoAuthFile map[string]struct {
+	Key string `json:"key"`
+}
+
+// Fetch 拉取并解析 OpenCode Go 额度。
+// 选窗:Percent 取所有有值窗口中最大的(最紧张),同值时 rolling > weekly > monthly。
 func (f *OpenCodeGoFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
 		Platform:    "OpenCode Go",
@@ -77,29 +96,23 @@ func (f *OpenCodeGoFetcher) Fetch() QuotaResult {
 		LastUpdated: time.Now(),
 	}
 
-	if f.sessionToken == "" {
-		result.Error = "未配置 OpenCode Go Cookie"
+	key := f.apiKey
+	if key == "" && f.readAuthFile {
+		key = f.readAuthKey()
+	}
+	if key == "" {
+		result.Error = "未配置 OpenCode Go API Key(在 opencode.ai 订阅后复制 API Key 填入,或在 opencode CLI 里 /connect 后自动读取)"
 		return result
 	}
 
-	jar, _ := cookiejar.New(nil)
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-		Jar:     jar,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	url := fmt.Sprintf("%s/workspace/%s/go", f.baseURL, f.workspaceID)
-	req, err := http.NewRequest("GET", url, nil)
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest("GET", f.baseURL+"/zen/go/v1/usage", nil)
 	if err != nil {
 		result.Error = fmt.Sprintf("创建请求失败: %v", err)
 		return result
 	}
-
-	req.Header.Set("Cookie", "auth="+f.sessionToken)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("User-Agent", "quota-viewer/1.0")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -108,44 +121,58 @@ func (f *OpenCodeGoFetcher) Fetch() QuotaResult {
 	}
 	defer resp.Body.Close()
 
-	// 错误分类
-	switch resp.StatusCode {
-	case 302, 303:
-		result.Error = "会话已过期"
-		return result
-	case 401, 403:
-		result.Error = "凭据无效"
-		return result
-	case 404:
-		result.Error = "Workspace 不存在"
-		return result
-	}
-
-	if resp.StatusCode != 200 {
-		result.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
-		return result
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		result.Error = fmt.Sprintf("读取响应失败: %v", err)
 		return result
 	}
 
-	// 1) 尝试 SSR hydration 数据
-	windows := parseSSRWindows(string(body))
-	if len(windows) == 0 {
-		// SSR 模式匹配成功但所有窗口 usagePercent=0 → 无有效窗口
-		if ssrPattern.MatchString(string(body)) {
-			result.Error = "未找到有效配额窗口"
+	switch resp.StatusCode {
+	case 401:
+		result.Error = "API Key 无效"
+		return result
+	case 403:
+		var e openCodeGoErrorResp
+		if json.Unmarshal(body, &e) == nil && e.Error != nil && e.Error.Type == "EntitlementError" {
+			result.Error = "未订阅 OpenCode Go 套餐(或订阅已失效)"
 			return result
 		}
-		// 2) 回退到 data-slot HTML 解析
-		windows = parseSlotWindows(string(body))
+		result.Error = "API Key 无权限"
+		return result
+	case 200:
+		// 继续解析
+	default:
+		result.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		return result
+	}
+
+	var parsed openCodeGoUsageResp
+	if err := json.Unmarshal(body, &parsed); err != nil || parsed.Usage == nil {
+		result.Error = "无法解析额度数据(响应结构可能已变化)"
+		return result
+	}
+
+	windows := []windowInfo{}
+	for _, w := range []struct {
+		wt     string
+		window *openCodeGoWindow
+	}{
+		{"rolling", parsed.Usage.Rolling},
+		{"weekly", parsed.Usage.Weekly},
+		{"monthly", parsed.Usage.Monthly},
+	} {
+		if w.window == nil || w.window.Percent == nil {
+			continue
+		}
+		info := windowInfo{windowType: w.wt, usagePercent: *w.window.Percent}
+		if w.window.ResetsAt != nil {
+			info.resetsAt = *w.window.ResetsAt
+		}
+		windows = append(windows, info)
 	}
 
 	if len(windows) == 0 {
-		result.Error = "页面结构已变化"
+		result.Error = "未找到有效配额窗口"
 		return result
 	}
 
@@ -161,75 +188,33 @@ func (f *OpenCodeGoFetcher) Fetch() QuotaResult {
 	result.Percent = best.usagePercent
 	result.Remaining = fmt.Sprintf("%s · 已用 %s · 剩余 %s", windowLabel(best.windowType),
 		formatUsagePercent(best.usagePercent), formatUsagePercent(100-best.usagePercent))
-	result.ResetAt = time.Now().Add(time.Duration(best.resetInSec) * time.Second).Format(time.RFC3339)
+	if t, err := time.Parse(time.RFC3339Nano, best.resetsAt); err == nil {
+		result.ResetAt = t.UTC().Format(time.RFC3339)
+	}
 
 	return result
 }
 
-// parseSSRWindows 从 HTML 中解析 SSR hydration 配额窗口数据。
-func parseSSRWindows(html string) []windowInfo {
-	matches := ssrPattern.FindAllStringSubmatch(html, -1)
-	if len(matches) == 0 {
-		return nil
-	}
-
-	var windows []windowInfo
-	for _, m := range matches {
-		wt := m[1]
-		inner := m[2]
-		percent, resetSec := parseSSRFields(inner)
-		if percent > 0 {
-			windows = append(windows, windowInfo{
-				windowType:   wt,
-				usagePercent: percent,
-				resetInSec:   resetSec,
-			})
+// readAuthKey 从 OpenCode CLI 的凭证文件读取 opencode-go 的 key。
+// 文件缺失、结构不符或没有该 provider 时返回空字符串(调用方回退到"未配置"错误)。
+func (f *OpenCodeGoFetcher) readAuthKey() string {
+	path := f.authFile
+	if path == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
 		}
+		path = filepath.Join(home, ".local", "share", "opencode", "auth.json")
 	}
-	return windows
-}
-
-// parseSSRFields 解析 SSR 窗口数据内部的 key=value 对。
-// 内部格式: usagePercent:3.1,resetInSec:18000 (顺序不固定;usagePercent 为浮点)
-func parseSSRFields(inner string) (percent float64, resetSec int) {
-	for _, part := range strings.Split(inner, ",") {
-		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, "usagePercent:") {
-			percent, _ = strconv.ParseFloat(strings.TrimPrefix(part, "usagePercent:"), 64)
-		} else if strings.HasPrefix(part, "resetInSec:") {
-			resetSec, _ = strconv.Atoi(strings.TrimPrefix(part, "resetInSec:"))
-		}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
 	}
-	return
-}
-
-// parseSlotWindows 从 HTML data-slot 结构中解析配额窗口数据(SSR 解析失败时的备选)。
-func parseSlotWindows(html string) []windowInfo {
-	matches := slotPattern.FindAllStringSubmatch(html, -1)
-	if len(matches) == 0 {
-		return nil
+	var auth openCodeGoAuthFile
+	if json.Unmarshal(data, &auth) != nil {
+		return ""
 	}
-
-	var windows []windowInfo
-	for _, m := range matches {
-		label := m[1]
-		percentStr := m[2]
-		percent, _ := strconv.Atoi(percentStr)
-		if percent <= 0 {
-			continue
-		}
-		wt, ok := slotNameMap[label]
-		if !ok {
-			continue
-		}
-		// data-slot 没有 resetInSec, 默认 0 表示未知
-		windows = append(windows, windowInfo{
-			windowType:   wt,
-			usagePercent: float64(percent),
-			resetInSec:   0,
-		})
-	}
-	return windows
+	return strings.TrimSpace(auth["opencode-go"].Key)
 }
 
 // formatUsagePercent 把浮点百分比格式化为紧凑文本:整数值去小数(43 → "43%"),

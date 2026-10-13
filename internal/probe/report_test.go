@@ -137,23 +137,22 @@ func TestBuildReport_KindSetByFetcher_Kept(t *testing.T) {
 	}
 }
 
-// TestBuildReport_EmptyKind_NormalizedToUsage —— A6 的前半。
-// kimi/xfyun/mimo/ollama/opencode-go 五家连 Kind 都不设,必须归一成 "usage"。
+// TestBuildReport_EmptyKind_NormalizedToUsage kimi/xfyun/mimo/ollama/opencode-go
+// 五家连 Kind 都不设,必须逐家归一成 "usage"(逐家一条子测试,漏一家即红)。
 func TestBuildReport_EmptyKind_NormalizedToUsage(t *testing.T) {
-	ids := []string{"kimi", "xfyun", "mimo", "ollama", "opencode-go"}
-	defs := map[string]fetcher.ProviderDef{}
-	for _, id := range ids {
-		defs[id] = fakeDef(id, "", fetcher.QuotaResult{Percent: 10})
-	}
-
-	rep := BuildReport(testNow(), testConfig(true, ids...), fakeLookup(defs))
-	for _, id := range ids {
-		if got := findLine(t, rep, id).Kind; got != fetcher.KindUsage {
-			t.Errorf("%s 的 kind: got %q, want %q", id, got, fetcher.KindUsage)
-		}
-	}
-	if rep.EnabledCount != 5 {
-		t.Errorf("enabled_count: got %d, want 5", rep.EnabledCount)
+	for _, id := range []string{"kimi", "xfyun", "mimo", "ollama", "opencode-go"} {
+		t.Run(id, func(t *testing.T) {
+			defs := map[string]fetcher.ProviderDef{
+				id: fakeDef(id, "", fetcher.QuotaResult{Percent: 10}),
+			}
+			rep := BuildReport(testNow(), testConfig(true, id), fakeLookup(defs))
+			if rep.EnabledCount != 1 {
+				t.Fatalf("enabled_count: got %d, want 1", rep.EnabledCount)
+			}
+			if got := findLine(t, rep, id).Kind; got != fetcher.KindUsage {
+				t.Errorf("%s 的 kind: got %q, want %q", id, got, fetcher.KindUsage)
+			}
+		})
 	}
 }
 

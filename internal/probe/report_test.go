@@ -3,6 +3,8 @@ package probe
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -335,7 +337,43 @@ func TestFailReport_EmptyProvidersIsArrayNotNull(t *testing.T) {
 
 // ---- AC-1 / AC-7:入口 Run ----
 
-// TestRun_InvalidArgs_UsageAndExit2 R1:不带参数 / 未知参数 → usage + 退出 2。
+// envelope 解析失败信封,返回顶层键与几个关键字段。
+// 契约顶层 7 键:失败信封少一个键即红。
+func parseEnvelope(t *testing.T, out string) (map[string]json.RawMessage, string) {
+	t.Helper()
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(out), &m); err != nil {
+		t.Fatalf("stdout 不是合法 JSON 信封:%q(%v)", out, err)
+	}
+	if len(m) != 7 {
+		t.Errorf("信封顶层键数: got %d, want 7(%v)", len(m), m)
+	}
+	for _, want := range []string{"schema", "generated_at", "extended_mode", "enabled_limit", "enabled_count", "providers", "error"} {
+		if _, ok := m[want]; !ok {
+			t.Errorf("信封缺顶层键 %q(实际键:%v)", want, m)
+		}
+	}
+	if got := string(m["providers"]); got != "[]" {
+		t.Errorf("信封 providers: got %s, want []", got)
+	}
+	var e struct {
+		Schema       int    `json:"schema"`
+		ExtendedMode bool   `json:"extended_mode"`
+		EnabledLimit int    `json:"enabled_limit"`
+		EnabledCount int    `json:"enabled_count"`
+		Error        string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(out), &e); err != nil {
+		t.Fatalf("信封字段解析失败:%v", err)
+	}
+	if e.Schema != 1 || e.ExtendedMode || e.EnabledLimit != 3 || e.EnabledCount != 0 {
+		t.Errorf("信封顶层值不符 R3: %+v", e)
+	}
+	return m, e.Error
+}
+
+// TestRun_InvalidArgs_UsageAndExit2 R1:不带参数 / 不带 --json 的未知参数 → usage + 退出 2,
+// stdout 一个字节都不写(契约不适用)。
 func TestRun_InvalidArgs_UsageAndExit2(t *testing.T) {
 	cases := []struct {
 		name string
@@ -356,6 +394,49 @@ func TestRun_InvalidArgs_UsageAndExit2(t *testing.T) {
 		if !strings.Contains(errBuf.String(), "--json") {
 			t.Errorf("%s: stderr 应含 usage, got %q", c.name, errBuf.String())
 		}
+	}
+}
+
+// TestRun_JSONWithUnknownArg_FailureEnvelopeAndExit0 —— 判据 1 的靶子。
+// spec 约束 8:参数失败时仍输出一行同形状的合法 JSON 并退出 0。带 --json 时出现
+// 未知参数(含 `--json=1` 这种非逐字形)必须走失败信封,不许退回「usage + 2」。
+func TestRun_JSONWithUnknownArg_FailureEnvelopeAndExit0(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"--json 后跟未知开关", []string{"--json", "--nope"}},
+		{"未知开关在前", []string{"--nope", "--json"}},
+		{"等号形 --json=1", []string{"--json=1"}},
+		{"多余位置参数", []string{"--json", "extra"}},
+		{"多个未知参数", []string{"--json", "--nope", "--also-nope"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var out, errBuf strings.Builder
+			if code := Run(c.args, &out, &errBuf, fakeLookup(nil)); code != 0 {
+				t.Fatalf("带 --json 的参数失败必须退出 0: got %d(stdout=%q)", code, out.String())
+			}
+			if strings.Count(out.String(), "\n") != 0 {
+				t.Errorf("信封应恰好一行、内部无换行: got %q", out.String())
+			}
+			_, msg := parseEnvelope(t, out.String())
+			if msg == "" {
+				t.Error("信封 error 必须带文本,说明哪个参数不认")
+			}
+			if !strings.Contains(msg, "未知参数") {
+				t.Errorf("信封 error 应说明是未知参数: got %q", msg)
+			}
+		})
+	}
+}
+
+// TestRun_JSONUnknownArg_WriteFailureExitNonZero 信封路径写 stdout 失败时也不能
+// 退 0(约束 8:绝不允许空 stdout + exit 0)。
+func TestRun_JSONUnknownArg_WriteFailureExitNonZero(t *testing.T) {
+	var errBuf strings.Builder
+	if code := Run([]string{"--json", "--nope"}, brokenWriter{}, &errBuf, fakeLookup(nil)); code == 0 {
+		t.Error("参数失败的失败信封写 stdout 失败时必须退出非 0: got 0")
 	}
 }
 
@@ -407,6 +488,7 @@ func TestRun_WriteFailure_ExitNonZero(t *testing.T) {
 
 // TestRun_NoAppData_FailureEnvelope —— A7 的靶子。
 // 去掉 APPDATA 预检后 config.Load() 会吞错返回默认配置,error 变空串,本条必红。
+// 判据 2:顶层失败路径在往 stdout 写信封的同时,必须往 stderr 写一行诊断。
 func TestRun_NoAppData_FailureEnvelope(t *testing.T) {
 	t.Setenv("APPDATA", "")
 
@@ -434,6 +516,82 @@ func TestRun_NoAppData_FailureEnvelope(t *testing.T) {
 	}
 	if strings.Count(out.String(), "\n") != 0 {
 		t.Errorf("stdout 应恰好一行:%q", out.String())
+	}
+	if strings.TrimSpace(errBuf.String()) == "" {
+		t.Error("失败同时要写 stderr(spec §二 诊断旁路):stderr 为空")
+	}
+}
+
+// TestRun_ConfigFailureEnvelope_WritesStderr 判据 2:配置读取失败的出口——
+// stdout 一行同形状信封、stderr 一行诊断、退出 0。
+// 把 config.json 造成一个**目录**时 config.Load() 的 os.ReadFile 真的报错
+// (Windows: "Incorrect function",且 os.IsNotExist 为 false),走的才是 loadConfig
+// 的「config.Load() 返回 err」那条分支(与 APPDATA 缺失不同);
+// 注意 APPDATA 指向一个**文件**没用——Windows 下那是 ERROR_PATH_NOT_FOUND,
+// os.IsNotExist 为 true,Load() 会照旧吞错返回默认配置(见实现说明 r3 的「假设」)。
+func TestRun_ConfigFailureEnvelope_WritesStderr(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "quota-viewer", "config.json"), 0o700); err != nil {
+		t.Fatalf("造「config.json 是目录」的夹具失败:%v", err)
+	}
+	t.Setenv("APPDATA", dir)
+
+	var out, errBuf strings.Builder
+	if code := Run([]string{"--json"}, &out, &errBuf, nil); code != 0 {
+		t.Fatalf("配置读取失败必须退出 0: got %d", code)
+	}
+	_, msg := parseEnvelope(t, out.String())
+	if msg == "" {
+		t.Error("配置读取失败的信封必须带 error 文本,不能退化成成功形状")
+	}
+	if strings.Count(out.String(), "\n") != 0 {
+		t.Errorf("信封应恰好一行:%q", out.String())
+	}
+	if strings.TrimSpace(errBuf.String()) == "" {
+		t.Error("配置读取失败的失败信封必须同时写 stderr")
+	}
+}
+
+// TestRun_SingleProviderFailure_WritesNoStderr 判据 2 的取舍:单家抓取失败是业务失败,
+// 由记录里的 error 字段承载(spec 约束 5:单家失败不拖垮整体),不写 stderr。
+func TestRun_SingleProviderFailure_WritesNoStderr(t *testing.T) {
+	defs := map[string]fetcher.ProviderDef{
+		"kimi": fakeDef("kimi", "", fetcher.QuotaResult{Error: "上游 401"}),
+		"good": fakeDef("good", "", fetcher.QuotaResult{Percent: 26}),
+	}
+
+	var out, errBuf strings.Builder
+	if code := Run([]string{"--json"}, &out, &errBuf, fakeLookup(defs)); code != 0 {
+		t.Fatalf("单家失败仍退出 0: got %d", code)
+	}
+	if errBuf.String() != "" {
+		t.Errorf("业务失败不该写 stderr(噪声):got %q", errBuf.String())
+	}
+
+	var got struct {
+		Providers []struct {
+			ID    string `json:"id"`
+			Error string `json:"error"`
+		} `json:"providers"`
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(out.String()), &got); err != nil {
+		t.Fatalf("stdout 不是合法 JSON:%v", err)
+	}
+	if got.Error != "" {
+		t.Errorf("单家失败不是整体失败,顶层 error 应为空: got %q", got.Error)
+	}
+	found := false
+	for _, p := range got.Providers {
+		if p.ID == "kimi" {
+			found = true
+			if p.Error != "上游 401" {
+				t.Errorf("失败家的 error 应在记录里: got %q", p.Error)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("providers 里没有 kimi 记录:%q", out.String())
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -202,30 +203,49 @@ func NowLocal() time.Time {
 	return time.Now()
 }
 
-// Run 是 CLI 的入口逻辑(可测):参数不合法 → usage 打到 stderr 并返回 2;
-// --json → 一行 JSON 打到 wout 并返回 0(参数/配置失败也返回 0,失败写在 error
-// 字段里);写 stdout 失败(成功路径与失败信封路径一视同仁)返回 1——
-// 空 stdout + exit 0 是 spec 约束 8 明令禁止的形状。
+// Run 是 CLI 的入口逻辑(可测):
+//   - 带 --json 时:一行 JSON 打到 wout 并返回 0——参数失败与配置读取失败都出
+//     失败信封(spec 约束 8:参数或配置读取失败时仍输出一行同形状的合法 JSON
+//     并退出 0),失败同时写 error 字段与 stderr(spec §二「诊断旁路」);
+//   - 不带 --json(无参 / 未知参数):stderr 打 usage、stdout 一个字节都不写,返回 2;
+//   - 写 stdout 失败(成功路径与失败信封路径一视同仁)返回 1——空 stdout + exit 0
+//     是 spec 约束 8 明令禁止的形状,那是唯一的非 0 例外。
 func Run(args []string, wout, werr io.Writer, lookup Lookup) int {
 	wantJSON := false
+	unknown := ""
 	for _, a := range args {
-		switch a {
-		case "--json", "-json":
+		if a == "--json" || a == "-json" {
 			wantJSON = true
-		default:
-			writeUsage(werr, "未知参数: "+a)
-			return 2
+			continue
+		}
+		if unknown == "" {
+			unknown = "未知参数: " + a
+		}
+		// `--json=1` 这类「取值形」本身是参数失败(本开关是裸开关),但它同时声明了
+		// 「这次是按 JSON 模式调用」⇒ 下面照旧走失败信封,而不是 usage + 2。
+		if strings.HasPrefix(a, "--json=") || strings.HasPrefix(a, "-json=") {
+			wantJSON = true
 		}
 	}
 	if !wantJSON {
-		writeUsage(werr, "缺少 --json 参数")
+		msg := "缺少 --json 参数"
+		if unknown != "" {
+			msg = unknown
+		}
+		writeUsage(werr, msg)
 		return 2
 	}
 
 	now := NowLocal()
 	cfg, lookupFn, err := loadConfig(lookup)
-	if err != nil {
-		if !WriteReport(wout, FailReport(now, err.Error())) {
+	if err != nil || unknown != "" {
+		msg := unknown
+		if err != nil {
+			msg = err.Error()
+		}
+		// 顶层失败的诊断旁路:信封之外再往 stderr 写一行(spec §二)。
+		io.WriteString(werr, "quota-viewer-cli: "+msg+"\n")
+		if !WriteReport(wout, FailReport(now, msg)) {
 			return 1
 		}
 		return 0

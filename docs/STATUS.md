@@ -8,36 +8,37 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
-> 5. **直接跳到最新一条「会话记录：2026-10-14 01:40」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-14 16:05」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-14 01:40`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`b5537c2` on `master`（v1.3.0 的代码点；其后只有文档提交）
-> 📊 累计会话数：主文档 8 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-14 16:05`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`d6c09a4` on `master`（门面刷新文档点；其后应无新提交）
+> 📊 累计会话数：主文档 9 条，另有 10 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "b5537c2", "branch": "master", "dirty": false, "timestamp": "2026-10-14T01:40:00+08:00"} -->
+<!-- git-meta: {"last_commit": "d6c09a4", "branch": "master", "dirty": false, "timestamp": "2026-10-14T16:05:00+08:00"} -->
 
-- **日期**：2026-10-14 01:40
-- **会话摘要**：托盘图标单击唤出窗口到前台（撤销双击切换）——走完整流水线（三轴审票 → 1 票实现 → 逐票验收门 VERIFIED → 全范围静态双轴），并把这批 25 个提交推到 GitHub、发布 **v1.3.0**（附 exe）
+- **日期**：2026-10-14 16:05
+- **会话摘要**：门面刷新——GitHub About 从五家平台改到十家（纯英文，270 字符）+ 9 个新 topics；两份 README 补十家平台清单与官网链接、修正过时的格数表述、新增命令行探针与 Open Design 专节、改用实测体积数字。走单会话轻量路线（1 次审票 + 1 次动态验收门，VERIFIED），已推 master。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.3.0 已发布（2026-10-14，附 exe）**，master 与 origin/master 同步；本轮增量 = 托盘图标单击唤出窗口到前台（撤销双击切换）
-- 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent
-- Open Design 只能靠浏览器会话 Cookie 读额度（API key 读不到），端点见最新会话「关键上下文」
-- 下一步：非阻断清理批次 12 条待用户拍板（见 ROADMAP「Now」）；对端告知（探针可用 + 偏离清单）属仓外动作；STATUS 已超归档阈值（600+ 行），下个会话宜按任务组整组归档
-- 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建，worktree/副本里重建的 hash 必然不同；Gate Kit 的 `mutate` 在本机报假绿，变异协议用「手动施加 + sha1 核验」；Droid 当天实测可用（CLI 探针读 factory-droid 53%），非 DSH 侧子代理派发不再是死路
+- 当前阶段：**v1.3.0 已发布（2026-10-14，附 exe）+ 门面已刷新**，master 与 origin/master 同步在 `d6c09a4`；本轮增量 = GitHub About / topics / 两份 README（十家平台、命令行探针、Open Design 专节），零产品代码改动
+- 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**注册表 10 家但悬浮球同屏上限 9 格（普通 3 / 扩展 9）**——门面文档已显式写明
+- Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
+- 下一步：非阻断清理批次 12 条待用户拍板（见 ROADMAP「Now」）；STATUS 已超归档阈值（600+ 行），下个会话宜按任务组整组归档
+- 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**`.scratch/`、`.agents/`、`AGENTS.md`、`.video_agent/` 未跟踪且未被 `.gitignore` 覆盖** ⇒ 提交只能精确 `git add`，`git add -A` 会把内部笔记扫进公开仓库
+
 
 ---
 
@@ -48,19 +49,20 @@
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
 - **功能**：悬浮球（1-9 格动态，颜色=状态，方圆角）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证 + 扩展模式开关）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（Workspace ID + Token）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）、Open Design（浏览器会话 Cookie，Design Plan 5 小时/7 天窗口）
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（API Key，留空读 opencode CLI 凭证）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）、Open Design（浏览器会话 Cookie，Design Plan 5 小时/7 天窗口）
+- **同屏上限**：注册表 10 家，悬浮球同屏最多 9 格（普通模式 3 格 / 扩展模式 9 格，`config.go:35-36`）；此为用户拍板的「10 选 9」决策
 
 ## 当前分支与最近提交
 
 - **分支**：master
-- **HEAD**：`2d9031f`
+- **HEAD**：`d6c09a4`
 - **最近提交**：
-  - `2d9031f` - docs: README 补齐 Factory Droid / MiniMax / Open Design 三家 Provider 表格行
-  - `1881d69` - chore: 修正两处与事实不符的注释
-  - `c306903` - docs: 速查表补齐三家 + MiniMax 与 Open Design 特殊说明
-  - `bb276a7` - fix: open-design 禁止跟随 302 跳转,并把 302 并入 Cookie 失效分支
-  - `a74d370` - feat: 接入第 10 家额度 Provider Open Design
-- **Release**：v1.2.0（2026-09-30，Latest，附 exe）← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0（十平台增量未发版）
+  - `d6c09a4` - docs: README 补齐十家平台清单与官网链接，新增命令行探针与 Open Design 章节
+  - `63f58ea` - docs: STATUS 补记托盘菜单退出项已实测闭环(4/4)与实例重启
+  - `ff5607d` - docs: 追加 2026-10-14 会话记录与 wiki 同步(托盘单击唤出/行号锚点)+ROADMAP 对账
+  - `b5537c2` - docs: 托盘注释订正(双击净效果是三段闪烁/事件转发去向)+README 注明双击不再切换
+  - `3530e59` - feat: 托盘单击唤出悬浮球到前台（撤销双击切换显示/隐藏）
+- **Release**：v1.3.0（2026-10-14，Latest，附 exe）← v1.2.0 ← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0（本轮不发新 release）
 
 ---
 
@@ -634,3 +636,59 @@
 - **v1.3.0 覆盖的可见变化**（自 v1.2.0）：MiniMax 与 Open Design 两家新平台、扩展模式最多 9 格、无界面 `--json` 探针 `quota-viewer-cli.exe`、OpenCode Go 官方 API Key 通道、Factory Droid 在 Standard 限流时展示 Core 池、托盘单击唤出到前台（双击不再切换）。
 - **探针与日志**：worker 探针 `.scratch/tray-activate/verifier-probes/tray-activate.ps1`（`-ProcId` / `-Scenario hidden|covered|idempotent|dclick`）；验收门探针 `.scratch/tray-activate/verifier-probes/gate-r1/`（含 `dclick-fine.ps1` 真双击采样手法与库侧插桩日志）。
 - Wiki 指针状态：`docs/wiki/` 12 文件（00–10 + 99），本轮同步 00/02/03/04/06 五页，锚点刷到 `b5537c2`；99 归档页 10 条。
+
+---
+
+## 会话记录：2026-10-14 16:05
+
+> **会话摘要**：门面刷新——GitHub About 从五家平台改到十家 + 两份 README 补齐十家平台清单、官网链接、命令行探针与 Open Design 专节。单会话轻量路线，1 次审票 + 1 次动态验收门（VERIFIED），零产品代码改动，已推 master
+> **Git**：`d6c09a4` on `master`（已与 origin/master 同步）
+> **任务组**：门面刷新（`.scratch/readme-promo-20261014/`，未入库）
+> **任务组状态**：已完成
+
+### 本次完成
+
+- **GitHub About / topics**：描述从「五家平台 + 中英混排」改为**纯英文 270 字符**，十家平台英文渲染名逐个列出，并含 `quota`、`~11 MB exe`、`~60 MB RAM`、`tray`、`JSON CLI probe`；追加 9 个 topics（`open-design`/`minimax`/`deepseek`/`ollama`/`kimi`/`opencode`/`ai-quota`/`quota-monitor`/`windows`），原有 7 个全保留，共 16 个；`homepageUrl` 保持为空。原描述与回滚方法已记进票面。
+- **两份 README（`d6c09a4`，2 文件 +88/−34）**：① 顶部新增十家平台一行清单（平台名带官网链接）；② 紧跟一行写明**同屏上限 9 格**（普通 3 / 扩展 9）；③ 修正过时表述（英文 `1-3 cells`/`max 3, min 1`、中文 `1-3 格`/`最多 3 个` → 普通上限 3 / 扩展上限 9，并补 1-3 单行、4 格 2×2、5-9 格 3 列布局）；④ 平台表格平台名改为官网链接并新增「类型」列（usage / balance，DeepSeek 余额型一眼可辨）；⑤ 新增「命令行探针」小节（产物名、构建命令、`--json` 一行 JSON、无参退出码 2）；⑥ 新增「Open Design 怎么监控」小节（Design Plan 5 小时 / 7 天窗口、必须用浏览器会话 Cookie 并解释 `sk-amr-` key 401、从 `open-design.ai/cloud/dashboard` 取 Cookie）；⑦ 项目结构树补 `cmd/quotaviewer` 与 `internal/probe`；⑧ 体积改用实测值（exe 10.86 MB / 工作集 59.6 MB），删掉旧 About 里未经核实的 `~50MB vs Electron 200MB+` 对比。
+- **审票（compact，1 个 verifier 顺序跑三轴）**：4 条 blocking + 若干 important，全部为票面/spec 的机械缺陷，主会话按纪律直接修正并留痕：① AS1「纯英文」与「逐字列十家平台名」自相矛盾（讯飞星辰/小米 MiMo 是中文名）→ 钉死英文渲染口径；② AS3 判据只有中文 pattern，对英文 README 恒零命中（**假绿**）→ 两份各配一组；③ AS8 白名单含 tracker，与「内部笔记不入公开仓」冲突 → 删去；④ 删无源 Electron 对比。**并采纳其指出的最危险失败点**，新增 AS10（同屏 9 格口径）：注册表 10 家但上限 9 格，若不写明，用户勾满十家会看到第十格无声消失。
+- **动态验收门 VERIFIED**（独立实例、亲跑证据）：十条 AS 全过；60 条机械断言 0 失败；**14 个变异体全部被杀死**（文档侧 7 个在副本上做、每例 sha1 还原校验通过；元数据侧 7 个纯内存字符串，未写远端），证明判据有牙而非恒真；AS4 由**真实编译运行的二进制**证明（无参 `exit=2` + stdout 0 字节 + stderr usage；`--json` → `exit=0` 单行合法 JSON）；AS5 两份各 10 链接、逐个相同、11 个绝对 URL 全 200；AS8 diff 只含两份 README；AS9 v1.3.0 仍 Latest、exe 时间戳未变。
+- **事实源**：本次改动引用的每个数字/端点都回源到代码行号（格数上限 `config.go:35-36`、刷新默认 15 分钟 `config.go:91`、CLI 退出码 `probe.go:206-259`、Open Design 必须 Cookie `opendesign.go:22`/`:222`、体积为本次实测）。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 走单会话轻量路线 | 纯文档 + 仓元数据、零代码、用户明确批准；省掉静态 code-review 轴（无代码可审） | 完整规划/执行路线（为 2 份 README 出票派 worker，明显过重） |
+| About 用纯英文 | GitHub 描述在搜索与列表页展示，英文覆盖更广；双语会挤掉十家平台名 | 保持中英双语（350 字符内塞十家会砍掉功能描述） |
+| 新增 AS10「同屏上限 9 格」 | 门面把「十家」推到最高可见度，却不说同屏上限，用户勾满十家会看到第十格无声消失——本仓已有同类前车之鉴（≤3 静默钳制曾悄悄关掉最后一个 provider） | 只写「支持十家」（验收照样全绿，但用户会踩坑） |
+| 不发新 release | 纯文档改动，v1.3.0 的能力描述已经正确，只是写得不够全 | 发 v1.3.1（无代码变化，属噪音） |
+| `.gitignore` 不改 | 是否忽略 `.scratch/`/`.agents/` 是范围外决策，涉「内部笔记不发布」从纪律变机制 | 顺手加 ignore（超出本票范围，留给用户拍板） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 修改 | `README.md` | 十家平台清单 + 官网链接 + 命令行探针 + Open Design 专节 |
+| 修改 | `README.zh-CN.md` | 与英文版逐节同构 |
+| 修改（仓外） | GitHub 仓库 description / topics | 经 `gh repo edit` 写入，无仓内文件 |
+| 新增 | `.scratch/readme-promo-20261014/{spec.md, issues/01, issues/02}` | spec / 票 / 裁决（未入库） |
+| 新增 | `.scratch/readme-promo-20261014/verifier-probes/` | 两个门的断言与变异脚本（未入库） |
+
+### 未完成 & 下一步
+
+1. 非阻断清理批次 12 条仍待用户拍板（ROADMAP「Now」）；对端告知报文属仓外动作，仍挂着。
+2. 本次验收门给 5 条非阻断 lead（不构成任何 AS 失败），已记进票 02 的 `## Verdicts`：AS7 阈值子项在本 README 上恒真（两份 0 个百分号 token）；探针小节可补 `--json=1` 走 JSON 信封退出 0 的说明；「默认预算 ¥300」写死币种而代码支持 USD；About 写 RAM、README 写 working set，同一数字两种口径；`Windows 10+` 支持基线在本仓查不到出处。
+3. **`Windows 10+` 出处未定**——门指出仓内无证据（只有 `go-webview2` 依赖，依赖存在 ≠ 支持基线），该行是本次 diff 的未改动上下文行；需联网核 Wails 官方平台要求后再定措辞。
+4. STATUS 已超归档阈值（600+ 行），本轮未归档。
+
+### 已知问题 & 注意事项
+
+- **`.scratch/`、`.agents/`、`AGENTS.md`、`.video_agent/` 未跟踪且未被 `.gitignore` 覆盖**（`.gitignore` 只有 `build/bin`、`node_modules`）⇒ 提交只能精确 `git add`；漏写「禁 `git add -A`」的票会留真实事故面。是否加 ignore **待用户拍板**。
+- 其余见上方「已知问题与注意事项」（构建字节与目录绑定、托盘库点击语义、注入点击探针的 DPI 硬坑）。
+
+### 关键上下文
+
+- **交付态**：`d6c09a4` 已推 origin/master；v1.3.0 仍是 Latest；`build/bin/quota-viewer.exe` sha1 `98173463E712B14F648D157CE602FDA81D650947` 未变（本轮未重建）。
+- **门给出的判据锚点**：README.md sha1 `C1CFADF6B7AE601BB31F22A766FDA9A69AA576C1`、README.zh-CN.md sha1 `2FC23B0DCFD97C8DFD9B5CCC1B114E3D61E7F95C`；此 hash 之后若再改 README 或仓元数据，本次验收即失效需重验。
+- **事实源**：给门面文档写数字前先钉一张带 `文件:行号` 的表（本会话 spec 的「事实源」段即模板）。
+- Wiki 指针状态：`docs/wiki/` 12 文件（00–10 + 99），本轮零代码改动，wiki 无漂移；99 归档页 10 条。

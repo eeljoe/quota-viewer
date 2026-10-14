@@ -1,2 +1,14 @@
 build/bin
 node_modules
+
+# ==== 内部过程产物与非公开笔记（2026-10-14 起不再入库）====
+# 公开仓库只发布产品与其对外文档；开发笔记 / 探针 / 计划留本地。
+.scratch/
+.agents/
+.video_agent/
+.superpowers/
+docs/superpowers/
+.opencode/
+out/
+AGENTS.md
+ROADMAP.md

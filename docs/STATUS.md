@@ -8,6 +8,7 @@
 > 2. 阅读下方「项目概况」了解项目基本信息
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
+>    - 注：`ROADMAP.md` 自 2026-10-14 起**仅在本地存在、不入公开仓库**（与 `.scratch/`、`.agents/` 同）；若你拿到的是 clone，此文件缺席属正常，计划内容可临时向维护者索取
 > 5. **直接跳到最新一条「会话记录：2026-10-14 16:05」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
@@ -23,21 +24,22 @@
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "d6c09a4", "branch": "master", "dirty": false, "timestamp": "2026-10-14T16:05:00+08:00"} -->
+<!-- git-meta: {"last_commit": "91dacb0", "branch": "master", "dirty": false, "timestamp": "2026-10-14T17:15:00+08:00"} -->
 
-- **日期**：2026-10-14 16:05
-- **会话摘要**：门面刷新——GitHub About 从五家平台改到十家（纯英文，270 字符）+ 9 个新 topics；两份 README 补十家平台清单与官网链接、修正过时的格数表述、新增命令行探针与 Open Design 专节、改用实测体积数字。走单会话轻量路线（1 次审票 + 1 次动态验收门，VERIFIED），已推 master。
+- **日期**：2026-10-14 17:15
+- **会话摘要**：仓库收口——内部过程产物移出版本控制（`.gitignore` 补全忽略规则；`ROADMAP.md` 与 `.superpowers/sdd/` 取消跟踪），并**重写历史**清除已推送的 `.superpowers/sdd/task-8-9-fix-report.md` 与 `docs/superpowers/` 下的计划/spec；重写后强推 master 并重建全部 6 个标签。代码与对外文档零变化，内部文件全部保留在本地磁盘。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.3.0 已发布（2026-10-14，附 exe）+ 门面已刷新**，master 与 origin/master 同步在 `d6c09a4`；本轮增量 = GitHub About / topics / 两份 README（十家平台、命令行探针、Open Design 专节），零产品代码改动
+- 当前阶段：**v1.3.0 已发布（2026-10-14，附 exe）+ 门面已刷新 + 仓库已收口**，master 与 origin/master 同步在 `91dacb0`（历史已重写，旧 hash 全部作废）；本轮增量 = 内部过程产物移出版本控制
 - 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**注册表 10 家但悬浮球同屏上限 9 格（普通 3 / 扩展 9）**——门面文档已显式写明
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
-- 下一步：非阻断清理批次 12 条待用户拍板（见 ROADMAP「Now」）；STATUS 已超归档阈值（600+ 行），下个会话宜按任务组整组归档
-- 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**`.scratch/`、`.agents/`、`AGENTS.md`、`.video_agent/` 未跟踪且未被 `.gitignore` 覆盖** ⇒ 提交只能精确 `git add`，`git add -A` 会把内部笔记扫进公开仓库
+- 下一步：非阻断清理批次 12 条待用户拍板（见本地 `ROADMAP.md`「Now」，该文件已不入仓库）；STATUS 已超归档阈值（600+ 行），下个会话宜按任务组整组归档
+- 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**公开仓库自 2026-10-14 起只含产品代码与对外文档**——`.scratch/`、`.agents/`、`.video_agent/`、`.superpowers/`、`docs/superpowers/`、`AGENTS.md`、`ROADMAP.md` 全部已进 `.gitignore`，提交仍应精确 `git add` 而非 `-A`（ignore 只管未跟踪文件，已跟踪文件不受保护）
+
 
 
 ---
@@ -692,3 +694,61 @@
 - **门给出的判据锚点**：README.md sha1 `C1CFADF6B7AE601BB31F22A766FDA9A69AA576C1`、README.zh-CN.md sha1 `2FC23B0DCFD97C8DFD9B5CCC1B114E3D61E7F95C`；此 hash 之后若再改 README 或仓元数据，本次验收即失效需重验。
 - **事实源**：给门面文档写数字前先钉一张带 `文件:行号` 的表（本会话 spec 的「事实源」段即模板）。
 - Wiki 指针状态：`docs/wiki/` 12 文件（00–10 + 99），本轮零代码改动，wiki 无漂移；99 归档页 10 条。
+
+---
+
+## 会话记录：2026-10-14 17:15
+
+> **会话摘要**：仓库收口——内部过程产物移出版本控制（补全 `.gitignore`、`ROADMAP.md` 与 `.superpowers/` 取消跟踪），并重写全历史清除已推送的内部文档；强推 master、重建 6 个标签。**代码与对外文档零变化**
+> **Git**：`91dacb0` on `master`（历史已重写，旧 hash 作废）
+> **任务组**：仓库收口（无 spec，用户直接指令）
+> **任务组状态**：已完成
+
+### 本次完成
+
+- **起因**：2026-10-14 门面刷新会话的验收门指出 `.scratch/`、`.agents/`、`AGENTS.md`、`.video_agent/` 处于「未跟踪但无 ignore 兜底」状态——`git add -A` 会把内部笔记扫进公开仓库。用户随后拍板加 ignore，并要求把 `ROADMAP.md`、`.superpowers/sdd/` 一并收口。
+- **`.gitignore` 补全**：新增忽略 `.scratch/`、`.agents/`、`.video_agent/`、`.superpowers/`、`docs/superpowers/`、`.opencode/`、`out/`、`AGENTS.md`、`ROADMAP.md`（原有 `build/bin`、`node_modules` 保留）。
+- **取消跟踪**：`git rm --cached ROADMAP.md` 与 `.superpowers/`（55 个文件），**磁盘文件全部保留**（本地照旧读写，只是不再随仓库发布）。
+- **历史重写**（`python -m git_filter_repo --invert-paths --force`）：清除 `.superpowers/`、`docs/superpowers/`、`ROADMAP.md` 三条路径的全历史痕迹。重写前先在备份镜像上演练确认，再在真仓库执行。**提交数 119 → 118**，6 个标签全部重建指向，代码与文档完好（89 个已跟踪文件、`internal/` 34、`frontend/` 17、`docs/wiki/` 13）。
+- **凭证扫描（重写前）**：遍历全部 commit 扫 `sk-`/`fk-`/`oc_sk-`/`sk-cp-`/`sk-amr-`/`user_`/`Bearer`/JWT 等特征串，**命中 0**——历史中从未提交过凭证；同目录的 `decrypt_cookies.py`、`extracted_cookies.json` 等也从未入过 git。
+- **安全网**：重写前做了三重备份（`git bundle --all` 0.62 MB、`--mirror` 完整克隆、内部文件与 ROADMAP/AGENTS 副本），存于 `C:\Users\joe\quota-viewer-git-backup-20261014\`。
+- **副作用修补**：公开的 `docs/STATUS.md` 有 20 处引用 `ROADMAP.md`（该文件已不在仓库），在阅读指南处加注说明「该文件仅本地存在」。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| `.gitignore` 保留公开跟踪 | clone 者需要忽略规则，否则本地会看到一堆噪音；它是机制而非内部笔记 | 连 `.gitignore` 也撤（用户候选之一，未选） |
+| `ROADMAP.md` 撤出公开仓库 | 滚动计划属内部思路，对公开工具仓意义不大；用户选定 | 保留公开（原状） |
+| 清历史而非仅停止跟踪 | 用户明确选「连历史一起清除」，`.superpowers/sdd/task-8-9-fix-report.md` 确曾推到 GitHub | 只停止跟踪（更安全，但旧提交仍可翻到） |
+| 重写前做三重备份 + 备份上演练 | 历史重写不可逆、影响 3 个 fork 与全部 tag | 直接改（不可接受） |
+| 未把 `docs/STATUS.md` 一并撤下 | 用户未选该项；它是项目历史与交接面，且 `docs/wiki/` 与之互引 | 一并撤下（用户候选之一，未选） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 修改 | `.gitignore` | 补 9 条内部路径忽略规则 |
+| 修改 | `docs/STATUS.md` | 头部/TL;DR 更新 + ROADMAP 缺席加注 + 本会话记录 |
+| 取消跟踪（保留磁盘） | `ROADMAP.md` | 仍在本地，24 行 |
+| 取消跟踪（保留磁盘） | `.superpowers/`（55 文件） | Claude Code superpowers 插件产物，2026-07-17 开发期留下 |
+| 未跟踪（新增 ignore） | `.scratch/`、`.agents/`、`.video_agent/`、`AGENTS.md`、`.opencode/`、`out/` | 全部仅本地 |
+
+### 未完成 & 下一步
+
+1. **3 个 fork 已失联**（`mr-dadong`、`itsharex`、`szxufan`）：历史重写后它们的 base 不存在，需 fork 主自行同步或删除重建。已接受此代价。
+2. **旧对象可能在 GitHub 侧缓存一段时间**：强推后旧 commit 不再可达，但 GitHub 的 GC 是异步的；如需立即彻底清除可联系 GitHub Support。
+3. 非阻断清理批次 12 条、门面刷新遗留 3 条小项仍待办（见本地 `ROADMAP.md`）。
+4. STATUS 已超归档阈值（695 行），本轮未归档。
+
+### 已知问题 & 注意事项
+
+- **历史重写的长期影响**：任何在 2026-10-14 17:15 之前 clone 过本仓的副本，其本地历史与远端已分叉；协作者需 `git fetch && git reset --hard origin/master` 或重新 clone。
+- 备份目录 `C:\Users\joe\quota-viewer-git-backup-20261014\` 含完整旧历史与内部文件副本，确认无误后可自行删除。
+- `.superpowers/` 的来源：本机 `~/.claude/plugins/marketplaces/superpowers-marketplace` 装的 Claude Code 插件，在 2026-07-17 开发首日写入 `.superpowers/sdd/`（含 20 个 Python 探针脚本、8 个 diff、25 个 md 报告）。该目录与 `docs/superpowers/`（早期 spec/plan）现已全部排除在版本控制外。
+
+### 关键上下文
+
+- **重写工具**：`python -m git_filter_repo`（模块在 `C:\Users\joe\AppData\Roaming\Python\Python313\site-packages`，`git filter-repo` 命令本身不在 PATH）；它默认会移除 `origin` 远端，需事后 `git remote add` 接回——本次已接回 `git@github.com:eeljoe/quota-viewer.git`。
+- **重写后 hash 全部作废**：此前 STATUS/wiki 里记录的任何 commit hash（如 `d6c09a4`、`b5537c2`）在本地与远端都已不存在，仅存在于备份 bundle 中。
+- Wiki 指针状态：`docs/wiki/` 13 文件（00–10 + 99 + `.covered-files`），本轮零代码改动，wiki 无漂移。

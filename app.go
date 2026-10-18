@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -120,11 +122,36 @@ func (a *App) Refresh() []fetcher.QuotaResult {
 
 // ProviderInput 是前端提交的 Provider 状态。
 // 凭证字段空字符串 = 不修改(避免掩码回写覆盖真实值)。
+// Extra 是第 2..N 组凭证,按 Key 对齐到已有组;未提交的组即视为删除。
 type ProviderInput struct {
-	ID      string            `json:"id"`
-	Enabled bool              `json:"enabled"`
-	Creds   map[string]string `json:"creds"`
-	Budget  float64           `json:"budget"`
+	ID      string             `json:"id"`
+	Enabled bool               `json:"enabled"`
+	Creds   map[string]string  `json:"creds"`
+	Budget  float64            `json:"budget"`
+	Extra   []config.CredGroup `json:"extra"`
+}
+
+// maskCredSet 对一组凭证逐字段掩码。
+func maskCredSet(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = maskSecret(v)
+	}
+	return out
+}
+
+// mergeCredsInto 把前端提交的一组凭证合并进已有值并返回合并结果:
+// 非空字段覆盖,空字段 = 不修改(掩码回显时前端提交的是空串)。
+func mergeCredsInto(dst map[string]string, in map[string]string, fields []fetcher.CredentialField) map[string]string {
+	if dst == nil {
+		dst = map[string]string{}
+	}
+	for _, f := range fields {
+		if v, ok := in[f.Key]; ok && v != "" {
+			dst[f.Key] = config.NormalizeCookieInput(v)
+		}
+	}
+	return dst
 }
 
 // GetConfig 返回当前配置(凭证做掩码)与全部 Provider 元数据。
@@ -142,9 +169,11 @@ func (a *App) GetConfig() map[string]interface{} {
 	for _, def := range fetcher.GetAll() {
 		pc, ok := cur[def.ID]
 		creds := map[string]string{}
+		extra := make([]map[string]interface{}, 0, len(pc.Extra))
 		if ok {
-			for k, v := range pc.Creds {
-				creds[k] = maskSecret(v)
+			creds = maskCredSet(pc.Creds)
+			for _, g := range pc.Extra {
+				extra = append(extra, map[string]interface{}{"key": g.Key, "creds": maskCredSet(g.Creds)})
 			}
 		}
 		fields := make([]map[string]string, 0, len(def.Fields))
@@ -162,6 +191,7 @@ func (a *App) GetConfig() map[string]interface{} {
 			"login_url": def.LoginURL,
 			"fields":    fields,
 			"creds":     creds,
+			"extra":     extra,
 			"budget":    pc.Budget,
 		})
 	}
@@ -172,38 +202,44 @@ func (a *App) GetConfig() map[string]interface{} {
 		"ball_x":               a.cfg.BallX,
 		"ball_y":               a.cfg.BallY,
 		"extended_mode":        a.cfg.ExtendedMode,
+		"object_limit":         config.MaxObjects(a.cfg.ExtendedMode),
+		"object_count":         config.CountObjects(a.cfg.Providers),
 	}
 }
 
-// SaveConfig 保存 Provider 配置。启用数量钳制:普通模式 1-3 个,扩展模式 1-9 个(后端钳制)。
+// SaveConfig 保存 Provider 配置。监控对象数钳制:普通模式最多 9 个,扩展模式 16 个(后端钳制)。
 func (a *App) SaveConfig(providers []ProviderInput, refreshMin int, extendedMode bool) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	limit := config.EnabledLimit(extendedMode)
+	limit := config.MaxObjects(extendedMode)
 
-	// 1) 钳制启用数量:0 个 → 全部启用(再由上限裁掉超出者);超过上限 → 保留前 limit 个
-	enabledCount := 0
+	// 1) 钳制监控对象数:0 个 → 全部启用(再由上限裁掉超出者);超过上限 → 按顺序保留到上限为止。
+	//    对象数 = 各启用 Provider 的凭证组数之和(套餐卡数要抓完才知道,展示层再截断)。
+	enabledObjects := 0
 	for _, p := range providers {
 		if p.Enabled {
-			enabledCount++
+			enabledObjects += len(config.ProviderConfig{Extra: p.Extra}.CredSets())
 		}
 	}
-	if enabledCount == 0 {
+	if enabledObjects == 0 {
 		for i := range providers {
 			providers[i].Enabled = true
 		}
-		enabledCount = len(providers)
+		enabledObjects = len(providers)
 	}
-	if enabledCount > limit {
+	if enabledObjects > limit {
 		kept := 0
 		for i := range providers {
-			if providers[i].Enabled {
-				kept++
-				if kept > limit {
-					providers[i].Enabled = false
-				}
+			if !providers[i].Enabled {
+				continue
 			}
+			cost := len(config.ProviderConfig{Extra: providers[i].Extra}.CredSets())
+			if kept+cost > limit {
+				providers[i].Enabled = false
+				continue
+			}
+			kept += cost
 		}
 	}
 	a.cfg.ExtendedMode = extendedMode
@@ -228,14 +264,30 @@ func (a *App) SaveConfig(providers []ProviderInput, refreshMin int, extendedMode
 		pc := &a.cfg.Providers[idx]
 		pc.Enabled = in.Enabled
 		pc.Budget = in.Budget
-		if pc.Creds == nil {
-			pc.Creds = map[string]string{}
+
+		pc.Creds = mergeCredsInto(pc.Creds, in.Creds, def.Fields)
+
+		// 附加凭证组:按稳定 Key 对齐到已有组(删中间一行不会让后面的值整体错位),
+		// 未提交的组即删除;合并后全空的组丢弃(用户加了行没填内容)。
+		byKey := make(map[string]config.CredGroup, len(pc.Extra))
+		for _, g := range pc.Extra {
+			byKey[g.Key] = g
 		}
-		for _, f := range def.Fields {
-			if v, ok := in.Creds[f.Key]; ok && v != "" {
-				pc.Creds[f.Key] = config.NormalizeCookieInput(v)
+		merged := make([]config.CredGroup, 0, len(in.Extra))
+		usedKeys := map[string]bool{}
+		for i, g := range in.Extra {
+			key := g.Key
+			if key == "" || usedKeys[key] {
+				key = fmt.Sprintf("%s#%d", in.ID, i)
 			}
+			usedKeys[key] = true
+			cur := mergeCredsInto(byKey[key].Creds, g.Creds, def.Fields)
+			if config.CredGroupEmpty(cur) {
+				continue
+			}
+			merged = append(merged, config.CredGroup{Key: key, Creds: cur})
 		}
+		pc.Extra = merged
 	}
 
 	// 3) 按注册表顺序重排(展示顺序固定)
@@ -265,27 +317,53 @@ func (a *App) SaveConfig(providers []ProviderInput, refreshMin int, extendedMode
 }
 
 // TestConnection 测试单个平台连接是否可用。
-func (a *App) TestConnection(platform string) string {
+// credIndex 选第几组凭证(0 = 主凭证);越界回落到主凭证。
+// 多套餐平台会一次返回多张卡,逐张校验后汇总回报。
+func (a *App) TestConnection(platform string, credIndex int) string {
 	def, ok := fetcher.Get(platform)
 	if !ok {
 		return "未知平台"
 	}
 
 	a.mu.Lock()
-	var creds map[string]string
+	var sets []map[string]string
 	for _, p := range a.cfg.Providers {
 		if p.ID == platform {
-			creds = p.Creds
+			sets = p.CredSets()
 			break
 		}
 	}
 	a.mu.Unlock()
 
-	result := def.Build(creds).Fetch()
-	if result.Error != "" {
-		return "失败: " + result.Error
+	if credIndex < 0 || credIndex >= len(sets) {
+		credIndex = 0
 	}
-	return "成功: " + result.Remaining
+	var creds map[string]string
+	if len(sets) > 0 {
+		creds = sets[credIndex]
+	}
+
+	results := fetcher.FetchAll(def.Build(creds))
+	for _, r := range results {
+		if r.Error != "" {
+			return "失败: " + r.Error
+		}
+	}
+	if len(results) == 0 {
+		return "失败: 无返回数据"
+	}
+	if len(results) == 1 {
+		return "成功: " + results[0].Remaining
+	}
+	parts := make([]string, 0, len(results))
+	for _, r := range results {
+		name := r.SubLabel
+		if name == "" {
+			name = "套餐"
+		}
+		parts = append(parts, name+" "+r.Remaining)
+	}
+	return fmt.Sprintf("成功: %d 个监控对象 —— %s", len(results), strings.Join(parts, " / "))
 }
 
 // OpenLoginPage 用默认浏览器打开 URL。
@@ -407,47 +485,69 @@ func anchoredPos(ballX, ballY, w, h, ballPhys, rx, ry, rw, rh, margin int) (int,
 	return x, y
 }
 
-// fetchAll 并发抓取所有已启用的 Provider(普通模式最多 3 个,扩展模式最多 9 个),
-// 结果顺序 = 注册表顺序。
+// fetchAll 并发抓取所有已启用的监控对象。
+//
+// 一个监控对象 = 一组凭证 × 一张套餐卡:每家 Provider 按凭证组展开成若干任务,
+// 每组凭证再按 fetcher 返回的套餐卡展开成若干结果。结果顺序 =
+// 注册表顺序 → 凭证组顺序 → 套餐卡顺序(与 probe 探针同口径)。
+//
+// 这里不截断:悬浮球的格数上限由前端按 enabled_mode 计算并在溢出时显示 "+N",
+// 展开面板永远列全部对象。截断交给展示层,抓取层保持全量。
 func (a *App) fetchAll() []fetcher.QuotaResult {
 	a.mu.Lock()
 	cfg := *a.cfg
 	a.mu.Unlock()
 
-	limit := config.EnabledLimit(cfg.ExtendedMode)
-	enabled := make([]config.ProviderConfig, 0, limit)
+	type job struct {
+		p      config.ProviderConfig
+		def    fetcher.ProviderDef
+		creds  map[string]string
+		credNo int
+		known  bool
+	}
+
+	var jobs []job
 	for _, p := range cfg.Providers {
-		if p.Enabled {
-			enabled = append(enabled, p)
-			if len(enabled) == limit {
-				break
-			}
+		if !p.Enabled {
+			continue
+		}
+		def, ok := fetcher.Get(p.ID)
+		sets := p.CredSets()
+		for i, creds := range sets {
+			jobs = append(jobs, job{p: p, def: def, creds: creds, credNo: i, known: ok})
 		}
 	}
 
-	results := make([]fetcher.QuotaResult, len(enabled))
+	perJob := make([][]fetcher.QuotaResult, len(jobs))
 	var wg sync.WaitGroup
-	for i, p := range enabled {
-		def, ok := fetcher.Get(p.ID)
-		if !ok {
-			results[i] = fetcher.QuotaResult{Platform: p.ID, Error: "未知平台"}
-			continue
-		}
+	for i := range jobs {
 		wg.Add(1)
-		go func(i int, p config.ProviderConfig, def fetcher.ProviderDef) {
+		go func(i int, j job) {
 			defer wg.Done()
-			r := def.Build(p.Creds).Fetch()
-			r.ID = def.ID
-			r.Abbr = def.Abbr
-			if r.Kind == "" {
-				r.Kind = fetcher.KindUsage
+			if !j.known {
+				perJob[i] = []fetcher.QuotaResult{{Platform: j.p.ID, Error: "未知平台"}}
+				return
 			}
-			fetcher.ApplyBudget(&r, p.Budget)
-			results[i] = r
-		}(i, p, def)
+			rs := fetcher.FetchAll(j.def.Build(j.creds))
+			credCount := len(j.p.CredSets())
+			for k := range rs {
+				rs[k].ID = j.def.ID
+				if rs[k].Kind == "" {
+					rs[k].Kind = fetcher.KindUsage
+				}
+				// 身份归一(缩写/后缀/slot)与 probe 共用 SettleIdentity。
+				fetcher.SettleIdentity(&rs[k], j.def, j.credNo, k, len(rs), credCount)
+				fetcher.ApplyBudget(&rs[k], j.p.Budget)
+			}
+			perJob[i] = rs
+		}(i, jobs[i])
 	}
 	wg.Wait()
 
+	results := make([]fetcher.QuotaResult, 0, len(jobs))
+	for _, rs := range perJob {
+		results = append(results, rs...)
+	}
 	return results
 }
 

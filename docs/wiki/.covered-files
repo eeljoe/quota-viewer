@@ -25,6 +25,8 @@ internal/config/config.go
 internal/config/cookie.go
 internal/fetcher/
 internal/fetcher/*.go
+internal/fetcher/abbr.go
+internal/fetcher/abbr_test.go
 internal/fetcher/budget.go
 internal/fetcher/format.go
 internal/fetcher/kimi_test.go

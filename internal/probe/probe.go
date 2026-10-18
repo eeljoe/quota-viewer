@@ -5,6 +5,7 @@ package probe
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -16,7 +17,10 @@ import (
 )
 
 // schemaVersion 是顶层 schema 的固定值。
-const schemaVersion = 1
+//
+// 2 起:记录从"一家 Provider 一条"改为"一个监控对象一条",并新增 slot / sub_label
+// 两个键(纯增量,按名取键的旧消费方不受影响)。
+const schemaVersion = 2
 
 // reportTimeFormat 是 generated_at 的格式(RFC3339 带本地偏移)。
 const reportTimeFormat = time.RFC3339
@@ -33,16 +37,21 @@ type Report struct {
 	Schema       int            `json:"schema"`
 	GeneratedAt  string         `json:"generated_at"`
 	ExtendedMode bool           `json:"extended_mode"`
-	EnabledLimit int            `json:"enabled_limit"`
+	EnabledLimit int            `json:"enabled_limit"` // 悬浮球可显示的监控对象上限(普通 9 / 扩展 16)
 	EnabledCount int            `json:"enabled_count"`
 	Providers    []ProviderLine `json:"providers"`
 	Error        string         `json:"error"`
 }
 
-// ProviderLine 是每家 Provider 的记录(8 个键始终存在)。
+// ProviderLine 是每个监控对象的记录(10 个键始终存在)。
 // 数值/字符串字段用指针,否则失败记录只能是 0 / "" 而不是 null。
+//
+// Slot / SubLabel 自 schema 2 起加入:一格 = 一组凭证 × 一张套餐卡,
+// 多 Key / 多套餐时同一家会有多条记录,靠 slot 区分(否则消费方无从分辨哪条是哪把 Key)。
 type ProviderLine struct {
 	ID               string   `json:"id"`
+	Slot             string   `json:"slot"`
+	SubLabel         string   `json:"sub_label"`
 	Kind             string   `json:"kind"`
 	Percent          *float64 `json:"percent"`
 	RemainingPercent *float64 `json:"remaining_percent"`
@@ -57,6 +66,9 @@ type Lookup func(id string) (fetcher.ProviderDef, bool)
 
 // BuildReport 按配置抓一轮额度并构造契约对象。
 // get 为 nil 时用 fetcher.Get。
+//
+// 记录粒度 = 监控对象 = 一组凭证 × 一张套餐卡(与悬浮球一格一一对应),
+// 抓完再按 enabled_limit 截断,顺序 = Provider 注册表顺序 → 凭证组顺序 → 套餐卡顺序。
 func BuildReport(now time.Time, cfg *config.Config, get Lookup) Report {
 	if get == nil {
 		get = fetcher.Get
@@ -65,62 +77,101 @@ func BuildReport(now time.Time, cfg *config.Config, get Lookup) Report {
 		Schema:       schemaVersion,
 		GeneratedAt:  now.Format(reportTimeFormat),
 		ExtendedMode: cfg.ExtendedMode,
-		EnabledLimit: config.EnabledLimit(cfg.ExtendedMode),
+		EnabledLimit: config.MaxObjects(cfg.ExtendedMode),
 		Providers:    make([]ProviderLine, 0),
 	}
 
-	// 「已启用」= 与悬浮球一致的钳制后集合(app.go:409-418 同构)。
-	enabled := make([]config.ProviderConfig, 0, rep.EnabledLimit)
+	// 「已启用」= 与悬浮球一致的钳制后集合(app.go fetchAll 同构)。
+	enabled := make([]config.ProviderConfig, 0, len(cfg.Providers))
 	for _, p := range cfg.Providers {
-		if !p.Enabled {
-			continue
-		}
-		enabled = append(enabled, p)
-		if len(enabled) == rep.EnabledLimit {
-			break
+		if p.Enabled {
+			enabled = append(enabled, p)
 		}
 	}
 
-	lines := make([]ProviderLine, len(enabled))
-	var wg sync.WaitGroup
-	for i, p := range enabled {
-		def, ok := get(p.ID)
-		if !ok {
-			// app.go:425 同口径的未知平台记录。
-			lines[i] = ProviderLine{ID: p.ID, Kind: fetcher.KindUsage, Error: "未知平台"}
-			continue
+	// 每家展开成若干"凭证组"任务;一组凭证可能产出多张套餐卡 ⇒ 多条记录。
+	type job struct {
+		p      config.ProviderConfig
+		creds  map[string]string
+		credNo int
+	}
+	var jobs []job
+	for _, p := range enabled {
+		for i, creds := range p.CredSets() {
+			jobs = append(jobs, job{p: p, creds: creds, credNo: i})
 		}
+	}
+
+	perJob := make([][]ProviderLine, len(jobs))
+	var wg sync.WaitGroup
+	for i := range jobs {
 		wg.Add(1)
-		go func(i int, p config.ProviderConfig, def fetcher.ProviderDef) {
+		go func(i int, j job) {
 			defer wg.Done()
-			lines[i] = buildLine(now, p, def)
-		}(i, p, def)
+			def, ok := get(j.p.ID)
+			if !ok {
+				// app.go fetchAll 同口径的未知平台记录。
+				perJob[i] = []ProviderLine{{
+					ID: j.p.ID, Slot: SlotOf(j.p.ID, j.credNo, 0, 1), Kind: fetcher.KindUsage, Error: "未知平台",
+				}}
+				return
+			}
+			perJob[i] = buildLines(now, j.p, def, j.creds, j.credNo)
+		}(i, jobs[i])
 	}
 	wg.Wait()
 
+	lines := make([]ProviderLine, 0, len(perJob))
+	for _, ls := range perJob {
+		lines = append(lines, ls...)
+	}
+	if len(lines) > rep.EnabledLimit {
+		lines = lines[:rep.EnabledLimit]
+	}
 	rep.Providers = lines
 	rep.EnabledCount = len(lines)
 	return rep
 }
 
-// buildLine 抓取单家并按 app.go:431-437 的四句与顺序归一后转成契约记录。
-func buildLine(now time.Time, p config.ProviderConfig, def fetcher.ProviderDef) ProviderLine {
-	r := def.Build(p.Creds).Fetch()
-	// 四句 + 顺序照抄 app.go:432-437:Kind 必须在 ApplyBudget 之前归一
-	// (ApplyBudget 靠 Kind 判断是不是余额型,它是余额型 percent 的唯一产出处)。
-	r.ID = def.ID
-	r.Abbr = def.Abbr
-	if r.Kind == "" {
-		// 空串按 usage 归一(app.go:434-435);注册表声明了 balance 时以注册表为准
-		// ——10 家里 5 家连 Kind 都不设,注册表是同源口径的落点。
-		r.Kind = def.Kind
-		if r.Kind == "" {
-			r.Kind = fetcher.KindUsage
-		}
+// SlotOf 拼监控对象的稳定标识:<provider>/<凭证组号>[/p<套餐卡号>],与 app.go 同口径。
+func SlotOf(providerID string, credNo int, planIdx int, planCount int) string {
+	slot := fmt.Sprintf("%s/%d", providerID, credNo)
+	if planCount > 1 {
+		slot = fmt.Sprintf("%s/%d/p%d", providerID, credNo, planIdx)
 	}
-	fetcher.ApplyBudget(&r, p.Budget)
+	return slot
+}
 
-	line := ProviderLine{ID: r.ID, Kind: r.Kind, Error: r.Error}
+// buildLines 抓一组凭证,按返回的每张套餐卡产出一条记录;Fetcher 返回单结果时只有一条。
+func buildLines(now time.Time, p config.ProviderConfig, def fetcher.ProviderDef, creds map[string]string, credNo int) []ProviderLine {
+	results := fetcher.FetchAll(def.Build(creds))
+	lines := make([]ProviderLine, 0, len(results))
+	for i, r := range results {
+		// 四句 + 顺序照抄 app.go fetchAll:Kind 必须在 ApplyBudget 之前归一
+		// (ApplyBudget 靠 Kind 判断是不是余额型,它是余额型 percent 的唯一产出处)。
+		r.ID = def.ID
+		if r.Kind == "" {
+			// 空串按 usage 归一;注册表声明了 balance 时以注册表为准
+			// ——10 家里 5 家连 Kind 都不设,注册表是同源口径的落点。
+			r.Kind = def.Kind
+			if r.Kind == "" {
+				r.Kind = fetcher.KindUsage
+			}
+		}
+		// 缩写/后缀/slot 消歧与 app.go 同口径(共用 SettleIdentity)。
+		fetcher.SettleIdentity(&r, def, credNo, i, len(results), len(p.CredSets()))
+
+		fetcher.ApplyBudget(&r, p.Budget)
+		lines = append(lines, lineOf(now, r))
+	}
+	return lines
+}
+
+// lineOf 把一条归一后的结果转成契约记录。
+func lineOf(now time.Time, r fetcher.QuotaResult) ProviderLine {
+	line := ProviderLine{
+		ID: r.ID, Slot: r.Slot, SubLabel: r.SubLabel, Kind: r.Kind, Error: r.Error,
+	}
 	if r.Error != "" {
 		// 失败记录:数值/可空字段全 null(不是 0 / "")。
 		return line
@@ -192,7 +243,7 @@ func FailReport(now time.Time, msg string) Report {
 		Schema:       schemaVersion,
 		GeneratedAt:  now.Format(reportTimeFormat),
 		ExtendedMode: def.ExtendedMode,
-		EnabledLimit: config.EnabledLimit(def.ExtendedMode),
+		EnabledLimit: config.MaxObjects(def.ExtendedMode),
 		Providers:    make([]ProviderLine, 0),
 		Error:        msg,
 	}

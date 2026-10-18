@@ -30,6 +30,6 @@ export function SaveConfig(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveConfig'](arg1, arg2, arg3);
 }
 
-export function TestConnection(arg1) {
-  return window['go']['main']['App']['TestConnection'](arg1);
+export function TestConnection(arg1, arg2) {
+  return window['go']['main']['App']['TestConnection'](arg1, arg2);
 }

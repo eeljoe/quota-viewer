@@ -9,7 +9,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 
 **10 platforms**: [Kimi](https://platform.kimi.com) · [Xfyun](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [Xiaomi MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai)
 
-> The registry supports 10 platforms, but the floating ball shows **at most 9 cells at once** (3 normally, 9 in extended mode).
+> The registry supports 10 platforms. A **monitored object** is one credential × one plan card, so a platform with two API keys or two plans takes more than one cell. The floating ball shows **up to 9 objects normally, up to 16 in extended mode**; anything beyond that collapses into a `+N` cell (the panel still lists every object).
 
 - **Tech Stack**: Go 1.24 + Wails v2.12.0 + Vanilla HTML/CSS/JS (Vite bundling)
 - **Platform**: Windows 10+ (WebView2 Runtime)
@@ -18,10 +18,10 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 ## Features
 
 - **Floating Ball**: 60×60 glassmorphic square showing enabled providers (cell color = status: green / yellow / red), hover tooltip for per-platform details
-- **Adaptive Cells**: one to three cells in a single row (1 fills the whole ball, 2 split it in half, 3 in thirds); in extended mode 4 cells use a 2×2 grid and 5-9 cells wrap in 3 columns
+- **Adaptive Cells**: one cell per monitored object. One to three cells sit in a single row (1 fills the whole ball, 2 split it in half, 3 in thirds); 4 cells use a 2×2 grid, 5-9 wrap in 3 columns, 10-16 in 4 columns. Over the cap, the last cell becomes `+N` instead of silently dropping objects
 - **Expandable Panel**: Progress bars + remaining quota details (thousands-separated numbers), auto-refresh (default 15 min), refresh countdown timer (e.g. Kimi 5-hour window reset)
 - **Budget Progress Bar**: Balance-type providers (e.g. DeepSeek) support a configurable budget — progress bar shows consumption as `(budget - balance) / budget`, default budget ¥300
-- **Config Panel**: Check which providers to display (**up to 3 normally, up to 9 with extended mode on; at least 1**), each provider has its own credential inputs (API Key / Cookie), supports pasting browser "Copy as PowerShell" format directly
+- **Config Panel**: Check which providers to display (**up to 9 monitored objects normally, up to 16 with extended mode on; at least 1**), each provider has its own credential inputs (API Key / Cookie) and can hold **several credential groups** ("+ add another credential" for a second key / second account), each group gets its own cell. Supports pasting browser "Copy as PowerShell" format directly
 - **System Tray**: Refresh / Show-Hide / Open Config / Quit; click the tray icon to bring the floating ball to the front (show/hide lives in the tray menu; double-click no longer toggles it)
 - **Window Positioning**: Expand without going off-screen (smart corner flipping, multi-monitor / DPI scaling adaptive), collapse precisely back to original position
 - Close to tray, does not exit the process
@@ -51,8 +51,20 @@ Besides the GUI there is a headless probe, handy for scripts, status bars and ex
 go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer
 ```
 
-- `quota-viewer-cli.exe --json` — prints **one line of JSON** with every platform's quota to stdout and exits `0`
+- `quota-viewer-cli.exe --json` — prints **one line of JSON** with every monitored object's quota to stdout and exits `0`
 - no argument, or an unknown argument — prints usage to stderr, writes nothing to stdout, exits `2`
+
+**Record shape (`schema: 2`)** — one record per monitored object, so a platform with two keys or two plans yields two records:
+
+```json
+{"schema":2,"generated_at":"...","extended_mode":true,"enabled_limit":16,"enabled_count":2,
+ "providers":[
+   {"id":"kimi","slot":"kimi/0","sub_label":"","kind":"usage","percent":26,"remaining_percent":74,"reset_at":null,"balance":null,"currency":null,"error":""},
+   {"id":"minimax","slot":"minimax/1/p1","sub_label":"Key 2 · 视频赠送卡","kind":"usage","percent":80,"remaining_percent":20,"reset_at":null,"balance":null,"currency":null,"error":""}
+ ],"error":""}
+```
+
+`slot` identifies the object (`<provider>/<credential group>[/p<plan card>]`); `sub_label` is empty for single-object platforms. `enabled_limit` is the ball's object cap (9 / 16) and records are truncated to it. `schema` was `1` before multi-key/multi-plan support: the only breaking part is the two added keys — consumers reading by key name are unaffected.
 
 ## Monitoring Open Design
 

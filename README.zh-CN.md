@@ -9,7 +9,7 @@
 
 **十家平台**：[Kimi](https://platform.kimi.com) · [讯飞星辰](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [小米 MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai)
 
-> 注册表支持 10 家平台，悬浮球**同屏最多显示 9 格**（普通模式 3 格，扩展模式 9 格）。
+> 注册表支持 10 家平台。一个**监控对象** = 一组凭证 × 一张套餐卡，所以同平台两把 Key、两个套餐都会各占一格。悬浮球**普通模式最多 9 个对象，扩展模式最多 16 个**；超出的合并成一格 `+N`（展开面板仍逐行列出全部对象）。
 
 - **技术栈**: Go 1.24 + Wails v2.12.0 + 原生 HTML/CSS/JS (Vite 打包)
 - **平台**: Windows 10+ (WebView2 运行时)
@@ -18,10 +18,10 @@
 ## 功能
 
 - **悬浮球**: 60×60 玻璃质感方块，展示启用的 Provider（格字颜色 = 状态色：绿 / 黄 / 红），悬停 tooltip 显示各平台明细
-- **自适应球格**: 一至三格单行（1 格占满整球，2 格各半，3 格各三分之一）；扩展模式下 4 格走 2×2 网格，5-9 格按 3 列换行
+- **自适应球格**: 一个监控对象一格。一至三格单行（1 格占满整球，2 格各半，3 格各三分之一）；4 格走 2×2 网格，5-9 格按 3 列换行，10-16 格按 4 列换行；超出上限时末格变 `+N`，不会静默丢弃
 - **展开面板**: 进度条 + 剩余量明细（千分位数字），自动刷新（默认 15 分钟），刷新倒计时（如 Kimi 5 小时窗口重置时间）
 - **预算进度条**: 余额型 Provider（如 DeepSeek）支持配置预算——进度条按 `(预算 - 当前余额) / 预算` 显示消耗，默认预算 ¥300
-- **配置面板**: 勾选要展示的 Provider（**普通模式上限 3 个，开启扩展模式后上限 9 个，最少 1 个**），每个 Provider 独立录入自己的凭证（API Key / Cookie），支持直接粘贴浏览器 "Copy as PowerShell" 格式
+- **配置面板**: 勾选要展示的 Provider（**普通模式上限 9 个监控对象，开启扩展模式后上限 16 个，最少 1 个**），每个 Provider 独立录入自己的凭证（API Key / Cookie），并且**可挂多组凭证**（"+ 再加一组凭证" 填第二把 Key / 第二个账号），每组各占一格。支持直接粘贴浏览器 "Copy as PowerShell" 格式
 - **系统托盘**: 刷新 / 显示隐藏 / 打开配置 / 退出；单击托盘图标唤出到前台（显示/隐藏走右键菜单，双击不再切换）
 - **窗口定位**: 右下角展开不越屏（四角智能翻转，多显示器 / DPI 缩放适配），收起精确回到原位
 - 关闭到托盘，不退出进程
@@ -51,8 +51,20 @@
 go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer
 ```
 
-- `quota-viewer-cli.exe --json` —— 向 stdout 打**一行 JSON**，包含全部平台的额度，退出码 `0`
+- `quota-viewer-cli.exe --json` —— 向 stdout 打**一行 JSON**，包含全部监控对象的额度，退出码 `0`
 - 不带参数，或参数无法识别 —— 向 stderr 打 usage，stdout 无输出，退出码 `2`
+
+**记录形态（`schema: 2`）** —— 一个监控对象一条记录，同平台两把 Key 或两个套餐就是两条：
+
+```json
+{"schema":2,"generated_at":"...","extended_mode":true,"enabled_limit":16,"enabled_count":2,
+ "providers":[
+   {"id":"kimi","slot":"kimi/0","sub_label":"","kind":"usage","percent":26,"remaining_percent":74,"reset_at":null,"balance":null,"currency":null,"error":""},
+   {"id":"minimax","slot":"minimax/1/p1","sub_label":"Key 2 · 视频赠送卡","kind":"usage","percent":80,"remaining_percent":20,"reset_at":null,"balance":null,"currency":null,"error":""}
+ ],"error":""}
+```
+
+`slot` 标识监控对象（`<provider>/<凭证组>[/p<套餐卡>]`），单对象平台的 `sub_label` 为空。`enabled_limit` 是悬浮球的对象上限（9 / 16），记录会截到这个数。本地表之前是 `schema: 1`，唯一不兼容的是新增的两个键，按键名取值的消费方不受影响。
 
 ## Open Design 怎么监控
 

@@ -33,6 +33,14 @@ type QuotaResult struct {            // internal/fetcher/types.go
 type Fetcher interface {
     Fetch() QuotaResult
 }
+
+// 可选接口:一次查询返回多个监控对象(同一 Key 下有多个独立额度池的平台)
+// 例如 MiniMax 的 model_remains[] = 主套餐 + 视频/音乐赠送卡,每张卡各有 5h/周窗口
+type MultiFetcher interface {
+    FetchAll() []QuotaResult
+}
+
+func FetchAll(f Fetcher) []QuotaResult // 上层统一入口:实现了 MultiFetcher 就取全部,否则包成单元素切片(空切片也退回单结果)
 ```
 
 ### Provider 注册表（registry.go）
@@ -81,7 +89,7 @@ func Get(id string) (ProviderDef, bool)
 - Kimi 的 `Percent` 取 5h 与 7 天窗口较紧张者（周耗尽必须告警）；周用量优先读 `usages.limit_7d.used_ratio`，回退 `usage.used/limit`；`Used/Total/ResetAt` 仍记 5 小时窗口
 - Ollama 抓取对慢响应放宽：30s 超时（ollama.com 偶发 >10s 慢响应）+ 传输层错误重试一次
 - Factory Droid 无公开额度查询 API（官方 Analytics API 个人端点 Enterprise 限定且滞后一天），`factorydroid.go` 走官方 web 端同源私有路由：优先 token-rate limits 模型 `GET /api/billing/limits`（`usesTokenRateLimitsBilling=true` 时读 `limits.standard/core.{fiveHour,weekly,monthly}`，均只有 `usedPercent`/`secondsRemaining` 无绝对值；`extraUsageBalanceCents` 为预付 Extra Usage 余额；`overagePreference` 是上游给的「超额走哪一池」显式信号，如 `"droidCore"`），否则回退旧账单模型 `GET /api/organization/subscription/usage?useCache=true`（`usedRatio` 有恒 0 脏数据，绝对值可信时优先）。**展示主体（2026-10-13 起）**：接管判定 = `stdMax >= 100`（Standard 池顶格）**且** Core 有数据 **且** `overagePreference` 为空或 `"droidCore"` ⇒ `Percent`/`Used` 取 Core 池最紧张窗口（平手按 fiveHour→weekly→monthly 取**先者**）、`ResetAt` 由**该驱动窗口**的 `secondsRemaining` 推算（`windowEnd` 与它同源、只差约 1s，一律不用；无秒数则留空）、`Remaining` 以 `Core X.X% 已用（Standard 已限流）` 打头且整串只出现一处 Core；未接管时维持 `Percent = max(stdMax, coreMax)`、`Used` = Standard 5h。`Remaining` 常驻 5小时/周 两段（与 Kimi/Ollama 展示一致），月度仅在超过 5h/周 时追加，Core 仓一有消耗即显示，Extra 有余款才显示。计费顺序注意：Core 池模型的用量**先烧 Standard 窗口**（按模型倍率，如 GLM-5.3-Flash 0.06×），`limits.core` 独立窗口只在 Standard 顶满限流后接管（overage 回退，仅开源权重模型可走）——**这正是「球面看着没额度了、其实 Core 还有量」的成因，故接管时必须把主体切过去**。Key 在 app.factory.ai/settings/api-keys 生成（`fk-` 前缀），留空自动读 `~/.factory/.env`（支持 export 前缀/引号/行尾注释，与 Droid CLI 共用）。结构随官方升级可能变化（曾漂移过一次），失效时对照官方 web bundle 更新
-- MiniMax 走开放平台私有路由 `GET {region}/v1/api/openplatform/coding_plan/remains`（Bearer + 官方 web 端同款 Referer），只认 `sk-cp-` 订阅 Key（按量计费 Key 读不到套餐额度）。三个主机组成回退链 `api.minimaxi.com` → `www.minimaxi.com` → `api.minimax.io`，逐个尝试到成功（网络不通/401/403/404/业务鉴权码都算该主机失败）；响应是套餐卡数组 `model_remains[]`，取首位主套餐。**坑位**：`current_interval_remaining_percent` / `current_weekly_remaining_percent` 是**剩余百分比**，展示前必须反转为已用%（`100 - remaining`），照名字直用会让球色刚好反过来（minimax-status 1.2.5 的语义事故，有回归测试守护）；部分套餐不返回绝对量（`current_*_total_count` 恒 0）→ 退化为纯百分比展示，周总额 0 且无周百分比 → 标「周无限制」。窗口语义与 Kimi/Ollama 一致：5 小时窗口驱动 `Used`/`ResetAt`（`remains_time` 毫秒倒计时），`Percent` 取两窗口更紧张者
+- MiniMax 走开放平台私有路由 `GET {region}/v1/api/openplatform/coding_plan/remains`（Bearer + 官方 web 端同款 Referer），只认 `sk-cp-` 订阅 Key（按量计费 Key 读不到套餐额度）。三个主机组成回退链 `api.minimaxi.com` → `www.minimaxi.com` → `api.minimax.io`，逐个尝试到成功（网络不通/401/403/404/业务鉴权码都算该主机失败）；响应是套餐卡数组 `model_remains[]`——**每张卡一个监控对象**（`FetchAll()` 逐卡返回,主套餐在前,视频/音乐赠送卡在后;旧实现只取 `[0]`,赠送卡被静默丢弃）。**坑位**：`current_interval_remaining_percent` / `current_weekly_remaining_percent` 是**剩余百分比**，展示前必须反转为已用%（`100 - remaining`），照名字直用会让球色刚好反过来（minimax-status 1.2.5 的语义事故，有回归测试守护）；部分套餐不返回绝对量（`current_*_total_count` 恒 0）→ 退化为纯百分比展示，周总额 0 且无周百分比 → 标「周无限制」。窗口语义与 Kimi/Ollama 一致：5 小时窗口驱动 `Used`/`ResetAt`（`remains_time` 毫秒倒计时），`Percent` 取两窗口更紧张者
 - Open Design 无公开额度 API、也无 API-key 通道（`sk-amr-` Key 一律 401），只能用浏览器会话 Cookie。`opendesign.go` 打控制面 `amr-api.open-design.ai` 的 `/api/v1`（不是数据面 `amr-link.open-design.ai` 的 `/v1`），两步 GET：先 `/api/v1/workspaces/current` 取 `workspaceId`，再 `/api/v1/workspaces/{id}/billing/coding-plan-usage` 取窗口用量。坑位：第二步不能拿 `current` 当 id（400 `workspace_member_required`）；窗口按 `durationSeconds` 识别而不按下标（18000 = 5 小时、604800 = 7 天）；`usedCredits`/`limitCredits` 是十进制字符串，用 `strconv.ParseFloat` 算百分比（credits 可能超出 float64 精确整数范围，不转 int64）。5 小时窗口驱动 `Used`/`ResetAt`（`resetsAt` 官方毫秒精度，规范化为秒精度 UTC），`Percent` 取两窗口更紧张者，两窗口都写进 `Remaining`。Cookie 失效可能是 401 也可能是 302 跳登录页，故 client 设 `CheckRedirect: http.ErrUseLastResponse` 并把 302 并入失效分支（否则跟随跳转拿到 200 登录页 HTML，报成「解析响应失败」而丢掉「请重新登录」指引）
 - `format.go` 的 `formatNum` 做千分位展示格式化（仅内部使用）
 
@@ -98,6 +106,7 @@ func Get(id string) (ProviderDef, bool)
 
 - 任何平台出错（网络/鉴权/解析）→ `QuotaResult.Error` 非空，其余字段尽力填充
 - 调用方（app.go）不 panic：`fetchAll` 并发收集，前端按 Error 显示"失败"状态
+- 多套餐平台的全局失败(无 Key / 网络 / 鉴权码 / 空数组)仍返回**单条**错误结果,不是空切片——上层依赖这一条保证监控不会静默消失
 - 未配置凭证 → 各 fetcher 自行返回带 Error 的结果（不 panic）
 
 ### 测试模式
@@ -115,6 +124,7 @@ func Get(id string) (ProviderDef, bool)
 | `internal/fetcher/types.go` | QuotaResult + Fetcher 接口 + Kind 常量（契约核心） |
 | `internal/fetcher/registry.go` | ProviderDef + 注册表（新增 Provider 的唯一入口） |
 | `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` / `commandcode.go` / `factorydroid.go` / `minimax.go` / `opendesign.go` | 各平台实现 |
+| `internal/fetcher/abbr.go` | 多对象的球格缩写派生 + `SettleIdentity`(缩写/后缀/slot 归一,app.go 与 probe 共用) |
 | `internal/fetcher/format.go` | 千分位格式化 |
 | `internal/fetcher/budget.go` | 余额型预算 → 消耗百分比换算(ApplyBudget) |
 
@@ -123,6 +133,7 @@ func Get(id string) (ProviderDef, bool)
 ## Must NOT Change
 
 - `QuotaResult` JSON 字段名（前端渲染契约）
-- Fetcher 接口签名 `Fetch() QuotaResult`
+- Fetcher 接口签名 `Fetch() QuotaResult`(多对象平台额外实现 `FetchAll() []QuotaResult`,两者互不影响)
+- `SettleIdentity` 的缩写派生规则(同一 Provider 内不得出现两个相同缩写),及 app.go / probe 两处同口径的要求
 - Provider id 与注册表顺序（config 存储、TestConnection、前端绑定共用契约）
-- fetchAll 的 results 顺序 = 启用 Provider 的注册表顺序（前端球格顺序绑定）
+- fetchAll 的 results 顺序 = 注册表顺序 → 凭证组顺序 → 套餐卡顺序（前端球格顺序绑定；probe 同款口径）

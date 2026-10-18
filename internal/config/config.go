@@ -19,8 +19,45 @@ type Config struct {
 type ProviderConfig struct {
 	ID      string            `json:"id"`
 	Enabled bool              `json:"enabled"`
-	Creds   map[string]string `json:"creds,omitempty"`
+	Creds   map[string]string `json:"creds,omitempty"`  // 主凭证(第 1 组)
 	Budget  float64           `json:"budget,omitempty"` // 余额型 Provider 的预算总量(0 = 未设)
+	Extra   []CredGroup       `json:"extra,omitempty"`  // 第 2..N 组凭证(同平台多 Key / 多账号)
+}
+
+// CredGroup 是一组额外的凭证。
+//
+// Key 是稳定标识(前端生成、保存时原样带回):保存时按它对齐到已有组,
+// 避免"删掉中间一行"导致后面各行的凭证值整体错位。空串的组由后端补一个。
+type CredGroup struct {
+	Key   string            `json:"key,omitempty"`
+	Creds map[string]string `json:"creds,omitempty"`
+}
+
+// CredSets 返回该 Provider 的全部凭证组:主凭证在前,附加组在后。
+//
+// 全空的附加组会被跳过——用户点了"添加一行"却没填内容时,不该凭空多出一个
+// 报"未配置 Key"的监控对象。主凭证恒返回(可能为空 map),保持单凭证 Provider
+// 既有语义:启用了但没配凭证 = 一格错误提示。
+func (p ProviderConfig) CredSets() []map[string]string {
+	sets := make([]map[string]string, 0, 1+len(p.Extra))
+	sets = append(sets, p.Creds)
+	for _, g := range p.Extra {
+		if CredGroupEmpty(g.Creds) {
+			continue
+		}
+		sets = append(sets, g.Creds)
+	}
+	return sets
+}
+
+// CredGroupEmpty 判断一组凭证是否完全没有内容(用户加了行但没填)。
+func CredGroupEmpty(creds map[string]string) bool {
+	for _, v := range creds {
+		if v != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // AllProviderIDs 全部已知 Provider id(与 fetcher 注册表一致,顺序 = 展示顺序)。
@@ -30,30 +67,51 @@ var AllProviderIDs = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek"
 // DefaultProviderIDs 默认启用的 Provider(与现状一致:Kimi/讯飞/OpenCode Go)。
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"}
 
-// 展示上限:普通模式 3 个;扩展模式上限 9(前端 3x3 球格容量)。
+// 悬浮球展示上限:按**监控对象**计,不再按 Provider 计。
+//
+// 一个监控对象 = 一组凭证 × 一张套餐卡。60x60 的悬浮球里:
+//   - 普通模式 9 个 = 3x3 网格,每格约 20px(沿用 v1.3.0 扩展模式的观感)
+//   - 扩展模式 16 个 = 4x4 网格,每格约 15px
+//
+// 再往上(5x5 每格 12px)CJK 缩写与两字缩写就糊成一团,故 16 是硬上限。
 const (
-	maxEnabledNormal   = 3
-	maxEnabledExtended = 9
+	maxObjectsNormal   = 9
+	maxObjectsExtended = 16
 )
 
-// EnabledLimit 返回启用数量上限:扩展模式放开到 9,普通模式 3 个。
-func EnabledLimit(extended bool) int {
+// MaxObjects 返回悬浮球可显示的监控对象数上限(扩展模式放开到 16)。
+func MaxObjects(extended bool) int {
 	if extended {
-		return maxEnabledExtended
+		return maxObjectsExtended
 	}
-	return maxEnabledNormal
+	return maxObjectsNormal
 }
 
-// clampEnabled 把启用数量钳制到上限(超出部分按顺序关闭)。
-func clampEnabled(providers []ProviderConfig, limit int) {
-	enabledCount := 0
-	for i := range providers {
-		if providers[i].Enabled {
-			enabledCount++
-			if enabledCount > limit {
-				providers[i].Enabled = false
-			}
+// CountObjects 统计一组 Provider 配置当前占用的监控对象数(各启用 Provider 的凭证组数之和)。
+func CountObjects(providers []ProviderConfig) int {
+	n := 0
+	for _, p := range providers {
+		if p.Enabled {
+			n += len(p.CredSets())
 		}
+	}
+	return n
+}
+
+// clampEnabled 把启用的监控对象数钳制到上限(超出的 Provider 按顺序关闭)。
+// 按对象数而非 Provider 数计:一个 Provider 挂 3 组凭证就占 3 格。
+func clampEnabled(providers []ProviderConfig, limit int) {
+	used := 0
+	for i := range providers {
+		if !providers[i].Enabled {
+			continue
+		}
+		cost := len(providers[i].CredSets())
+		if used+cost > limit {
+			providers[i].Enabled = false
+			continue
+		}
+		used += cost
 	}
 }
 
@@ -157,9 +215,9 @@ func Load() (*Config, error) {
 		_ = Save(cfg) // 新 Provider 迁移回写失败不阻塞启动
 	}
 
-	// 钳制最多启用上限(普通 3 / 扩展 9):手工编辑配置/异常状态可能超过,
+	// 钳制监控对象上限(普通 9 / 扩展 16):手工编辑配置/异常状态可能超过,
 	// 不钳制会让配置面板渲染出不可能的勾选状态,保存时被静默钳掉。
-	clampEnabled(cfg.Providers, EnabledLimit(cfg.ExtendedMode))
+	clampEnabled(cfg.Providers, MaxObjects(cfg.ExtendedMode))
 
 	return cfg, nil
 }
@@ -212,8 +270,8 @@ func migrateFromLegacy(l legacyConfig) *Config {
 	// opencode_go_workspace_id / opencode_go_session_token 已无人读取(死 key),
 	// 故不在此处 set —— 该家保持默认启用状态、creds 为空。
 
-	// 钳制最多 3 个启用(展示上限;旧格式无扩展模式)
-	clampEnabled(cfg.Providers, EnabledLimit(false))
+	// 钳制监控对象上限(旧格式无扩展模式,按普通模式 9 个对象)
+	clampEnabled(cfg.Providers, MaxObjects(false))
 
 	_ = Save(cfg) // 回写新格式,失败静默
 	return cfg

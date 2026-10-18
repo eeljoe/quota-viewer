@@ -51,6 +51,15 @@ func NewYourPlatformFetcher(apiKey string) *YourPlatformFetcher {
 
 ### 1.2 实现 Fetch() 方法
 
+先分清一下**这家平台一个凭证回来几个独立额度池**：
+
+- **只有一个**（大多数平台）—— 实现 `Fetch() QuotaResult` 即可，下面的步骤照做。
+- **有多个**（如 MiniMax 的主套餐 + 赠送卡、MiMo 的套餐额度 + 补偿额度）——
+  额外实现 `FetchAll() []QuotaResult`，**每个额度池一条记录**（说人话：一个额度池 = 一个监控对象 = 一格球），
+  并把套餐名写进 `SubLabel`、每卡的短缩写写进 `Abbr`（主卡留给 Provider 缩写即可）。
+  只有一个额度池的平台**不要**实现 `FetchAll`——上层 `fetcher.FetchAll` 会自动包成单条。
+  参考实现：`internal/fetcher/minimax.go`、`internal/fetcher/mimo.go`。
+
 ```go
 func (f *YourPlatformFetcher) Fetch() QuotaResult {
     result := QuotaResult{
@@ -319,7 +328,7 @@ wails build
 
 ## 完整检查清单
 
-- [ ] `internal/fetcher/yourplatform.go` — Fetcher 结构体 + 构造函数 + `Fetch() QuotaResult`
+- [ ] `internal/fetcher/yourplatform.go` — Fetcher 结构体 + 构造函数 + `Fetch() QuotaResult`（一多度池平台加 `FetchAll() []QuotaResult`）
 - [ ] `internal/fetcher/registry.go` — `registry` 数组追加新条目
 - [ ] `internal/fetcher/yourplatform_test.go` — httptest 测试（空凭证 / 正常 / 401 / 异常 JSON）
 - [ ] `go test ./...` 全绿

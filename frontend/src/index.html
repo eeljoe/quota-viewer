@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 收起态:悬浮球(1-3 格 Provider 缩写,颜色=状态,悬停显示明细) -->
-    <div id="ball" class="ball"><!-- 格子由 JS 按启用的 Provider 动态生成 --></div>
+    <!-- 收起态:悬浮球(监控对象缩写格,颜色=状态,悬停显示明细) -->
+    <div id="ball" class="ball"><!-- 格子由 JS 按监控对象动态生成(多 Key / 多套餐各占一格) --></div>
 
     <!-- 展开态:详情面板 -->
     <div id="panel" class="panel hidden">
@@ -44,8 +44,9 @@
             <div class="form-group">
                 <label class="provider-toggle">
                     <input type="checkbox" id="input-extended" class="provider-check">
-                    <span>扩展模式(悬浮球最多 9 格,默认 3)</span>
+                    <span>扩展模式(悬浮球最多 16 格,普通模式 9 格)</span>
                 </label>
+                <div class="muted" id="object-hint"></div>
             </div>
             <div class="form-group">
                 <label for="input-interval">刷新间隔(分钟)</label>

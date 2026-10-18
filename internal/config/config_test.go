@@ -206,13 +206,14 @@ func TestLoad_MigrateLegacyJSON(t *testing.T) {
 	if !byID["xfyun"].Enabled || byID["xfyun"].Creds["cookie"] != "x" {
 		t.Errorf("xfyun migrate wrong: %+v", byID["xfyun"])
 	}
-	// mimo 有凭证但被钳制(4 个 enabled 超上限,按注册表顺序保留前 3):
-	// 凭证保留,enabled 为 false,用户可在设置中重新启用
-	if byID["mimo"].Enabled {
-		t.Errorf("mimo should be clamped to disabled (4 enabled > 3): %+v", byID["mimo"])
+	// mimo 有凭证且只占 1 个监控对象(上限 9)⇒ 迁移后保持启用。
+	// 上限按对象数计后,旧版「4 个启用超 3」的钳制场景不再触发;
+	// 钳制不丢凭证这条由 TestLoad_ClampsObjectsOverNine 继续守护。
+	if !byID["mimo"].Enabled {
+		t.Errorf("mimo should stay enabled (1 object, limit 9): %+v", byID["mimo"])
 	}
 	if byID["mimo"].Creds["cookie"] != "session=abc" {
-		t.Errorf("mimo creds should survive clamping: %+v", byID["mimo"])
+		t.Errorf("mimo creds should migrate: %+v", byID["mimo"])
 	}
 	// 死 key 不再被读取:opencode-go 保持默认启用,但 creds 必须为空
 	oc := byID["opencode-go"]
@@ -328,25 +329,24 @@ func TestAllProviderIDs_MatchesFetcherRegistry(t *testing.T) {
 	}
 }
 
-// TestLoad_ClampsEnabledOverThree 复现 2026-09-30 现场:手工编辑配置造成 4 个同时
-// 启用(绕过 SaveConfig 的钳制)。Load 必须按顺序钳制回 3 个,否则配置面板会渲染出
-// 「勾了 4 个」的不可能状态,保存时被静默钳掉一个,用户反复保存才收敛。
-func TestLoad_ClampsEnabledOverThree(t *testing.T) {
-	writeConfig(t, `{
-	  "providers": [
-	    {"id":"kimi","enabled":true},
-	    {"id":"xfyun","enabled":false},
-	    {"id":"opencode-go","enabled":false},
-	    {"id":"mimo","enabled":false},
-	    {"id":"deepseek","enabled":false},
-	    {"id":"ollama","enabled":true},
-	    {"id":"command-code","enabled":true},
-	    {"id":"factory-droid","enabled":true,"creds":{"api_key":"fk_keep"}}
-	  ],
+// TestLoad_ClampsObjectsOverNine 复现手工编辑配置绕过 SaveConfig 钳制的现场。
+// 上限按**监控对象**计(普通模式 9):10 家各 1 组凭证 = 10 个对象,Load 必须按顺序
+// 钳回 9 个,否则配置面板会渲染出不可能的状态,保存时被静默钳掉。
+func TestLoad_ClampsObjectsOverNine(t *testing.T) {
+	ids := make([]string, 0, len(AllProviderIDs))
+	for i, id := range AllProviderIDs {
+		extra := ""
+		if i == len(AllProviderIDs)-1 {
+			extra = `,"creds":{"api_key":"fk_keep"}`
+		}
+		ids = append(ids, fmt.Sprintf(`{"id":"%s","enabled":true%s}`, id, extra))
+	}
+	writeConfig(t, fmt.Sprintf(`{
+	  "providers": [%s],
 	  "refresh_interval_min": 15,
 	  "ball_x": -1,
 	  "ball_y": -1
-	}`)
+	}`, strings.Join(ids, ",")))
 
 	cfg, err := Load()
 	if err != nil {
@@ -360,30 +360,73 @@ func TestLoad_ClampsEnabledOverThree(t *testing.T) {
 			enabledCount++
 		}
 	}
-	if enabledCount != 3 {
-		t.Errorf("expected exactly 3 enabled after clamp, got %d", enabledCount)
+	if enabledCount != 9 {
+		t.Errorf("expected exactly 9 enabled after clamp, got %d", enabledCount)
 	}
-	// 注册表顺序在前的保留启用,最后的 factory-droid 被钳制关闭
+	// 注册表顺序在前的保留启用,末位 open-design 被钳制关闭
 	if !byID["kimi"].Enabled || !byID["ollama"].Enabled || !byID["command-code"].Enabled {
 		t.Error("expected first three enabled providers to survive clamp")
 	}
-	if byID["factory-droid"].Enabled {
-		t.Error("expected factory-droid clamped to disabled (4th enabled)")
+	if byID["open-design"].Enabled {
+		t.Error("expected open-design clamped to disabled (10th object)")
 	}
 	// 钳制只关启用,不丢凭证
-	if byID["factory-droid"].Creds["api_key"] != "fk_keep" {
-		t.Errorf("clamping must preserve credentials, got %+v", byID["factory-droid"])
+	if byID["open-design"].Creds["api_key"] != "fk_keep" {
+		t.Errorf("clamping must preserve credentials, got %+v", byID["open-design"])
 	}
 }
 
-// TestLoad_ExtendedMode_AllowsNineEnabled 验证扩展模式把启用上限从 3 放开到 9:
-// 注册表已 10 家,扩展模式是「10 选 9」——按顺序保留前 9 个,末位被钳制关闭;
-// 普通模式仍然钳回 3。
-func TestLoad_ExtendedMode_AllowsNineEnabled(t *testing.T) {
+// TestLoad_ClampsByCredentialGroupCount 上限按凭证组数计:一家挂 3 组凭证就占 3 格。
+// 4 家 × 3 组 = 12 个对象 > 9 ⇒ 第 4 家整家关闭(不切半组,避免留下无主的对象)。
+func TestLoad_ClampsByCredentialGroupCount(t *testing.T) {
+	three := `"creds":{"api_key":"k0"},` +
+		`"extra":[{"key":"a","creds":{"api_key":"k1"}},{"key":"b","creds":{"api_key":"k2"}}]`
+	writeConfig(t, `{
+	  "providers": [
+	    {"id":"kimi","enabled":true,`+three+`},
+	    {"id":"xfyun","enabled":true,`+three+`},
+	    {"id":"opencode-go","enabled":true,`+three+`},
+	    {"id":"mimo","enabled":true,`+three+`}
+	  ],
+	  "refresh_interval_min": 15,
+	  "ball_x": -1,
+	  "ball_y": -1
+	}`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	byID := map[string]ProviderConfig{}
+	for _, p := range cfg.Providers {
+		byID[p.ID] = p
+	}
+	for _, id := range []string{"kimi", "xfyun", "opencode-go"} {
+		if !byID[id].Enabled {
+			t.Errorf("%s 应保留启用(9 个对象刚好装下前三家)", id)
+		}
+		if got := len(byID[id].CredSets()); got != 3 {
+			t.Errorf("%s 凭证组数: got %d, want 3", id, got)
+		}
+	}
+	if byID["mimo"].Enabled {
+		t.Error("mimo(第 4 家,12 个对象超 9)应被整家钳制关闭")
+	}
+	// 关闭的那家凭证与凭证组都要留着,重新勾选即恢复
+	if len(byID["mimo"].Extra) != 2 || byID["mimo"].Creds["api_key"] != "k0" {
+		t.Errorf("钳制不得丢凭证组: %+v", byID["mimo"])
+	}
+}
+
+// TestLoad_ExtendedMode_AllowsSixteenObjects 扩展模式把对象上限从 9 放开到 16:
+// 6 家 × 3 组 = 18 个对象 ⇒ 前 5 家(15 个)保留,第 6 家关闭。
+func TestLoad_ExtendedMode_AllowsSixteenObjects(t *testing.T) {
+	three := `"creds":{"api_key":"k0"},` +
+		`"extra":[{"key":"a","creds":{"api_key":"k1"}},{"key":"b","creds":{"api_key":"k2"}}]`
 	buildJSON := func(extended bool) string {
-		ids := make([]string, 0, len(AllProviderIDs))
-		for _, id := range AllProviderIDs {
-			ids = append(ids, fmt.Sprintf(`{"id":"%s","enabled":true}`, id))
+		entries := make([]string, 0, 6)
+		for _, id := range []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama"} {
+			entries = append(entries, fmt.Sprintf(`{"id":"%s","enabled":true,%s}`, id, three))
 		}
 		return fmt.Sprintf(`{
 		  "providers": [%s],
@@ -391,7 +434,7 @@ func TestLoad_ExtendedMode_AllowsNineEnabled(t *testing.T) {
 		  "refresh_interval_min": 15,
 		  "ball_x": -1,
 		  "ball_y": -1
-		}`, strings.Join(ids, ","), extended)
+		}`, strings.Join(entries, ","), extended)
 	}
 
 	writeConfig(t, buildJSON(true))
@@ -399,33 +442,80 @@ func TestLoad_ExtendedMode_AllowsNineEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error: %v", err)
 	}
-	enabled := 0
+	byID := map[string]ProviderConfig{}
 	for _, p := range cfg.Providers {
-		if p.Enabled {
-			enabled++
+		byID[p.ID] = p
+	}
+	for _, id := range []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek"} {
+		if !byID[id].Enabled {
+			t.Errorf("扩展模式: %s 应保留启用(15 个对象 ≤ 16)", id)
 		}
 	}
-	if enabled != 9 {
-		t.Errorf("extended mode: expected 9 enabled (10 providers, limit 9), got %d", enabled)
-	}
-	// 注册表末位(open-design)是第 10 个启用者,被钳制关闭
-	if last := cfg.Providers[len(cfg.Providers)-1]; last.Enabled {
-		t.Errorf("extended mode: expected last provider %s clamped off, got %+v", last.ID, last)
+	if byID["ollama"].Enabled {
+		t.Error("扩展模式: 第 6 家(18 个对象)应被钳制关闭")
 	}
 
-	// 同样的启用状态,关闭扩展模式 → 钳回 3
+	// 同样的配置关掉扩展模式 ⇒ 上限 9,只装得下 3 家
 	writeConfig(t, buildJSON(false))
 	cfg, err = Load()
 	if err != nil {
 		t.Fatalf("Load() error: %v", err)
 	}
-	enabled = 0
+	if got := CountObjects(cfg.Providers); got != 9 {
+		t.Errorf("normal mode 对象数: got %d, want 9", got)
+	}
+}
+
+// TestCredSets_SkipsEmptyGroups 加了行没填内容的凭证组不该凭空多出监控对象
+// (否则会多一格"未配置 Key"的红色报错格)。
+func TestCredSets_SkipsEmptyGroups(t *testing.T) {
+	p := ProviderConfig{
+		Creds: map[string]string{"api_key": "k0"},
+		Extra: []CredGroup{
+			{Key: "a", Creds: map[string]string{"api_key": ""}},
+			{Key: "b", Creds: map[string]string{"api_key": "k1"}},
+			{Key: "c", Creds: nil},
+		},
+	}
+	sets := p.CredSets()
+	if len(sets) != 2 {
+		t.Fatalf("凭证组数: got %d, want 2(空组应被跳过)", len(sets))
+	}
+	if sets[0]["api_key"] != "k0" || sets[1]["api_key"] != "k1" {
+		t.Errorf("凭证组内容不对: %+v", sets)
+	}
+}
+
+// TestLoad_ExtraCredGroupsRoundTrip 附加凭证组要能原样往返(不被迁移逻辑吃掉)。
+func TestLoad_ExtraCredGroupsRoundTrip(t *testing.T) {
+	writeConfig(t, `{
+	  "providers": [
+	    {"id":"kimi","enabled":true,"creds":{"api_key":"k0"},
+	     "extra":[{"key":"kimi#1","creds":{"api_key":"k1"}},{"key":"kimi#2","creds":{"api_key":"k2"}}]},
+	    {"id":"xfyun","enabled":false}
+	  ],
+	  "refresh_interval_min": 15,
+	  "ball_x": -1,
+	  "ball_y": -1
+	}`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	var kimi ProviderConfig
 	for _, p := range cfg.Providers {
-		if p.Enabled {
-			enabled++
+		if p.ID == "kimi" {
+			kimi = p
 		}
 	}
-	if enabled != 3 {
-		t.Errorf("normal mode: expected 3 enabled after clamp, got %d", enabled)
+	if len(kimi.Extra) != 2 {
+		t.Fatalf("附加凭证组: got %d, want 2", len(kimi.Extra))
+	}
+	if kimi.Extra[1].Key != "kimi#2" || kimi.Extra[1].Creds["api_key"] != "k2" {
+		t.Errorf("附加凭证组内容不对: %+v", kimi.Extra)
+	}
+	if got := len(kimi.CredSets()); got != 3 {
+		t.Errorf("CredSets(): got %d, want 3", got)
 	}
 }

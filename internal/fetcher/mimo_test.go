@@ -134,3 +134,52 @@ func TestMiMoFetcher_JSONNoUsageData_ReturnsError(t *testing.T) {
 		t.Error("expected error when JSON has no usage data")
 	}
 }
+
+// TestMiMo_FetchAll_TwoBuckets 同一 Cookie 返回两个额度桶(套餐额度 + 补偿额度)时,
+// 必须产出两个监控对象。旧实现只取第一个有 limit 的 item,补偿额度被静默丢弃。
+func TestMiMo_FetchAll_TwoBuckets(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"code": 0,
+			"data": {"usage": {"percent": 0.22, "items": [
+				{"name": "plan_total_token", "used": 38000000000, "limit": 40000000000, "percent": 0.95},
+				{"name": "compensation_total_token", "used": 100, "limit": 1000, "percent": 0.1}
+			]}}
+		}`))
+	}))
+	defer server.Close()
+
+	rs := NewMiMoFetcher("session=abc", server.URL).FetchAll()
+	if len(rs) != 2 {
+		t.Fatalf("监控对象数: got %d, want 2", len(rs))
+	}
+	if rs[0].SubLabel != "套餐额度" || rs[1].SubLabel != "补偿额度" {
+		t.Errorf("桶名应翻译成可读标签: %q / %q", rs[0].SubLabel, rs[1].SubLabel)
+	}
+	if got := rs[1].Percent; got != 10 {
+		t.Errorf("补偿额度 percent: got %v, want 10", got)
+	}
+	if rs[0].Abbr != "" || rs[1].Abbr == "" {
+		t.Errorf("球格缩写应逐桶区分: %q / %q", rs[0].Abbr, rs[1].Abbr)
+	}
+}
+
+// TestMiMo_Fetch_仍取第一个桶 单对象入口保持旧语义(既有调用方与测试不受影响)。
+func TestMiMo_Fetch_StillFirstBucket(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":0,"data":{"usage":{"percent":0.22,"items":[
+			{"name":"plan_total_token","used":38000000000,"limit":40000000000,"percent":0.95},
+			{"name":"compensation_total_token","used":100,"limit":1000,"percent":0.1}
+		]}}}`))
+	}))
+	defer server.Close()
+
+	f := NewMiMoFetcher("session=abc", server.URL)
+	single := f.Fetch()
+	all := f.FetchAll()
+	if single.Percent != all[0].Percent || single.Remaining != all[0].Remaining {
+		t.Errorf("Fetch 应等于 FetchAll()[0]: %+v vs %+v", single, all[0])
+	}
+}

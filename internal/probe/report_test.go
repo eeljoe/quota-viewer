@@ -33,6 +33,29 @@ func fakeDef(id, kind string, r fetcher.QuotaResult) fetcher.ProviderDef {
 	}
 }
 
+// fakeMultiFetcher 一次返回多个监控对象(模拟多套餐平台)。
+type fakeMultiFetcher struct{ rs []fetcher.QuotaResult }
+
+func (f fakeMultiFetcher) Fetch() fetcher.QuotaResult {
+	if len(f.rs) == 0 {
+		return fetcher.QuotaResult{}
+	}
+	return f.rs[0]
+}
+func (f fakeMultiFetcher) FetchAll() []fetcher.QuotaResult { return f.rs }
+
+// fakeMultiDef 造「一次产出多条记录」的注册表条目。
+func fakeMultiDef(id string, rs []fetcher.QuotaResult) fetcher.ProviderDef {
+	return fetcher.ProviderDef{
+		ID:   id,
+		Abbr: "MX",
+		Kind: fetcher.KindUsage,
+		Build: func(map[string]string) fetcher.Fetcher {
+			return fakeMultiFetcher{rs: rs}
+		},
+	}
+}
+
 func fakeLookup(defs map[string]fetcher.ProviderDef) Lookup {
 	return func(id string) (fetcher.ProviderDef, bool) {
 		d, ok := defs[id]
@@ -169,9 +192,9 @@ func TestBuildReport_EnvelopeShape_Exactly7Keys(t *testing.T) {
 
 	data := string(mustEncode(t, BuildReport(testNow(), cfg, fakeLookup(defs))))
 
-	want := `{"schema":1,"generated_at":"2026-10-13T10:45:00+08:00","extended_mode":true,` +
-		`"enabled_limit":9,"enabled_count":1,"providers":[` +
-		`{"id":"kimi","kind":"usage","percent":26,"remaining_percent":74,` +
+	want := `{"schema":2,"generated_at":"2026-10-13T10:45:00+08:00","extended_mode":true,` +
+		`"enabled_limit":16,"enabled_count":1,"providers":[` +
+		`{"id":"kimi","slot":"kimi/0","sub_label":"","kind":"usage","percent":26,"remaining_percent":74,` +
 		`"reset_at":null,"balance":null,"currency":null,"error":""}],"error":""}`
 	if data != want {
 		t.Errorf("顶层 JSON 与契约不符:\n got %s\nwant %s", data, want)
@@ -193,23 +216,24 @@ func TestBuildReport_OnlyEnabledProviders(t *testing.T) {
 	}
 }
 
-// TestBuildReport_TruncatesToEnabledLimit 条数按 EnabledLimit 截断(AC-2 / AC-5)。
+// TestBuildReport_TruncatesToEnabledLimit 条数按 EnabledLimit(监控对象上限)截断(AC-2 / AC-5)。
+// 普通模式上限 9 个监控对象:9 家各 1 组凭证 = 9 个刚好装下,第 10 家被截断。
 func TestBuildReport_TruncatesToEnabledLimit(t *testing.T) {
-	ids := []string{"kimi", "xfyun", "opencode-go", "mimo", "ollama"}
+	ids := append([]string{}, config.AllProviderIDs...)
 	defs := map[string]fetcher.ProviderDef{}
 	for _, id := range ids {
 		defs[id] = fakeDef(id, "", fetcher.QuotaResult{Percent: 5})
 	}
 
 	rep := BuildReport(testNow(), testConfig(false, ids...), fakeLookup(defs))
-	if rep.EnabledLimit != 3 {
-		t.Errorf("enabled_limit: got %d, want 3", rep.EnabledLimit)
+	if rep.EnabledLimit != 9 {
+		t.Errorf("enabled_limit: got %d, want 9", rep.EnabledLimit)
 	}
-	if len(rep.Providers) != 3 || rep.EnabledCount != 3 {
-		t.Fatalf("应截断到 3 条:count=%d providers=%d", rep.EnabledCount, len(rep.Providers))
+	if len(rep.Providers) != 9 || rep.EnabledCount != 9 {
+		t.Fatalf("应截断到 9 条:count=%d providers=%d", rep.EnabledCount, len(rep.Providers))
 	}
-	got := []string{rep.Providers[0].ID, rep.Providers[1].ID, rep.Providers[2].ID}
-	want := []string{"kimi", "xfyun", "opencode-go"}
+	got := []string{rep.Providers[0].ID, rep.Providers[8].ID}
+	want := []string{"kimi", "minimax"} // 注册表顺序前 9 个(第 10 个 open-design 被截断)
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("顺序应 = 配置顺序: got %v, want %v", got, want)
@@ -218,8 +242,49 @@ func TestBuildReport_TruncatesToEnabledLimit(t *testing.T) {
 	}
 }
 
-// TestBuildReport_EveryRecordHas8Keys 每条记录都含全部 8 个键(AC-2,缺键即红)。
-func TestBuildReport_EveryRecordHas8Keys(t *testing.T) {
+// TestBuildReport_OneRecordPerMonitoredObject 记录粒度 = 监控对象 = 一组凭证 × 一张套餐卡。
+// 一家挂 2 组凭证、每组又返回 2 张套餐卡 ⇒ 4 条记录,slot 互不相同。
+func TestBuildReport_OneRecordPerMonitoredObject(t *testing.T) {
+	defs := map[string]fetcher.ProviderDef{
+		"minimax": fakeMultiDef("minimax", []fetcher.QuotaResult{
+			{Platform: "MiniMax", Percent: 10, Remaining: "a"},
+			{Platform: "MiniMax", Percent: 80, SubLabel: "视频赠送卡", Remaining: "b"},
+		}),
+	}
+	cfg := testConfig(true, "minimax")
+	cfg.Providers[0].Creds = map[string]string{"api_key": "k0"}
+	cfg.Providers[0].Extra = []config.CredGroup{
+		{Key: "minimax#1", Creds: map[string]string{"api_key": "k1"}},
+	}
+
+	rep := BuildReport(testNow(), cfg, fakeLookup(defs))
+	if len(rep.Providers) != 4 {
+		t.Fatalf("监控对象数: got %d, want 4", len(rep.Providers))
+	}
+	slots := map[string]bool{}
+	for _, l := range rep.Providers {
+		if l.Slot == "" {
+			t.Errorf("记录缺 slot: %+v", l)
+		}
+		if slots[l.Slot] {
+			t.Errorf("slot 重复: %q", l.Slot)
+		}
+		slots[l.Slot] = true
+	}
+	// 两组凭证 × 两张卡 = 4 个 slot;套餐卡维度带 p 序号
+	for _, want := range []string{"minimax/0/p0", "minimax/0/p1", "minimax/1/p0", "minimax/1/p1"} {
+		if !slots[want] {
+			t.Errorf("缺 slot %q(实际:%v)", want, slots)
+		}
+	}
+	// 第 2 把 Key 的第 2 张卡后面缀带上 Key 序号,面板才分得清是哪把 Key
+	if got := rep.Providers[3].SubLabel; got != "Key 2 · 视频赠送卡" {
+		t.Errorf("sub_label: got %q, want %q", got, "Key 2 · 视频赠送卡")
+	}
+}
+
+// TestBuildReport_EveryRecordHas10Keys 每条记录都含全部 10 个键(AC-2,缺键即红)。
+func TestBuildReport_EveryRecordHas10Keys(t *testing.T) {
 	defs := map[string]fetcher.ProviderDef{
 		"kimi": fakeDef("kimi", "", fetcher.QuotaResult{Percent: 26}),
 		"bad":  fakeDef("bad", "", fetcher.QuotaResult{Error: "boom"}),
@@ -241,10 +306,10 @@ func TestBuildReport_EveryRecordHas8Keys(t *testing.T) {
 		t.Fatalf("providers 条数: got %d, want 2", len(arr))
 	}
 	for i, rec := range arr {
-		if len(rec) != 8 {
-			t.Errorf("第 %d 条记录应恰好 8 个键, 实际 %d 个(%v)", i, len(rec), rec)
+		if len(rec) != 10 {
+			t.Errorf("第 %d 条记录应恰好 10 个键, 实际 %d 个(%v)", i, len(rec), rec)
 		}
-		for _, want := range []string{"id", "kind", "percent", "remaining_percent", "reset_at", "balance", "currency", "error"} {
+		for _, want := range []string{"id", "slot", "sub_label", "kind", "percent", "remaining_percent", "reset_at", "balance", "currency", "error"} {
 			if _, ok := rec[want]; !ok {
 				t.Errorf("第 %d 条记录缺键 %q(实际键:%v)", i, want, rec)
 			}
@@ -327,7 +392,7 @@ func TestFailReport_EmptyProvidersIsArrayNotNull(t *testing.T) {
 	if err := json.Unmarshal([]byte(data), &got); err != nil {
 		t.Fatalf("失败信封字段解析失败:%v", err)
 	}
-	if got.Schema != 1 || got.ExtendedMode || got.EnabledLimit != 3 || got.EnabledCount != 0 {
+	if got.Schema != 2 || got.ExtendedMode || got.EnabledLimit != 9 || got.EnabledCount != 0 {
 		t.Errorf("失败信封顶层值不符 R3: %+v", got)
 	}
 	if got.Error == "" {
@@ -366,7 +431,7 @@ func parseEnvelope(t *testing.T, out string) (map[string]json.RawMessage, string
 	if err := json.Unmarshal([]byte(out), &e); err != nil {
 		t.Fatalf("信封字段解析失败:%v", err)
 	}
-	if e.Schema != 1 || e.ExtendedMode || e.EnabledLimit != 3 || e.EnabledCount != 0 {
+	if e.Schema != 2 || e.ExtendedMode || e.EnabledLimit != 9 || e.EnabledCount != 0 {
 		t.Errorf("信封顶层值不符 R3: %+v", e)
 	}
 	return m, e.Error
@@ -511,8 +576,8 @@ func TestRun_NoAppData_FailureEnvelope(t *testing.T) {
 	if got.Providers == nil || len(got.Providers) != 0 {
 		t.Errorf("providers 必须是初始化的空切片: got %v", got.Providers)
 	}
-	if got.Schema != 1 {
-		t.Errorf("失败信封 schema: got %d, want 1", got.Schema)
+	if got.Schema != 2 {
+		t.Errorf("失败信封 schema: got %d, want 2", got.Schema)
 	}
 	if strings.Count(out.String(), "\n") != 0 {
 		t.Errorf("stdout 应恰好一行:%q", out.String())

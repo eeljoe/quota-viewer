@@ -102,6 +102,13 @@ html, body {
 .ball.grid .ball-cell + .ball-cell { border-left: none; }
 .ball.cells-4-6 .ball-cell { font-size: 10px; }
 .ball.cells-7-9 .ball-cell { font-size: 9px; }
+/* 10-16 格(4x4,每格约 15px):两字符缩写再降一档才不顶格。 */
+.ball.cells-10-16 .ball-cell { font-size: 7.5px; }
+
+/* 溢出格:对象数超过上限时占掉最后一格,明说还有多少个没上球,
+   而不是静默丢弃(门面文档踩过的坑:写"十家"不说同屏上限)。 */
+.ball-cell.more { color: var(--text-2); font-style: normal; }
+.ball.cells-10-16 .ball-cell.more { font-size: 7px; }
 
 /* 双字符缩写(MX / OD / Go)比单字符宽一倍半,在窄格里会顶到格子边界 ——
    相邻两格各顶一边,文字净空只剩格间那 1px,看着像粘在一起(3 格 13px 时甚至溢出格子)。
@@ -392,6 +399,41 @@ html, body {
 .provider-fields { margin-top: 8px; }
 .provider-fields .form-group { margin-bottom: 8px; }
 .provider-fields .form-group:last-child { margin-bottom: 0; }
+
+/* 凭证组:主组 + 附加组(同平台多 Key / 多账号),每组独立一块,可增删 */
+.cred-group {
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ctrl);
+    background: rgba(255, 255, 255, 0.02);
+}
+.cred-group-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.cred-group-title {
+    flex: 1;
+    font-size: 11px;
+    color: var(--text-3);
+}
+.cred-group .form-group:last-child { margin-bottom: 0; }
+.btn-sm.add-cred { width: 100%; margin-top: 2px; }
+.btn-sm.danger:hover { color: var(--red); border-color: var(--red); }
+
+/* 对象上限提示(普通 9 / 扩展 16) */
+#object-hint { margin-top: 4px; line-height: 1.5; }
+
+/* 面板行:平台名 + 监控对象后缀(套餐名 / Key 序号) */
+.quota-sub {
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-3);
+}
+.quota-sub::before { content: "· "; }
 
 /* 单格球:字母放大占满整个球 */
 .ball.single-cell .ball-cell { font-size: 20px; }

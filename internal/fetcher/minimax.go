@@ -74,10 +74,21 @@ type minimaxFail struct {
 
 func (e *minimaxFail) Error() string { return e.msg }
 
-// Fetch 拉取并解析 MiniMax Token Plan 额度。按域名链逐个尝试(网络不通 / 401/403/404 /
-// 业务鉴权码都换下一个),全部失败时报第一个错误;5h 窗口驱动主展示与 ResetAt,
-// Percent 取 5h 与周窗口中更紧张的一个(窗口告警契约)。
+// Fetch 拉取并解析 MiniMax Token Plan 额度(单对象入口,取第一张卡)。
+// 多套餐场景请用 FetchAll —— 每张套餐卡是独立监控对象。
 func (f *MiniMaxFetcher) Fetch() QuotaResult {
+	all := f.FetchAll()
+	if len(all) == 0 {
+		// FetchAll 保证至少返回一条(全局失败也返回单条错误结果),这里是防御性兜底。
+		return QuotaResult{Platform: "MiniMax", Kind: KindUsage, LastUpdated: time.Now()}
+	}
+	return all[0]
+}
+
+// FetchAll 返回每张套餐卡一个监控对象:主套餐(model_remains[0],与官方 CLI 生态一致)
+// 在前,视频/音乐等赠送卡在后。任一全局失败(无 Key / 网络 / 业务鉴权码 / 空数组)
+// 返回单条错误结果,与旧的单对象语义一致。
+func (f *MiniMaxFetcher) FetchAll() []QuotaResult {
 	result := QuotaResult{
 		Platform:    "MiniMax",
 		Kind:        KindUsage,
@@ -86,7 +97,7 @@ func (f *MiniMaxFetcher) Fetch() QuotaResult {
 
 	if f.apiKey == "" {
 		result.Error = "未配置 MiniMax Token Plan Key(sk-cp- 开头的订阅 Key,在 platform.minimaxi.com/console/plan 获取)"
-		return result
+		return []QuotaResult{result}
 	}
 
 	var body []byte
@@ -103,23 +114,33 @@ func (f *MiniMaxFetcher) Fetch() QuotaResult {
 	}
 	if body == nil {
 		result.Error = firstFail.msg
-		return result
+		return []QuotaResult{result}
 	}
 
 	var resp minimaxRemainsResp
 	if err := json.Unmarshal(body, &resp); err != nil {
 		result.Error = "解析响应失败(响应结构可能已变化): " + err.Error()
-		return result
+		return []QuotaResult{result}
 	}
 	if resp.BaseResp.StatusCode != 0 {
 		result.Error = minimaxBizError(resp.BaseResp)
-		return result
+		return []QuotaResult{result}
 	}
 	if len(resp.ModelRemains) == 0 {
 		result.Error = "未找到套餐用量数据(响应结构可能已变化)"
-		return result
+		return []QuotaResult{result}
 	}
-	return f.parseRemains(result, &resp.ModelRemains[0])
+
+	out := make([]QuotaResult, 0, len(resp.ModelRemains))
+	setter := &planAbbrSetter{}
+	for i := range resp.ModelRemains {
+		card := resp.ModelRemains[i]
+		r := f.parseRemains(result, &card)
+		r.SubLabel = card.ModelName
+		r.Abbr = setter.next(i, card.ModelName)
+		out = append(out, r)
+	}
+	return out
 }
 
 // parseRemains 解析主套餐卡(取 model_remains 首位,与官方 CLI 生态一致)。

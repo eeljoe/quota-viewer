@@ -248,3 +248,66 @@ func TestMiniMax_EmptyModelRemains_ReturnsError(t *testing.T) {
 		t.Fatal("expected error for empty model_remains")
 	}
 }
+
+// TestMiniMax_FetchAll_TwoPlans 同一 Key 返回两张套餐卡时必须产出两个监控对象。
+// 旧实现只取 model_remains[0],赠送卡被静默丢弃(见 Fetch 的注释)。
+func TestMiniMax_FetchAll_TwoPlans(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"base_resp":{"status_code":0},"model_remains":[
+			{"model_name":"MiniMax-M3","current_interval_total_count":5000000,
+			 "current_interval_remaining_percent":90,"remains_time":3600000,
+			 "current_weekly_total_count":0,"current_weekly_remaining_percent":null},
+			{"model_name":"视频赠送卡","current_interval_total_count":200000,
+			 "current_interval_remaining_percent":20,"remains_time":1800000,
+			 "current_weekly_total_count":0,"current_weekly_remaining_percent":null}
+		]}`))
+	}))
+	defer server.Close()
+
+	f := NewMiniMaxFetcher("sk-cp-test")
+	f.baseURLs = []string{server.URL}
+
+	rs := f.FetchAll()
+	if len(rs) != 2 {
+		t.Fatalf("监控对象数: got %d, want 2", len(rs))
+	}
+	if rs[0].SubLabel != "MiniMax-M3" || rs[1].SubLabel != "视频赠送卡" {
+		t.Errorf("套餐名应逐卡带出: %q / %q", rs[0].SubLabel, rs[1].SubLabel)
+	}
+	// 剩余 20% ⇒ 已用 80%,第二张卡是真正紧张的那张(旧实现根本看不到它)
+	if got := rs[1].Percent; got != 80 {
+		t.Errorf("第二张卡 percent: got %v, want 80", got)
+	}
+	if rs[0].Percent != 10 {
+		t.Errorf("第一张卡 percent: got %v, want 10", rs[0].Percent)
+	}
+	// 球格缩写:主套餐留给 Provider 缩写(空),赠送卡派生出 "视"
+	if rs[0].Abbr != "" || rs[1].Abbr != "视" {
+		t.Errorf("球格缩写: got %q / %q, want \"\" / \"视\"", rs[0].Abbr, rs[1].Abbr)
+	}
+	for i, r := range rs {
+		if r.Error != "" {
+			t.Errorf("第 %d 张卡不应报错: %s", i, r.Error)
+		}
+	}
+}
+
+// TestMiniMax_FetchAll_SinglePlanKeepsOldBehaviour 单套餐时 Fetch 与 FetchAll 一致。
+func TestMiniMax_FetchAll_SinglePlanKeepsOldBehaviour(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(minimaxRemainsJSON(fptr(55), fptr(80), 0)))
+	}))
+	defer server.Close()
+
+	f := NewMiniMaxFetcher("sk-cp-test")
+	f.baseURLs = []string{server.URL}
+
+	rs := f.FetchAll()
+	if len(rs) != 1 {
+		t.Fatalf("监控对象数: got %d, want 1", len(rs))
+	}
+	single := f.Fetch()
+	if single.Percent != rs[0].Percent || single.Remaining != rs[0].Remaining {
+		t.Errorf("单套餐时 Fetch 应等于 FetchAll()[0]: %+v vs %+v", single, rs[0])
+	}
+}

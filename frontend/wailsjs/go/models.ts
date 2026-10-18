@@ -1,3 +1,22 @@
+export namespace config {
+	
+	export class CredGroup {
+	    key?: string;
+	    creds?: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new CredGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.creds = source["creds"];
+	    }
+	}
+
+}
+
 export namespace fetcher {
 	
 	export class QuotaResult {
@@ -15,6 +34,8 @@ export namespace fetcher {
 	    // Go type: time
 	    last_updated: any;
 	    error: string;
+	    slot?: string;
+	    sub_label?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new QuotaResult(source);
@@ -35,6 +56,8 @@ export namespace fetcher {
 	        this.reset_at = source["reset_at"];
 	        this.last_updated = this.convertValues(source["last_updated"], null);
 	        this.error = source["error"];
+	        this.slot = source["slot"];
+	        this.sub_label = source["sub_label"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -65,6 +88,7 @@ export namespace main {
 	    enabled: boolean;
 	    creds: Record<string, string>;
 	    budget: number;
+	    extra: config.CredGroup[];
 	
 	    static createFrom(source: any = {}) {
 	        return new ProviderInput(source);
@@ -76,7 +100,26 @@ export namespace main {
 	        this.enabled = source["enabled"];
 	        this.creds = source["creds"];
 	        this.budget = source["budget"];
+	        this.extra = this.convertValues(source["extra"], config.CredGroup);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

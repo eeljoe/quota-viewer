@@ -31,6 +31,7 @@ export namespace fetcher {
 	    currency: string;
 	    remaining: string;
 	    reset_at: string;
+	    reset_label?: string;
 	    // Go type: time
 	    last_updated: any;
 	    error: string;
@@ -54,6 +55,7 @@ export namespace fetcher {
 	        this.currency = source["currency"];
 	        this.remaining = source["remaining"];
 	        this.reset_at = source["reset_at"];
+	        this.reset_label = source["reset_label"];
 	        this.last_updated = this.convertValues(source["last_updated"], null);
 	        this.error = source["error"];
 	        this.slot = source["slot"];

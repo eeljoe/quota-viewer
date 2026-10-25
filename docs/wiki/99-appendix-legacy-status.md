@@ -980,3 +980,111 @@
 
 ---
 
+## 会话记录：2026-10-18 21:00
+
+> **会话摘要**：同 URL 多 Key / 多套餐——用户拍杼「一格一监控对象」（每个 Key / 每张套餐卡各一格）。新增 `CredGroup` 多凭证组与 `MultiFetcher` 可选接口，上限从「Provider 数」改为「监控对象数」（普通 9 / 扩展 16），超出显示 `+N`；`probe --json` 升到 `schema: 2`。分支 `feat/multi-key-multi-plan`，未提交、未推、未发 release。
+> **Git**：分支 `feat/multi-key-multi-plan`（从 `38b370f` 分出），工作区有未提交改动
+> **任务组**：同 URL 多 Key / 多套餐（无 spec，用户直接指令）
+> **任务组状态**：代码与文档已落地（待用户目验球格 4×4 档观感）
+
+### 本次完成
+
+- **问题证据**（改代码前先确认）：「多套餐」**今天就在静默丢数据**——`minimax.go:122` 只取 `model_remains[0]`（注释自己写着「视频/音乐等赠送卡在后」），`mimo.go:98` 只取首个有 limit 的 item（`compensation_total_token` 补偿额度被忽略，测试夹具里就有这个 item）；「多 Key」**根本无法表达**——`Creds` 是 `map[string]string`，一个字段只能一个值。
+- **数据模型**：`ProviderConfig.Extra []CredGroup`（第 2..N 组凭证，`Key` 是前端生成、保存时原样带回的稳定标识——**删中间一行不得让后面的凭证值整体错位**）；`CredSets()` 跳过全空附加组（加了行没填不该凭空多出一格报错的监控对象）；**旧配置零迁移**（`Extra` 为空时数据模型与旧版一致）。
+- **多套餐接口**：`fetcher.MultiFetcher` 可选接口 + `fetcher.FetchAll(f)` 统一入口（未实现的自动包成单元素；违约返回空切片也退回单结果，避免上层拿到零监控对象而静默不显示这家）；`minimax.go` / `mimo.go` 已转多对象，全局失败仍返回单条错误结果。Kimi 的 `limits[]` / `data[]` 是**同一账号的窗口/模型维度**，不是独立套餐，**故不拆**。
+- **身份归一**（`internal/fetcher/abbr.go` 新文件）：`SettleIdentity(r, def, credNo, planIdx, planCount, credCount)` 统一填 `slot` / `sub_label` / `abbr`——**app.go 与 probe 两处必须同口径**（否则球面与 `--json` 对不上）；单对象时清空后缀并沿用 Provider 缩写（保持旧观感），多对象时主对象留 Provider 缩写、套餐卡按卡名派生（CJK 首字 / ASCII 两字）、第 2..N 把 Key 用「首字母 + 序号」（K1 / K2）；`planAbbrSetter` 保证同平台内缩写不重复。
+- **引擎重编排**：`app.go fetchAll` 由「Provider × 凭证组× 套餐卡」展开，并发后按「注册表 → 凭证组 → 套餐卡」顺序展平（用 `perJob [][]QuotaResult` 而不是直接 append，避免并发顺序乱）；**抓取层不截断**，截断留给展示层，展开面板永远列全部对象。
+- **上限与布局重拍（用户拍杼的那一份）**：`config.MaxObjects` 普通 **9** / 扩展 **16**（上限按凭证组数计，套餐卡数拿到才知）；球格布局 1-3 单行 / 4 → 2×2 / 5-9 → 3 列 / 10-16 → 4 列，新增 `cells-10-16` 字号档；**超上限不静默丢弃**——末格变 `+N`，tooltip 写清还有多少个、去哪里看（本仓同屏 9 格上限过去的前车之鉴：门面写「十家」不说上限，用户勾满十家看到第十格无声消失）。上限取 9 / 16 的依据：悬浮球只有 **60×60px**，9 格 = 每格约 20px，16 格 = 约 15px，5×5 每格 12px 会把「讯」与两字缩写磨成一团。
+- **前端**：配置面板每家可「+ 再加一组凭证」且附加组可删（主组无删除按钮，避免误删主凭证），每组带独立「测试」（带 `cred_index`）；面板行展示后缀（套餐名 / `Key 2 · 视频赠送卡`）；对象占用提示与扩展模式切换即重排球格。后端字段返回到前端的 HTML 前做了 `escapeHtml`（新增的套餐名是上游文本）。
+- **probe 同步**：`--json` 记录粒度从「一家一条」改为「一对象一条」，`schema` 1 → **2**，新增 `slot` / `sub_label` 两个键（纯增量，按名取键的旧消费方不受影响）；`enabled_limit` 现在是对象上限。**这条连带着「对端告知」那条待办的报文——发出去前要带上 schema 变更。**
+- **验证**：`go test ./...` 全绿（config/fetcher/probe 三包，含新增的多套餐 / 多凭证组 / 身份归一用例）；`wails build` 通过且绑定重生成（`TestConnection(platform, credIndex)`）；**真实凭证端到端**：`quota-viewer-cli.exe --json` 跑真实配置出 6 条对象（slot 均填正、单对象平台 sub_label 为空、`schema=2 limit=16`），用临时配置（MiniMax 真 Key + 一把无效 Key）实测出 2 条独立对象 `minimax/0 Key 1 pct=13` / `minimax/1 Key 2（报鉴误密码 1004）`。
+- **渲染探针**（`.scratch/multi-key/probe/{ball-render,config-render}-probe.js`，未入库）：把 `main.js` 里**真实的** `updateBall` / `maxEnabled` / `getStatusColor` 源码抽出来跑在最小 DOM stub 上，断言 1-20 个对象下的格子数 / 列数 / 字号档 / 溢出格 / tooltip；**变异体（清空溢出格斆字）被杀死** —— 证明断言有牙。
+- **文档**：README 两版同步（上限口径、多凭证、`schema: 2` 记录形态示例）；wiki 05 / 07 / 08 / 02 同步（`.covered-files` +2）；`docs/ADDING_A_PROVIDER.md` 补「这家平台有几个额度池」的分流；ROADMAP 换库。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 用户拍杼「一格一对象」后直接实现，不再汇报 | 用户已在三个候选里明确选它；报表式形式“当中的紧迫额度最高”不适合本仓「一眼看完全部平台状态灯」的设定 | 聚合取最紧张力 / 配置时手选 |
+| 上限从 3/9 改 9/16，按**对象**而非 Provider 计 | 一家挂 3 把 Key 就占 3 格，按 Provider 计会让真正的用户永远触顶 | 保留 3/9 并强制单 Key |
+| 超上限用 `+N` 而不是静默丢弃 | 本仓名庪的前车之鉴（≤3 静默钳制慢慢关掉最后一个 provider）；门面文档也因此补了 AS10 | 直接只展前 N 格 |
+| `CredGroup.Key` 用前端生成的稳定标识对齐 | 按位置合并时，删掉中间一行会把后面的凭证值整体错位到别的 Key 上 | 按位置合并（会有真 bug） |
+| Kimi 不拆多对象 | `limits[]` / `data[]` 是同一账号的**窗口 / 模型维度**，不是独立套餐；拆会把一个 provider 变成几个无意义的格 | 按模型名拆格 |
+| `probe` 记录加键并升 `schema` | 球面与 `--json` 不能对不上（本仓一直强调同口径）；加键是纯增量，旧消费方按名取键不受影响 | 保持 8 键、只在多对象时多输出行（但同 slot 无法区分） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 新增 | `internal/fetcher/abbr.go` | `SettleIdentity` + 缩写派生（app.go 与 probe 共用的一处口径） |
+| 修改 | `internal/config/config.go` | `CredGroup` + `CredSets()` + `MaxObjects`(9/16) + `CountObjects` |
+| 修改 | `app.go` | `fetchAll` 展开监控对象；`GetConfig` 返回 `extra`/`object_limit`/`object_count`；`SaveConfig` 按 Key 对齐凭证组；`TestConnection(platform, credIndex)` |
+| 修改 | `frontend/src/{main.js,style.css,index.html}` | 球格 9/16 布局 + `+N` 溢出格；凭证组增删；面板行后缀 |
+| 修收 | `internal/probe/probe.go` | `schema: 2`，记录 10 键，一对象一条 |
+
+### 用户目验回弦（同日 23:30）与修复
+
+- **用户截图直接暴露一个我没看过的症状**：配置面板里所有 Provider 都只有一行标题，凭证输入框与「+ 再加一组凭证」按钮**一个都没渲染**。
+- **根因（我的代码）**：重写 `renderProviderList` 时把原有的 `card.appendChild(fieldsWrap)` 丢了 —— `fieldsWrap` 建好、被 `buildGroup` 填满，却从未挂到卡片上。之前只探了 `updateBall`（球格渲染），没有探配置面板的渲染函数，所以没拦下。
+- **顺带拿到的第二个 bug**（新探针写完才暴露）：`groupFilled` 只看 `input.value`，而 `GetConfig` 回显的掩码在 **`placeholder`** 上 —— 已保存的第二组凭证被当成空组，面板下方「占用 N / 上限」提示偏小（后端 `CredSets()` 认存下来的凭证，两边口径不一致）。已改为同时看 `value` 与 `placeholder`。
+- **为什么之前没探到**：本仓写前端时始终只拿 Go 测试、真实凭证探针、以及一个针对 `updateBall` 的渲染探针做验证 —— **配置面板的 DOM 结构从未被自动验证过**。现补上 `.scratch/multi-key/probe/config-render-probe.js`（抽真实 `renderProviderList` 源码跑 DOM stub，断言卡片挂载、凭证组数、删除按钮仅在附加组、每组测试按钮的 cred 下标、对象计数与提示文案），并带变异体（删掉 `card.appendChild(fieldsWrap)` 后断言变红）。
+
+### 未完成 & 下一步
+
+1. **待用户目验（重新）**：配置面板加第二组凭证 → 看「+ 再加一组凭证」按钮是否出现、加完是否多出一格、面板是否标出「Key 2」；并看 4×4 / 5-9 格档的字号观感是否过小。
+2. **未提交未推**：分支 `feat/multi-key-multi-plan` 上是一批工作区改动（包含本会话的 STATUS 归档与本轮文档同步），等目验过后一趟单 commit。
+3. **旧布局兼容性**：那些只记录 3/9 的历史会话章节已归档到 99 \9875（历史不改）；当前 README / wiki / ROADMAP 已全部改伺 9/16 口径。
+4. **未发 release**：格子与展示形态都变了，发版前应由用户目验过后决定是否负责说明。
+
+### 关键上下文
+
+- **交付态**：`build/bin/quota-viewer.exe`（sha1 `40AF97C1F146BFC869E3EB483D582E023B53B06F`，11.11 MB，23:33:28；含两个前端修复），桌面 `Quota Viewer.lnk` 指向该文件（已核对 TargetPath + mtime），实例已重启运行。
+- **环境笔记**：Go 不在 PATH，在 `C:\Users\joe\sdk\go1.26.5\bin\go.exe`（GOROOT），wails CLI 在 `C:\Users\joe\go\bin\wails.exe`；两者都需先加 PATH 才能跑。
+- **Wiki 指针状态**：`docs/wiki/` 同步 02 / 05 / 07 / 08（`.covered-files` 57 → 59，新增 `abbr.go` / `abbr_test.go`）。
+---
+
+## 会话记录：2026-10-19 00:50
+
+> **会话摘要**：多 Key / 多套餐任务组收尾——用户目验通过并拍板，单 commit 推 master、发 **v1.4.0**（附 exe）、并按任务组归档旧会话
+> **Git**：`62f81ff` on `master`（已与 origin/master 同步；tag `v1.4.0`）
+> **任务组**：同 URL 多 Key / 多套餐（无 spec，用户直接指令）
+> **任务组状态**：已完成（已合并 master 并发市 v1.4.0）
+
+### 本次完成
+
+- **用户目验通过**。会话末尾下令推 GitHub、发新 Release、`/update-status` 收尾。上一条会话留下的四项未完成全部落地：多 Key 配置流程目验通过、已提交推送、已发 release、旧布局口径已在 README / wiki / ROADMAP 全部改为 9/16。
+- **单 commit 交付**（`62f81ff`，33 文件 +1999/-759）：按本仓惯例直接快进 master（历史线性、无合并提交），推 `origin/master`。精确暂存不用 `git add -A`（项目惯例）。
+- **v1.4.0 发布**：tag 已推，Release 标题「多 Key / 多套餐各占一格」，notes 只写可见能力变化（多 Key / 多套餐 / 球容量与排布 / `+N` 溢出 / `schema` 1→2），末尾一句「修复了一些简单的小问题」——**按用户的发布口径，不写 bug 细节**（包括会话中那个前端渲染缺陷）。
+- **资源与可回滚性核对**：上传的 `quota-viewer.exe`（11,653,632 字节）GitHub 返回 sha256 `05a1878268edc3f6021aef0bb77d722729147371a603e148d33a8570c330ff6a`，与本地 `build/bin/quota-viewer.exe`（sha1 `40AF97C1F146BFC869E3EB483D582E023B53B06F`）逐字节一致；v1.4.0 已标记 **Latest**，v1.3.0 退为普通版本。
+- **会话归档**（update-status Step 7）：将 3 个已关闭任务组原样搬入归档页——托盘单击唤出 / 门面刷新 / 仓库收口（2026-10-14 三条）；主文档 430 → 263 行（低于 400 阈值），归档页现共 19 条。保留 2026-08-25（无关闭信号，永不归档）与本任务组两条。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 一质体化为 **v1.4.0** 而不是 v1.3.1 | 格子与展示形态都变了（对象上限 3/9 → 9/16、多凭证组、新增缩写派生），patch 语义不合 | 发 v1.3.1 小版 |
+| 发布 notes 不写 bug 细节 | 用户长期口径：release 只写可见行为变化 + 一句「修复了一些简单的小问题」 | 把前端渲染缺陷写进 notes |
+| 归档时把 2026-10-14 三条一并搬走 | 主文档 431 行超 400 阈值；三条均标「任务组状态：已完成」且无分支依赖 | 保留全部供新会话回溯（会进入无界增长） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 提交 | `62f81ff` | 本任务组全部代码 + 文档（33 文件） |
+| 发布产物 | `build/bin/quota-viewer.exe` | v1.4.0 附件；sha256 `05a1878268edc3f6021aef0bb77d722729147371a603e148d33a8570c330ff6a` |
+| 产物探针（未入库） | `.scratch/multi-key/probe/{ball-render,config-render}-probe.js` | 球格与配置面板的渲染探针，各自杀死一个变异体 |
+
+### 未完成 & 下一步
+
+1. **对端告知报斈**（持续中）：回 `subagent-fallback` 那边的探针可用性报文必须带上 **`schema` 已从 1 升到 2**（记录新增 `slot` / `sub_label`，按名取键的旧消费方不受影响），否则对端按旧契约解析会对不上。
+2. **非阻断清理批次 12 条**（持续中）：仍待用户拍板，本轮未动。
+3. **Wails 版本对齐**（Next）：go.mod v2.12.0 vs CLI v2.13.0，本轮构建仍有该告警，未阻塞。
+
+### 关键上下文
+
+- **交付态**与 v1.3.0 时一致的口径：`wails build` 产物字节与构建目录绑定（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）。本轮 exe 在主工作区构建，桌靯 `Quota Viewer.lnk` 指向它。
+- **`gh release create` 上传 exe 易超时**：本轮第一次调用超 600s 被切，只创出了**空草稿**（无资源）。应对：先 `gh release create --draft` 快速建稿，再单独 `gh release upload` 传产物，最后 `gh release edit --draft=false`。本轮超时的个空草稿需须自己检查并发布（`gh release view <tag> --json isDraft,assets`）。
+- **前端可视验证的缺口**：本轮用戸截图暴露了「配置面板凭证区整块没渲染」的自伤缺陷——Go 测试与球格渲染探针都绿了却都绕开了这段 DOM。**以后动前端渲染逻辑，先想一想有没有探针能覆到它**，不要默认「构建过就没事」。
+- **环境笔记**：Go 不在 PATH，在 `C:\Users\joe\sdk\go1.26.5\bin\go.exe`；wails CLI 在 `C:\Users\joe\go\bin\wails.exe`；两者都需先加 PATH。
+- **Wiki 指针状态**：`docs/wiki/` 本轮同步 02 / 05 / 07 / 08（`.covered-files` 57 → 59）；本次收尾无代码改动，wiki 无漂移。
+

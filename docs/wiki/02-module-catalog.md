@@ -43,8 +43,8 @@
 | Ollama 测试 | `internal/fetcher/ollama_test.go` | 382 | httptest 用例（HTML/登录失效/0%/回退解析） |
 | Command Code 抓取器 | `internal/fetcher/commandcode.go` | 177 | Command Code 私有 CLI 路由，5h/周窗口 + 月度 credits |
 | Command Code 测试 | `internal/fetcher/commandcode_test.go` | 223 | httptest 用例 |
-| Factory Droid 抓取器 | `internal/fetcher/factorydroid.go` | 360 | Factory 私有 billing 路由，5h/周/月窗口 + Core 池 + Extra 余额；`overagePreference` 决定 Standard 顶格后超额走哪一池，接管时展示主体切 Core；Key 留空读 ~/.factory/.env |
-| Factory Droid 测试 | `internal/fetcher/factorydroid_test.go` | 535 | httptest 用例（双账单模型/.env 发现/告警钳制/Core 接管与平手取先者/ResetAt 亚秒夹逼） |
+| Factory Droid 抓取器 | `internal/fetcher/factorydroid.go` | 473 | Factory 私有 billing 路由，5h/周/月窗口 + Core 池 + Extra 余额；`overagePreference` 决定 Standard 顶格后超额走哪一池，接管时展示主体切 Core；`Remaining` 按已用百分比降序（最紧张的打头），`ResetAt`/`ResetLabel` 跟排头窗口走；Key 留空读 ~/.factory/.env |
+| Factory Droid 测试 | `internal/fetcher/factorydroid_test.go` | 612 | httptest 用例（双账单模型/.env 发现/告警钳制/Core 接管与平手取先者/ResetAt 亚秒夹逼/最紧张窗口打头与倒计时标签） |
 | MiniMax 抓取器 | `internal/fetcher/minimax.go` | 220 | MiniMax Token Plan 私有路由，三主机回退链，5h/周双窗口(剩余% 反转为已用%);`model_remains[]` 每张套餐卡一个监控对象 |
 | MiniMax 测试 | `internal/fetcher/minimax_test.go` | 226 | httptest 用例（域名回退/百分比语义守护/周无限制） |
 | Open Design 抓取器 | `internal/fetcher/opendesign.go` | 207 | 控制面两步 GET(workspace 发现 + coding-plan-usage)，Cookie 认证，302 并入失效分支 |

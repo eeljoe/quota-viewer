@@ -40,9 +40,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "b5537c2", "synced_at": "2026-10-14T01:40:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "284a497", "synced_at": "2026-10-25T18:45:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `b5537c2`（2026-10-14 01:40），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：托盘图标单击唤出窗口到前台（06 事件表改为「单击图标 → `tray:activate`」并补双击撤销的原因与库分派事实、00 契约清单补 `tray:activate`）、行号锚点漂移（02 的 `app.go` 427→435 / `tray.go` 85→87、03 与 04 的 `app.go` 引用整体 +8）。上一同步点为 `4939cdd`（2026-10-13 22:03，空同步：自 `6d8cdee` 起只有文档变更）。
+> **Wiki 同步状态**：最后同步于 `284a497`（2026-10-25 18:45），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：Factory Droid 展示口径（05 的 Factory bullet 改为「`Remaining` 按已用百分比降序、最紧张的窗口打头；`ResetAt`/`ResetLabel` 跟排头那一段的窗口走，该窗口缺秒数则两者留空、不借别的窗口的时间；与 Kimi/Ollama 锚 5h 的口径有意不同」；00 契约清单补 `reset_label`；02 的 Factory 两条行数 360→473 / 535→612 并补排序与倒计时标签说明）。上一同步点为 `b5537c2`（2026-10-14 01:40，托盘单击唤出与行号锚点刷新）。
 
 ## Wiki 文件索引
 
@@ -68,7 +68,7 @@
 - `ballSize`/`screenMargin` 常量（app.go）与前端 `SIZES.ball` 的一致性——改了必须两边同步
 - `tray:activate` / `tray:refresh` / `tray:toggle` / `tray:settings` 事件名——托盘与 app.go 两端共用契约
 - `quota:update` / `ui:show-settings` 事件名——后端推给前端的契约
-- `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/balance/currency/remaining/reset_at/error）——前端渲染依赖
+- `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/balance/currency/remaining/reset_at/reset_label/error）——前端渲染依赖（`reset_label` 自 2026-10-19 起，标明 `reset_at` 属于哪个窗口）
 - Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design，共 10 个）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
 - 展示上限普通 3 / 扩展 9 个、下限 1 个 Provider——前后端都钳制（9 = 前端 3×3 球格容量，不等于注册表长度）
 - 配置 JSON 结构（providers 数组）——已迁移用户配置兼容

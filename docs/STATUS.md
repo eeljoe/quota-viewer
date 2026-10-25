@@ -9,35 +9,35 @@
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
 >    - 注：`ROADMAP.md` 自 2026-10-14 起**仅在本地存在、不入公开仓库**（与 `.scratch/`、`.agents/` 同）；若你拿到的是 clone，此文件缺席属正常，计划内容可临时向维护者索取
-> 5. **直接跳到最新一条「会话记录：2026-10-19 00:50」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-25 18:45」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-19 00:50`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`62f81ff` on `master`（已与 origin/master 同步；tag `v1.4.0`）
-> 📊 累计会话数：主文档 3 条，另有 19 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-25 18:45`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`284a497` on `master`（领先 origin/master 3 个提交；最近 tag 仍是 `v1.4.0`）
+> 📊 累计会话数：主文档 4 条，另有 19 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "62f81ff", "branch": "master", "dirty": false, "timestamp": "2026-10-19T00:50:00+08:00"} -->
+<!-- git-meta: {"last_commit": "284a497", "branch": "master", "dirty": false, "timestamp": "2026-10-25T18:45:00+08:00"} -->
 
-- **日期**：2026-10-19 00:50
-- **会话摘要**：会话归档（`/read-status` 触发的 Step 2c 机械动作）——把 6 个已关闭任务组的会话章节（2026-09-30 Factory Droid 接入 / 2026-10-02 + 10-03 MiniMax 接入与展示形态改版 / 2026-10-11 15:14 Open Design 接入 / 16:10 悬浮球格布局打磨 / 10-13 Provider 漂移修复与 `--json` 探针）原样搬进 `docs/wiki/99-appendix-legacy-status.md`，主文档 754 → 366 行（低于 400 行阈值）。主文档保留最近 3 条 + 无关闭信号的 2026-08-25。**零产品代码改动。**
+- **日期**：2026-10-25 18:45
+- **会话摘要**：用户现场报告「Factory Droid 最紧张的月额度看不到、倒计时也不对」——走单会话轻量路线定位并修好展示口径（`Remaining` 按紧张度排序、最紧张窗口打头；`ResetAt`/新增 `ResetLabel` 跟排头窗口走），重建 exe 并重启实例，截图确认「月 98.0% 已用」与「距月额度刷新: 4天21时」都在首屏可见。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.4.0 已发布（2026-10-19，附 exe）**，master 与 origin/master 同步在 `62f81ff`；本轮增量 = 多 Key / 多套餐的交付与收尾（代码 + 文档均已推送）
+- 当前阶段：v1.4.0 已发布（2026-10-19）之后转入用户反馈的小修：master 领先 origin 3 个提交（`284a497` Factory 展示口径修复 + 构建产物 + 文档）；最近一轮 = Factory Droid「最紧张窗口打头、倒计时跟它走」
 - 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`）
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
-- 下一步：「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次 12 条待用户拍板（见本地 `ROADMAP.md`「Now」，该文件已不入仓库）；STATUS 已再次按任务组整组归档至 314 行（低于阈值）
+- 下一步：定一下要不要把这次修复发 v1.4.1 并推送（master 已领先 origin 3 个提交）；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次 12 条待用户拍板（见本地 `ROADMAP.md`「Now」，该文件已不入仓库）
 - 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**公开仓库自 2026-10-14 起只含产品代码与对外文档**——`.scratch/`、`.agents/`、`.video_agent/`、`.superpowers/`、`docs/superpowers/`、`AGENTS.md`、`ROADMAP.md` 全部已进 `.gitignore`，提交仍应精确 `git add` 而非 `-A`（ignore 只管未跟踪文件，已跟踪文件不受保护）
 
 
@@ -312,3 +312,60 @@
 - **前端可视验证的缺口**：本轮用戸截图暴露了「配置面板凭证区整块没渲染」的自伤缺陷——Go 测试与球格渲染探针都绿了却都绕开了这段 DOM。**以后动前端渲染逻辑，先想一想有没有探针能覆到它**，不要默认「构建过就没事」。
 - **环境笔记**：Go 不在 PATH，在 `C:\Users\joe\sdk\go1.26.5\bin\go.exe`；wails CLI 在 `C:\Users\joe\go\bin\wails.exe`；两者都需先加 PATH。
 - **Wiki 指针状态**：`docs/wiki/` 本轮同步 02 / 05 / 07 / 08（`.covered-files` 57 → 59）；本次收尾无代码改动，wiki 无漂移。
+
+---
+
+## 会话记录：2026-10-25 18:45
+
+> **会话摘要**：用户现场报告「Factory Droid 最紧张的月额度看不到、倒计时也不对」——单会话轻量路线修好展示口径（最紧张窗口打头 + 倒计时标明所属窗口），重建 exe、重启实例，截图确认
+> **Git**：`284a497` on `master`（实现提交；随后 `19c29fe` 同步构建产物、文档跟进，master 领先 origin 3 个提交）
+> **任务组**：Factory Droid 窗口展示口径（无 spec 拆票，单会话轻量路线）
+> **任务组状态**：已完成（已构建并重启实例；未切版本号、未发 release、未推送）
+
+### 本次完成
+
+- **定位到两处根因**。① 面板头部那行（`.quota-remaining`）只有 210px 宽 + `text-overflow: ellipsis`，而 `Remaining` 按「5小时 → 周 → 月」固定顺序拼串，月百分比排第三段必然被截掉 —— 可球色与进度条是由月窗口（最紧张）驱动的，于是出现「条是红的、数字看不见」；② 进度条下的倒计时取的是 5 小时窗口的 `secondsRemaining`，跟驱动告警的窗口不是同一个。
+- **展示口径改成「按紧张度排序 + 倒计时跟排头」**。`Remaining` 各段按已用百分比降序拼接，最紧张的窗口打头；Core 接管时 Core 段仍固定首位（保住 10-13 那条「球看着满了、其实 Core 还有量」的语义），`Extra` 恒居末位。新增 `QuotaResult.ResetLabel`（`json:"reset_label,omitempty"`），`ResetAt` 改取排头那段窗口的重置时间并标明窗口名。
+- **前端倒计时带窗口名与天粒度**。`formatCountdown(iso, label)` 渲染成「距月额度刷新: 4天21时」，≥24 小时按天计（此前月窗口只能显示「288时41分」）；`reset_label` 经 `data-reset-label` 落位，30 秒一次的定时刷新会读回，不会被抹成通用措辞。
+- **真机验证与交付**：`wails build` 重建 23s；旧实例（PID 28328）结束后重启（PID 22364）；桌面 `Quota Viewer.lnk` 仍指向 `build/bin/quota-viewer.exe`（11,662,336 字节，18:42:40）。截图确认 Factory 行现为「月 98.0% 已用 · Core 45.0% 已用 · 5小…」，倒计时「距月额度刷新: 4天21时」。
+- **验收**：一个静态双轴审查（Standards/Spec，无 blocking）+ 一个独立动态验收门（VERIFIED：`go vet`/`go test ./...` 全绿、既有探针 7/7、自写探针 10/10、4000 组属性夹具不变量成立、三条指定变异全被杀且还原复绿）。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 排头窗口缺 `secondsRemaining` 时倒计时整行不显示 | 用户 2026-10-19 拍板；与既有「驱动窗口缺秒数就留空、不借别的窗口」口径一致 | 退一步显示 5 小时窗口的倒计时并标明来源 |
+| 只改 Factory，不动 Kimi / Ollama 等兄弟 provider | 用户只报了这一家；其余平台倒计时仍锚 5 小时窗口（ROADMAP Later 的 Kimi 打磨项仍在） | 顺手把「倒计时跟驱动窗口」推广到全部 usage 型 provider |
+| 单会话轻量路线（1 个静态审查 + 1 个动态验收） | 改动 4 文件 +207/−60，不触认证/schema/并发/构建配置 | 严格规划 → 出票 → 逐票 worker |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 修改 | `internal/fetcher/factorydroid.go` | `parseTokenRateLimits` 改为「段 + 紧张度排序 + 排头驱动倒计时」；`factoryDrivingWindow` 同时返回窗口名 |
+| 修改 | `internal/fetcher/types.go` | 新增 `ResetLabel`（`json:"reset_label,omitempty"`） |
+| 修改 | `internal/fetcher/factorydroid_test.go` | 新增 `TestFactoryDroid_TightestWindowLeadsDisplay`；AC 表顺序/倒计时期望同步到新口径 |
+| 修改 | `frontend/src/main.js` | 倒计时带窗口名与天粒度；`data-reset-label` 写入与读回 |
+| 新增 | `.scratch/factory-tightest-window/` | 本票 spec + 票 + 倒计时探针（不入库） |
+
+> 本次变更：+207/−60 行，4 个源码文件（另有构建产物 `frontend/dist` 与 `wailsjs` 绑定随 `19c29fe` 入库）
+> 变更基准：`git diff 211047c..284a497 --stat`
+
+### 未完成 & 下一步
+
+1. **要不要发 v1.4.1 并推送**（新）：master 领先 origin 3 个提交，未打 tag、未发 release —— 等用户定。
+2. **对端告知报文**（持续中）。
+3. **非阻断清理批次 12 条**（持续中）。
+4. **Kimi 倒计时口径**（持续中，ROADMAP Later）：「倒计时取正在驱动告警的窗口」这次只在 Factory 落地，Kimi 仍固定 5h。
+
+### 已知问题 & 注意事项
+
+- **GUI 像素级截断没测**：无头环境只能按 CSS 规则 + 字宽估算。排头段一定落在可见区内，但三段全展开（约 245px > 210px）时第二段尾部仍可能出现省略号 —— 那不是告警来源，可接受。
+- **探针契约**：`internal/probe` 的 `schema` 仍为 2、记录 10 键形状未变；`reset_at` 现在随最紧张窗口漂移（此前固定 5h），`reset_label` 未进报文。消费方若要区分窗口，才需要 schema 3 纯增量补键。
+
+### 关键上下文
+
+- Factory 私有路由 `/api/billing/limits` 的三窗口只有 `usedPercent` + `secondsRemaining`，没有绝对值；`Percent` = 全部窗口（含 Core 池）最大值，球色阈值 60% 黄 / 80% 红 / 100% 熄灭。
+- 本次固定点：SPEC_BASELINE `211047c` → 实现 `284a497`。静态审查 1 个实例（无 blocking），动态验收 1 个独立实例（VERIFIED）。前端探针在 `.scratch/factory-tightest-window/probe/countdown-probe.js`（7/7）。
+- 环境：Go 不在 PATH（`C:\Users\joe\sdk\go1.26.5\bin`），wails CLI 在 `C:\Users\joe\go\bin`；实例在跑时 `wails build` 会把旧 exe 改名成 `quota-viewer.exe~` 留在 `build/bin`（本次构建前先杀了实例，故没有残留）。
+- Wiki 指针状态：`docs/wiki/` 同步 00 / 02 / 05（Factory bullet 的排序与倒计时口径、契约清单补 `reset_label`、模块清册行数与说明），`synced_commit` 刷到 `284a497`；文件数仍 11。

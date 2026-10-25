@@ -23,6 +23,10 @@ type QuotaResult struct {
 	Currency    string    `json:"currency"`  // 余额货币代码(如 "CNY" / "USD")
 	Remaining   string    `json:"remaining"` // 原始剩余描述(如 "1,200/18,000 次" 或 "无限制")
 	ResetAt     string    `json:"reset_at"`  // 下次重置时间(ISO 8601,空则未知)
+	// ResetLabel 是 ResetAt 所属的窗口名(如 "月额度" / "Core 周额度")。
+	// 告警由"最紧张的窗口"驱动时,倒计时必须标明它是谁的,否则会被读成别的窗口。
+	// 空串 = 未知来源,前端退回通用措辞。
+	ResetLabel  string    `json:"reset_label,omitempty"`
 	LastUpdated time.Time `json:"last_updated"`
 	Error       string    `json:"error"` // 非空表示失败
 

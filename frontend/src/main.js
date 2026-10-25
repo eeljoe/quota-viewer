@@ -115,8 +115,9 @@ function renderResults(results) {
         const item = document.createElement("div");
         item.className = "quota-item" + (r.error ? " error" : "");
         item.style.animationDelay = idx * 45 + "ms";
+        const resetLabel = r.reset_label || "";
         const resetHtml = (r.reset_at && !r.error)
-            ? `<div class="quota-reset" data-reset-at="${r.reset_at}">${formatCountdown(r.reset_at)}</div>`
+            ? `<div class="quota-reset" data-reset-at="${r.reset_at}" data-reset-label="${escapeHtml(resetLabel)}">${formatCountdown(r.reset_at, resetLabel)}</div>`
             : "";
         item.innerHTML = `
             <div class="quota-item-header">
@@ -153,21 +154,28 @@ function syncPanelSize() {
 }
 
 // === 倒计时 ===
-function formatCountdown(isoStr) {
+// label 是后端给出的「这个重置时间属于哪个窗口」（如 "月额度"）——告警可能是由月窗口
+// 驱动的，不写清窗口，用户会把它读成 5 小时窗口的重置时间。空串退回通用措辞。
+// ≥24 小时改写成天粒度：月/周窗口的倒计时写成 "288时41分" 没法读。
+function formatCountdown(isoStr, label) {
     const target = new Date(isoStr);
     if (isNaN(target.getTime())) return "";
     const diff = target - Date.now();
     if (diff <= 0) return "已过期";
+    const prefix = label ? `距${label}刷新: ` : "距下次刷新: ";
+    const days = Math.floor(diff / 86400000);
+    if (days > 0) return `${prefix}${days}天${Math.floor((diff % 86400000) / 3600000)}时`;
     const hours = Math.floor(diff / 3600000);
     const mins = Math.floor((diff % 3600000) / 60000);
-    if (hours > 0) return `距下次刷新: ${hours}时${mins}分`;
-    return `距下次刷新: ${mins}分`;
+    if (hours > 0) return `${prefix}${hours}时${mins}分`;
+    return `${prefix}${mins}分`;
 }
 
 function updateCountdowns() {
     document.querySelectorAll(".quota-reset").forEach((el) => {
         const resetAt = el.getAttribute("data-reset-at");
-        const text = formatCountdown(resetAt);
+        const label = el.getAttribute("data-reset-label") || "";
+        const text = formatCountdown(resetAt, label);
         if (text) el.textContent = text;
     });
 }

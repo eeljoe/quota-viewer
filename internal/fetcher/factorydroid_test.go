@@ -56,6 +56,50 @@ func TestFactoryDroid_EmptyKey_ReadsEnvFile(t *testing.T) {
 	}
 }
 
+// TestFactoryDroid_TightestWindowLeadsDisplay 守护 2026-10-19 的用户现场:
+// 月窗口最紧张时,它必须排在 Remaining 的第一段、倒计时也必须跟它走。
+// 否则头部那行会被 210px 截掉第三段 —— 球面因月窗口变红,用户却看不到月百分比。
+func TestFactoryDroid_TightestWindowLeadsDisplay(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+  "usesTokenRateLimitsBilling": true,
+  "limits": {
+    "standard": {
+      "fiveHour": {"usedPercent": 20, "secondsRemaining": 1800},
+      "weekly":   {"usedPercent": 18, "secondsRemaining": 259200},
+      "monthly":  {"usedPercent": 96, "secondsRemaining": 1209600}
+    }
+  }
+}`))
+	}))
+	defer server.Close()
+
+	f := NewFactoryDroidFetcher("fk_test")
+	f.baseURL = server.URL
+	t0 := time.Now()
+	result := f.Fetch()
+	t1 := time.Now()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if want := "月 96.0% 已用 · 5小时 20.0% 已用 · 周 18.0% 已用"; result.Remaining != want {
+		t.Errorf("Remaining = '%s', want '%s'", result.Remaining, want)
+	}
+	if result.ResetLabel != "月额度" {
+		t.Errorf("ResetLabel = '%s', want '月额度'", result.ResetLabel)
+	}
+	reset, err := time.Parse(time.RFC3339, result.ResetAt)
+	if err != nil {
+		t.Fatalf("ResetAt '%s' 不可解析: %v", result.ResetAt, err)
+	}
+	want := 1209600 * time.Second
+	if reset.Before(t0.Add(want-time.Second)) || reset.After(t1.Add(want)) {
+		t.Errorf("ResetAt = '%s'(抓取时刻后 %.0fs), want 抓取时刻 + %.0fs(月窗口)",
+			result.ResetAt, reset.Sub(t0).Seconds(), want.Seconds())
+	}
+}
+
 // TestFactoryDroid_TokenRateLimits_FormatsResult 验证新账单模型(token-rate limits)解析:
 // 5h 窗口驱动主展示,Percent 取全部窗口最紧张的,预付余额写入 Remaining。
 func TestFactoryDroid_TokenRateLimits_FormatsResult(t *testing.T) {
@@ -83,15 +127,18 @@ func TestFactoryDroid_TokenRateLimits_FormatsResult(t *testing.T) {
 	if result.Total != 100 || result.Used != 20 {
 		t.Errorf("expected Used=20/Total=100 (5h 窗口驱动主展示), got %f/%f", result.Used, result.Total)
 	}
-	// 展示与 Kimi/Ollama 对齐:常驻 5小时/周;月度非最紧张窗口不显示;Extra 有余款才显示
-	if result.Remaining != "5小时 20.0% 已用 · 周 45.0% 已用 · Extra $3.20" {
+	// 按紧张度排序(5h 20 / 周 45 / 月 12):周最紧张 ⇒ 打头;Extra 段永远最后
+	if result.Remaining != "周 45.0% 已用 · 5小时 20.0% 已用 · Extra $3.20" {
 		t.Errorf("unexpected Remaining: '%s'", result.Remaining)
 	}
-	// ResetAt 来自 5h 窗口的 secondsRemaining(3600s)
+	// ResetAt 跟打头那一段走 ⇒ 周窗口的 secondsRemaining(259200s = 3 天)
+	if result.ResetLabel != "周额度" {
+		t.Errorf("expected ResetLabel '周额度', got '%s'", result.ResetLabel)
+	}
 	if reset, err := time.Parse(time.RFC3339, result.ResetAt); err != nil {
 		t.Errorf("expected parseable ResetAt, got '%s'", result.ResetAt)
-	} else if diff := time.Until(reset); diff < 55*time.Minute || diff > 65*time.Minute {
-		t.Errorf("expected ResetAt ~1h from now, got '%s'", result.ResetAt)
+	} else if diff := time.Until(reset); diff < 71*time.Hour || diff > 72*time.Hour {
+		t.Errorf("expected ResetAt ~72h from now, got '%s'", result.ResetAt)
 	}
 }
 
@@ -337,7 +384,8 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 			coreCounts: -1,
 		},
 		{
-			// AC-3:Standard 未顶格 → 不接管,Core 只作为附带说明
+			// AC-3:Standard 未顶格 → 不接管,Core 只作为附带说明。
+			// Core 80 仍是最紧张的一段 ⇒ 打头;它的窗口没有 secondsRemaining ⇒ 倒计时留空。
 			name: "AC3_Standard未顶格不接管", body: `{
   "usesTokenRateLimitsBilling": true,
   "overagePreference": "droidCore",
@@ -346,9 +394,9 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": 80}}
   }
 }`,
-			percent: 80, used: 50, resetSecs: 300,
-			hasTail:    "Core 80.0% 已用",
-			coreCounts: -1,
+			percent: 80, used: 50, resetSecs: -1,
+			remaining:  "Core 80.0% 已用 · 5小时 50.0% 已用 · 周 50.0% 已用",
+			coreCounts: 1,
 		},
 		{
 			// AC-4:Core 无数据(全 null)→ 不接管,Percent 不许掉成 0
@@ -360,8 +408,8 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": null, "secondsRemaining": null}, "weekly": {"usedPercent": null}}
   }
 }`,
-			percent: 100, used: 0, resetSecs: 300,
-			coreCounts: 0, hasTail: "周 100.0% 已用",
+			percent: 100, used: 0, resetSecs: -1,
+			coreCounts: 0, remaining: "周 100.0% 已用 · 5小时 0.0% 已用",
 		},
 		{
 			// AC-4':Core 整体缺失 → 同样不接管
@@ -370,7 +418,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   "limits": {"standard": {"fiveHour": {"usedPercent": 0}, "weekly": {"usedPercent": 100}}}
 }`,
 			percent: 100, used: 0, resetSecs: -1,
-			remaining: "5小时 0.0% 已用 · 周 100.0% 已用", coreCounts: 0,
+			remaining: "周 100.0% 已用 · 5小时 0.0% 已用", coreCounts: 0,
 		},
 		{
 			// AC-5:顶格判据是 >= 100,99.9 不算顶格
@@ -383,7 +431,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   }
 }`,
 			percent: 99.9, used: 30, resetSecs: -1,
-			remaining:  "5小时 30.0% 已用 · 周 99.9% 已用 · Core 60.0% 已用",
+			remaining:  "周 99.9% 已用 · Core 60.0% 已用 · 5小时 30.0% 已用",
 			coreCounts: -1,
 		},
 		{
@@ -397,7 +445,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   }
 }`,
 			percent: 100, used: 0, resetSecs: -1,
-			remaining:  "5小时 0.0% 已用 · 周 100.0% 已用 · Core 60.0% 已用",
+			remaining:  "周 100.0% 已用 · Core 60.0% 已用 · 5小时 0.0% 已用",
 			coreCounts: -1,
 		},
 		{
@@ -549,14 +597,15 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 }
 
 // validFactoryLimitsJSON 是真实 /api/billing/limits 返回结构的代表
-// (token-rate limits 计费:5h/周/月窗口 + 预付 Extra Usage 余额)。
+// (token-rate limits 计费:5h/周/月窗口 + 预付 Extra Usage 余额;
+// 三个窗口上游都给 secondsRemaining,这里照实保留)。
 const validFactoryLimitsJSON = `{
   "usesTokenRateLimitsBilling": true,
   "limits": {
     "standard": {
       "fiveHour": {"usedPercent": 20, "secondsRemaining": 3600},
-      "weekly": {"usedPercent": 45},
-      "monthly": {"usedPercent": 12}
+      "weekly": {"usedPercent": 45, "secondsRemaining": 259200},
+      "monthly": {"usedPercent": 12, "secondsRemaining": 1209600}
     }
   },
   "extraUsageBalanceCents": 320

@@ -15,8 +15,12 @@ import (
 // 本文件覆盖票 01 的 AS-1..AS-9(手填 token 分支:请求形状、字段容错、
 // 剩余→已用反转、驱动窗口、倒计时、隐藏窗口、Remaining 文案与错误映射)
 // 与票 02 的 AS-8/8a..8d(本机 Devin Desktop 登录态读取、兜底顺序)。
-// 全部走 httptest 注入 server + 临时 state.vscdb 字节文件,不发真实网络请求;
-// 每个用例都 t.Setenv("APPDATA", t.TempDir()),绝不读开发机真实登录态(AS-8d)。
+// 全部走 httptest 注入 server + 临时 state.vscdb 字节文件,不发真实网络请求。
+//
+// AS-8d 的隔离口径按事实写:凡构造 DevinFetcher 或调 Fetch() 的用例,构造前一律先
+// t.Setenv("APPDATA", t.TempDir()) ⇒ 构造期解析出的 stateFile 必在临时目录里,
+// 读不到开发机真实登录态;只调 applyPlanStatus(纯映射,不读任何字段)的用例用零值
+// DevinFetcher,根本不做构造,因而也没有"从环境 APPDATA 解析路径"这回事。
 
 // devinTestServer 起一个 httptest server,并返回与之绑定的 fetcher(注入 serverURL)。
 // 顺手把 APPDATA 指到临时目录:DevinFetcher 构造期会据此解析本机 state.vscdb,
@@ -275,7 +279,7 @@ func TestDevinParsePlanStatus_NullTolerance(t *testing.T) {
 
 // TestDevinApplyPlanStatus_InversionAndClamp 已用 = 100 - 剩余,越界夹到 [0,100]。
 func TestDevinApplyPlanStatus_InversionAndClamp(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 	cases := []struct {
 		name    string
 		daily   float64
@@ -314,7 +318,7 @@ func TestDevinApplyPlanStatus_InversionAndClamp(t *testing.T) {
 
 // TestDevinApplyPlanStatus_DrivingWindow 驱动窗口 = 可见窗口中已用更大者;Used/Percent 同值。
 func TestDevinApplyPlanStatus_DrivingWindow(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
 	// 日剩余 20(已用 80)、周剩余 70(已用 30)⇒ 日驱动。
 	r := f.applyPlanStatus(&devinPlanStatus{
@@ -352,7 +356,7 @@ func TestDevinApplyPlanStatus_DrivingWindow(t *testing.T) {
 // 球面百分比相同看不出差别,但倒计时的标签与时间会错标成周(票面第 6 条「并列取日」)。
 // 日/周重置 epoch 故意不同,所以 ResetAt 一条断言就能分开"取了哪个窗口"。
 func TestDevinApplyPlanStatus_TiePicksDailyWindow(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
 	// 日剩余 20、周剩余 20 ⇒ 两侧都已用 80,并列。
 	r := f.applyPlanStatus(&devinPlanStatus{
@@ -381,7 +385,7 @@ func TestDevinApplyPlanStatus_TiePicksDailyWindow(t *testing.T) {
 // TestDevinApplyPlanStatus_ResetAtAndLabel ResetAt = 驱动窗口 epoch 的 UTC RFC3339;
 // 驱动窗口无重置时间时两者都留空,不得借另一个可见窗口的时间。
 func TestDevinApplyPlanStatus_ResetAtAndLabel(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
 	// 日驱动 + 日有重置时间。
 	r := f.applyPlanStatus(&devinPlanStatus{
@@ -427,7 +431,7 @@ func TestDevinApplyPlanStatus_ResetAtAndLabel(t *testing.T) {
 
 // TestDevinApplyPlanStatus_HideDaily 只隐藏日窗口 ⇒ 只看周。
 func TestDevinApplyPlanStatus_HideDaily(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 	r := f.applyPlanStatus(&devinPlanStatus{
 		DailyRemaining:  devinF(0), // 已用 100,若参与驱动会顶到 100
 		WeeklyRemaining: devinF(82),
@@ -451,7 +455,7 @@ func TestDevinApplyPlanStatus_HideDaily(t *testing.T) {
 
 // TestDevinApplyPlanStatus_HideWeekly 对称:只隐藏周窗口 ⇒ 只看日。
 func TestDevinApplyPlanStatus_HideWeekly(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 	r := f.applyPlanStatus(&devinPlanStatus{
 		DailyRemaining:  devinF(82),
 		WeeklyRemaining: devinF(0),
@@ -475,7 +479,7 @@ func TestDevinApplyPlanStatus_HideWeekly(t *testing.T) {
 
 // TestDevinApplyPlanStatus_HideBoth 两个窗口都隐藏 ⇒ 报错且不带百分比与倒计时。
 func TestDevinApplyPlanStatus_HideBoth(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 	r := f.applyPlanStatus(&devinPlanStatus{
 		DailyRemaining:  devinF(20),
 		WeeklyRemaining: devinF(30),
@@ -502,7 +506,7 @@ func TestDevinApplyPlanStatus_HideBoth(t *testing.T) {
 // 不当作「0% 剩余」渲染成 100% 已用、不 panic、Remaining 只剩另一侧一段、
 // 驱动窗口落在给了百分比的那一侧。两侧都缺由解析层报结构错误(见 StructuralErrors)。
 func TestDevinApplyPlanStatus_MissingPercentIsInvisible(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
 	// 只给了周(日窗口 DailyRemaining == nil)。日的重置时间故意给非零:
 	// 若把缺百分比当成可见,它会以"0% 剩余 ⇒ 100% 已用"顶成驱动窗口并抢走倒计时。
@@ -555,7 +559,7 @@ func TestDevinApplyPlanStatus_MissingPercentIsInvisible(t *testing.T) {
 
 // TestDevinApplyPlanStatus_RemainingText 按已用降序、一位小数、超额追加、不含套餐名。
 func TestDevinApplyPlanStatus_RemainingText(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
 	// 日 20.0 已用 / 周 18.0 已用,无超额。
 	r := f.applyPlanStatus(&devinPlanStatus{
@@ -614,7 +618,7 @@ func TestDevinApplyPlanStatus_RemainingText(t *testing.T) {
 // TestDevinApplyPlanStatus_RemainingText_TieDailyFirst 两侧已用并列时 Remaining 的日段在前
 // (票面第 6 条「按已用降序(并列日在前)」)。排序一旦把并列当成可交换,两段顺序会随排序实现漂移。
 func TestDevinApplyPlanStatus_RemainingText_TieDailyFirst(t *testing.T) {
-	f := NewDevinFetcher("t")
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
 	r := f.applyPlanStatus(&devinPlanStatus{
 		DailyRemaining:  devinF(20), // 已用 80
@@ -761,7 +765,9 @@ func TestDevinFetcher_Fetch_OK(t *testing.T) {
 
 // TestDevinFetcher_DefaultServerURL 不注入 serverURL 时走默认端点常量,
 // 且构造函数不得把默认值提前写进可注入字段(票 02 靠这个字段让本机 apiServerUrl 生效)。
+// 这里要真构造(断言的是构造函数留下的字段),所以先把 APPDATA 指到临时目录(AS-8d)。
 func TestDevinFetcher_DefaultServerURL(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
 	f := NewDevinFetcher("dv-test-token")
 	if f.serverURL != "" {
 		t.Errorf("构造函数的 serverURL 必须留空(默认值只由 devinStatusURL 兜底), got %q", f.serverURL)

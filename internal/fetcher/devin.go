@@ -444,8 +444,12 @@ func (f *DevinFetcher) applyPlanStatus(st *devinPlanStatus) QuotaResult {
 //   - token:手填(TrimSpace 后)优先 → 本机 Devin Desktop 登录态 → 报「未配置」且不发请求;
 //   - server:注入值优先 → 本机读到的 apiServerUrl → 默认端点(只由 devinStatusURL 兜底)。
 //
-// 本机 token 与 server 来自同一次 readDevinDesktopCredential 调用,不重复读文件;
-// 而且只在确有缺项时才读 —— 手填 token 与注入 server 都齐了就不碰用户的 state.vscdb。
+// 本机 token 与 server 来自同一次 readDevinDesktopCredential 调用,不重复读文件。
+// 读取条件是「readDesktopState 为真 且(手填 token 为空 或 未注入 server)」:生产构造点
+// 只传 api_key、永不注入 serverURL(registry.go 的 NewDevinFetcher(creds["api_key"]))⇒
+// 该条件在生产上恒真,每次 Fetch 都会把整份 state.vscdb(实测约 1.5 MB)读一遍。
+// 也就是说手填 token 只省掉「token 取值」这一步,并不省掉读文件;只有注入 server 的
+// 调用方(测试)在 token 也非空时才真的不碰用户的文件。
 func (f *DevinFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
 		Platform:    "Devin",

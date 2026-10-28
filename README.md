@@ -7,9 +7,9 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 ![Floating Ball](docs/screenshots/preview-1.png)
 ![Expanded Panel](docs/screenshots/preview-2.png)
 
-**10 platforms**: [Kimi](https://platform.kimi.com) · [Xfyun](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [Xiaomi MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai)
+**11 platforms**: [Kimi](https://platform.kimi.com) · [Xfyun](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [Xiaomi MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai)
 
-> The registry supports 10 platforms. A **monitored object** is one credential × one plan card, so a platform with two API keys or two plans takes more than one cell. The floating ball shows **up to 9 objects normally, up to 16 in extended mode**; anything beyond that collapses into a `+N` cell (the panel still lists every object).
+> The registry supports 11 platforms. A **monitored object** is one credential × one plan card, so a platform with two API keys or two plans takes more than one cell. The floating ball shows **up to 9 objects normally, up to 16 in extended mode**; anything beyond that collapses into a `+N` cell (the panel still lists every object).
 
 - **Tech Stack**: Go 1.24 + Wails v2.12.0 + Vanilla HTML/CSS/JS (Vite bundling)
 - **Platform**: Windows 10+ (WebView2 Runtime)
@@ -40,6 +40,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 | [Factory Droid](https://factory.ai) | API Key (`fk-...`, or auto-read `~/.factory/.env` if empty) | usage | 5-hour / weekly / monthly windows + Core pool usage |
 | [MiniMax](https://platform.minimaxi.com) | Subscription Key (`sk-cp-...`) | usage | 5-hour / weekly window usage (Token Plan) |
 | [Open Design](https://open-design.ai) | Browser session Cookie | usage | Design Plan 5-hour / 7-day quota usage |
+| [Devin](https://app.devin.ai) | Token (or auto-read the local Devin Desktop login if empty) | usage | Daily / weekly quota usage of the Devin plan |
 
 > Tip: For Cookie-based providers, you can paste the entire "Copy as PowerShell" script from your browser's F12 → Network tab, and it will be automatically parsed into a Cookie header on save.
 
@@ -73,6 +74,14 @@ go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer
 Quota Viewer reads those windows from Open Design's control plane, and this is the one provider that **cannot** use an API key: keys of the form `sk-amr-` get a `401` from the control plane, so a **browser session Cookie is required**.
 
 To get it: sign in at `open-design.ai/cloud/dashboard`, open F12 → Network, copy the request as a Cookie (or use "Copy as PowerShell" and paste the whole script), then paste it into the Open Design card in the config panel. When the session expires, sign in again and replace the Cookie.
+
+## How to monitor Devin
+
+[Devin](https://app.devin.ai) is an AI software engineer; its quota comes with the Devin subscription and is tracked as a **daily window and a weekly window**.
+
+Devin has no public quota API — self-serve plans get a `403` from the enterprise consumption endpoints, with no switch to enable it — so Quota Viewer reads those two windows from the same private seat-management endpoint Devin Desktop itself calls. **If you are signed in to Devin Desktop on this machine, leave the token field empty** and the login is picked up automatically (the local `state.vscdb` is byte-scanned, no SQLite driver involved). Paste a token by hand only if that automatic path stops working: the token is the `devin-session-token$...` string stored in `%APPDATA%\Devin\User\globalStorage\state.vscdb`.
+
+The ball shows a single `DV` cell: the percentage comes from the **busier of the two windows**, and the countdown is labelled with the window it belongs to (daily / weekly). When the token expires, sign in to Devin Desktop again or paste a fresh one. The plan name is never displayed.
 
 ## Development
 

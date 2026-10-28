@@ -7,9 +7,9 @@
 ![悬浮球](docs/screenshots/preview-1.png)
 ![展开面板](docs/screenshots/preview-2.png)
 
-**十家平台**：[Kimi](https://platform.kimi.com) · [讯飞星辰](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [小米 MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai)
+**十一家平台**：[Kimi](https://platform.kimi.com) · [讯飞星辰](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [小米 MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai)
 
-> 注册表支持 10 家平台。一个**监控对象** = 一组凭证 × 一张套餐卡，所以同平台两把 Key、两个套餐都会各占一格。悬浮球**普通模式最多 9 个对象，扩展模式最多 16 个**；超出的合并成一格 `+N`（展开面板仍逐行列出全部对象）。
+> 注册表支持 11 家平台。一个**监控对象** = 一组凭证 × 一张套餐卡，所以同平台两把 Key、两个套餐都会各占一格。悬浮球**普通模式最多 9 个对象，扩展模式最多 16 个**；超出的合并成一格 `+N`（展开面板仍逐行列出全部对象）。
 
 - **技术栈**: Go 1.24 + Wails v2.12.0 + 原生 HTML/CSS/JS (Vite 打包)
 - **平台**: Windows 10+ (WebView2 运行时)
@@ -40,6 +40,7 @@
 | [Factory Droid](https://factory.ai) | API Key (`fk-...`,留空自动读 `~/.factory/.env`) | usage | 5 小时 / 周 / 月窗口 + Core 池用量 |
 | [MiniMax](https://platform.minimaxi.com) | 订阅 Key (`sk-cp-...`) | usage | 5 小时 / 周窗口用量（Token Plan） |
 | [Open Design](https://open-design.ai) | 浏览器会话 Cookie | usage | Design Plan 5 小时 / 7 天额度用量 |
+| [Devin](https://app.devin.ai) | Token（留空自动读本机 Devin Desktop 登录态） | usage | Devin 套餐的每日 / 每周额度用量 |
 
 > 提示：Cookie 类凭证支持在浏览器 F12 → 网络标签 → 复制请求头后，直接粘贴 "Copy as PowerShell" 格式的整段脚本，保存时自动解析为 Cookie 请求头。
 
@@ -73,6 +74,14 @@ go build -o build/bin/quota-viewer-cli.exe ./cmd/quotaviewer
 Quota Viewer 从 Open Design 的控制面读取这两个窗口，而它是唯一**不能**用 API Key 的一家：`sk-amr-` 形式的 key 请求控制面一律返回 `401`，**只能用浏览器会话 Cookie**。
 
 取法：在 `open-design.ai/cloud/dashboard` 登录后，打开 F12 → 网络标签，把请求按 Cookie 复制（或整段用 "Copy as PowerShell" 复制后直接粘贴），粘进配置面板的 Open Design 卡片即可。会话过期后重新登录并替换 Cookie。
+
+## 怎么监控 Devin
+
+[Devin](https://app.devin.ai) 是 AI 软件工程师，额度来自 Devin 订阅，按**每日窗口与每周窗口**计算。
+
+Devin 没有公开额度 API——self-serve 套餐请求企业版 consumption 接口一律 403，官方也没有可以放开的开关——所以 Quota Viewer 读的是 Devin Desktop 自己调用的那个私有席位管理接口。**本机登录过 Devin Desktop 的话，token 留空即可**，登录态会自动读出来（按字节扫本机 `state.vscdb`，不引 SQLite 驱动）。只有这条自动路径失效时才需要手填：token 就是 `%APPDATA%\Devin\User\globalStorage\state.vscdb` 里 `devin-session-token$...` 这一串。
+
+悬浮球只有一个 `DV` 格：百分比取**日 / 周两个窗口里更紧张的那个**，倒计时标明它属于哪个窗口（日额度 / 周额度）。token 失效时重新登录 Devin Desktop，或粘一串新的。套餐名不展示。
 
 ## 开发
 

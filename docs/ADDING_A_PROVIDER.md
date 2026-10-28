@@ -37,7 +37,7 @@ import (
 // 认证: Authorization: Bearer xxx  (或 Cookie 头)
 type YourPlatformFetcher struct {
     apiKey string       // 或 cookie / token，取决于平台
-    apiURL string       // 可为空，默认用线上端点（测试时注入 httptest server）
+    apiURL string       // 可为空，默认用线上端点（测试时注入 httptest server）；例外：devin 留空时先试本机读到的端点，见文末「Devin 特殊说明」
 }
 
 func NewYourPlatformFetcher(apiKey string) *YourPlatformFetcher {
@@ -47,7 +47,7 @@ func NewYourPlatformFetcher(apiKey string) *YourPlatformFetcher {
 
 **关键点**：
 - `apiURL` 字段必须保留且可为空——测试通过它注入 httptest server URL
-- 构造函数只接收凭证字符串，`apiURL` 留空走默认端点
+- 构造函数只接收凭证字符串，`apiURL` 留空走默认端点 —— **唯一例外是 `devin`**：留空时先试本机读到的 `apiServerUrl`，读不到才回落到默认端点（见文末「Devin 特殊说明」）
 
 ### 1.2 实现 Fetch() 方法
 
@@ -355,6 +355,7 @@ wails build
 | `factory-droid` | Factory Droid | F | API Key (Bearer, `fk-...`；留空自动读 `~/.factory/.env`) | usage | `factorydroid.go` |
 | `minimax` | MiniMax | MX | Token Plan Key (`sk-cp-` 订阅 Key) | usage | `minimax.go` |
 | `open-design` | Open Design | OD | Browser session Cookie | usage | `opendesign.go` |
+| `devin` | Devin | DV | 本机 Devin Desktop 登录态（留空自动读）或手填 token | usage | `devin.go` |
 
 ### Ollama Cloud 特殊说明
 
@@ -371,3 +372,27 @@ MiniMax 的 Token Plan 额度走开放平台私有路由 `GET {region}/v1/api/op
 ### Open Design 特殊说明
 
 Open Design（open-design.ai，AMR Link 中转控制面）无公开额度 API，且没有可用的 API-key 通道：`sk-amr-` 形式的 API key 读不到任何额度，控制面对它一律返回 401，只能用**浏览器会话 Cookie**（注册表字段用 `textarea`，用户在 open-design.ai/cloud/dashboard 登录后按 F12 复制，或直接粘贴浏览器 “Copy as PowerShell” 内容，`config/cookie.go` 会自动提取）。`opendesign.go` 请求的是控制面 `amr-api.open-design.ai` 的 `/api/v1` 私有路由（不是数据面 `amr-link.open-design.ai` 的 `/v1`），两步 GET：先 `GET /api/v1/workspaces/current` 取 `workspaceId`，再 `GET /api/v1/workspaces/{workspaceId}/billing/coding-plan-usage` 取窗口用量。坑位：第二步**不能拿 `current` 当 id 用**（会返回 400 `workspace_member_required`），必须先取真实 id；窗口按 `durationSeconds` 识别而不按数组下标（18000 = 5 小时，604800 = 7 天，窗口集合归后端管，官方前端同样按 durationSeconds 匹配）；`usedCredits` / `limitCredits` / `remainingCredits` 是十进制字符串，按 `ParseFloat` 算百分比（credits 计数可能超出 float64 精确整数范围，不要转 int64）。5 小时窗口驱动 `Used` / `ResetAt`（`resetsAt` 官方给毫秒精度，规范化为秒精度 UTC），`Percent` 取 5 小时与 7 天窗口中更紧张者，两个窗口都写进 `Remaining`。Cookie 失效时控制面可能返 401 也可能 302 跳登录页，故 client 设了 `CheckRedirect: http.ErrUseLastResponse` 并把 302 并入 Cookie 失效分支——否则会跟随跳转拿到 200 登录页 HTML，报成「解析响应失败(响应结构可能已变化)」而丢掉「请重新登录」指引。该路由是官方前端的私有接口，无稳定性承诺，失效时对照 open-design.ai 的 web bundle 更新 `opendesign.go`。
+
+### Devin 特殊说明
+
+Devin 没有可用的公开额度 API：v2/v3 的 `/enterprise/consumption/*` 只对 Enterprise 管理员的个人 Key 开放，self-serve（Free / Pro / Max / Teams）一律 403，官方文档明确写了没有可以放开的开关。能读到日/周两个窗口的只有 Devin Desktop（Windsurf 内核）自己调用的席位管理接口：`POST {server}/exa.seat_management_pb.SeatManagementService/GetUserStatus` —— CONNECT 协议，请求头 `Content-Type: application/json` 与 `Connect-Protocol-Version: 1`，UA 用浏览器型固定串；body 只有 `metadata`，`metadata.api_key` 传 token，`ide_name` / `extension_name` 填 `windsurf`，`ide_version` / `extension_version` 填实测可用的 `1.126.0`（接口会校验版本号），`session_id` 任意占位。
+
+响应在 `userStatus.planStatus` 里，用到的字段（类型为 2026-10-29 真机直连实测）：
+
+| 字段 | 实测类型 | 语义 |
+|---|---|---|
+| `dailyQuotaRemainingPercent` | number | 日窗口**剩余**百分比 |
+| `weeklyQuotaRemainingPercent` | number | 周窗口**剩余**百分比 |
+| `dailyQuotaResetAtUnix` | **string**（protojson int64） | 日窗口重置时间，epoch 秒 |
+| `weeklyQuotaResetAtUnix` | **string**（protojson int64） | 周窗口重置时间，epoch 秒 |
+| `overageBalanceMicros` | **string** int64 微美元；可整个字段缺失（本机响应即缺失） | 超额余额 |
+| `planInfo.hideDailyQuota` / `planInfo.hideWeeklyQuota` | bool；可整个字段缺失（本机套餐两者都缺失） | 为真则该窗口不可见 |
+| `planInfo.planName` | string（在 `planInfo` 里，**不在** `planStatus` 顶层） | `Pro` / `Free` / `Max` …，只解析不展示 |
+
+口径：响应给的是**剩余**百分比，展示前必须反转成已用（`100 − 剩余`，夹在 `[0,100]`），与官方前端 `tgY` / `tgK` 两个换算函数同口径；照名字直用会让球色刚好反过来。`Percent` 与 `ResetAt` 都由**最紧张的可见窗口**驱动，倒计时标明「日额度 / 周额度」，被隐藏的窗口既不参与百分比也不参与倒计时。`planInfo.hide*Quota` 为真、**或本次响应干脆没给该窗口的剩余百分比**，两种都按不可见处理（缺字段不能当 0% 已用，那会把额度渲染成全新）；两个窗口都不可见时报「当前套餐不提供可读的额度窗口」。套餐名不展示（卡片头部只有 210px，多一段会把最紧张的数字挤出可视区），`overageBalanceMicros > 0` 时追加到 `Remaining` 尾部。三个 int64 字段无论给字符串还是数字都要能解析，百分比给字符串也不该报错。
+
+凭据：`api_key` 手填优先；留空时读本机 Devin Desktop 登录态 —— `%APPDATA%\Devin\User\globalStorage\state.vscdb` 里 `devin-session-token$<jwt>` 与 `"apiServerUrl":"…"` 都是**明文**，直接按字节扫，不引 SQLite 驱动、也不解析库结构（实测文件约 1.5 MB，毫秒级）。扫描是**按字节匹配、只取第一个命中点**：Devin Desktop 一旦改成加密存储、挪了 `state.vscdb` 位置或换出多命中形态，结果会**静默退化**成两个空串 —— 用户看到的是「未配置 Devin token」（错误文案里点了「登录 Devin Desktop 后留空即可」这个前提），不是「读取失败」，此时改走手填。读文件要按 Go 的共享模式（`os.ReadFile` 即是）：Devin Desktop 运行时会持有该库，独占读会失败。
+
+server 有三级兜底：调用方注入的 server → 本机读到的 `apiServerUrl` → 默认 `https://server.codeium.com`。**注意「`apiURL` 留空 = 默认端点」这条通用说明对 Devin 不成立**：`NewDevinFetcher` 不预填默认端点，留空会先试本机端点，读不到才回落默认值；默认值只允许出现在 URL 拼装那一处，提前写进构造期字段会让本机值永远失效。
+
+错误映射：401/403 = token 失效（提示重新登录 Devin Desktop 或更新 token），400 = 缺 `api_key`，其他非 200 透出状态码，结构不符报「无法解析额度数据（响应结构可能已变化）」。该路由是 Devin Desktop 的私有接口，无稳定性承诺；失效时对照 Devin Desktop 的 `resources/app/node_modules/@exa/chat-client/index.js`（`GetUserStatus` / `PlanStatus` 类型定义）更新 `devin.go`。

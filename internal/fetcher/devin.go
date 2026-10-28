@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,17 +28,125 @@ import (
 // Devin Desktop 的 resources/app/node_modules/@exa/chat-client/index.js 里
 // GetUserStatus / PlanStatus 两个类型定义更新本文件(与官方前端 tgY / tgK 两个
 // 换算函数同口径:已用 = 100 − 可见窗口剩余)。
+//
+// 凭证:api_key 手填优先;留空时读本机 Devin Desktop 的登录态作兜底
+// (state.vscdb 里 token 与 apiServerUrl 都是明文),所以登录过桌面版的用户
+// 什么都不填也能出数(与 factory-droid 读 ~/.factory/.env 同形)。
 type DevinFetcher struct {
 	apiKey    string
 	serverURL string // 调用方注入(测试注入 httptest);留空 = 走默认端点
+	stateFile string // state.vscdb 路径,构造期一次解析
+	// readDesktopState 是「是否允许读本机登录态」:api_key 留空时是否去读
+	// Devin Desktop 的登录态。默认 true;关掉就等于只认手填 token。
+	readDesktopState bool
 }
 
 // NewDevinFetcher 创建一个 DevinFetcher。
 //
 // serverURL 故意不在这里填默认值:默认端点只由 devinStatusURL 兜底,否则票 02
 // 从本机读到的 apiServerUrl 永远没有机会生效(字段已被写死)。
+//
+// stateFile 在这里一次解析完(与 factorydroid 的构造期解析同形):APPDATA 之后
+// 再变也不影响本实例读哪份登录态,测试只要在构造前把 APPDATA 指到临时目录即可。
 func NewDevinFetcher(apiKey string) *DevinFetcher {
-	return &DevinFetcher{apiKey: strings.TrimSpace(apiKey)}
+	return &DevinFetcher{
+		apiKey:           strings.TrimSpace(apiKey),
+		stateFile:        defaultDevinStatePath(),
+		readDesktopState: true,
+	}
+}
+
+// devinMaxStateFileBytes 是本机登录态文件的体积上限(64 MB)。
+// 实测 1.5 MB;超出这个数量级说明不是我们认识的 state.vscdb(或已被写坏),
+// 与其把整个文件读进内存,不如当作读不到 —— 用户改走手填 token。
+const devinMaxStateFileBytes = 64 << 20
+
+// 本机凭据在 state.vscdb 里的两个字面量(实测明文)。
+const (
+	devinDesktopTokenLiteral  = "devin-session-token$"
+	devinDesktopServerLiteral = `"apiServerUrl":"`
+)
+
+// defaultDevinStatePath 返回 Devin Desktop 的 state.vscdb 路径。
+// APPDATA 为空时返回空串 —— 空串等于「读不到」,让 Fetch 直接走手填/未配置分支。
+func defaultDevinStatePath() string {
+	appData := os.Getenv("APPDATA")
+	if appData == "" {
+		return ""
+	}
+	return filepath.Join(appData, "Devin", "User", "globalStorage", "state.vscdb")
+}
+
+// readDevinDesktopCredential 从 Devin Desktop 的 state.vscdb 里取出登录 token 与
+// apiServerUrl。取不到(路径为空 / 文件不存在 / 空文件 / 没有关键字 / 超限)时
+// 返回两个空串 —— 不报错、不打日志:读不到在用户侧的表现就是「未配置 token」,
+// 不是「读取失败」,由 Fetch 给出一条可操作的提示。
+//
+// 为什么按字节扫:state.vscdb 是 VS Code 风格的小型 SQLite 库(键值表 ItemTable),
+// 凭证明文存在数据页里。为免为此引一个 SQLite 驱动、也不解析库结构,这里直接在
+// 整文件字节流里找两个字面量。如果哪天 Devin Desktop 改成加密存储,本函数会返回
+// 两个空串,用户改走手填 token,不会崩、也不会把别人的数据当成 token。
+//
+// token 的返回值**带** devin-session-token$ 前缀(实测 metadata.api_key 要的就是
+// 这个带前缀的整串)。两个结果互相独立:只有一个命中也返回另一个的空串。
+func readDevinDesktopCredential(stateFile string) (token string, server string) {
+	if stateFile == "" {
+		return "", ""
+	}
+	info, err := os.Stat(stateFile)
+	if err != nil || info.IsDir() {
+		return "", ""
+	}
+	// 体积守卫必须在读取之前:超限文件一律不读,否则大文件会把内存顶爆。
+	if info.Size() > devinMaxStateFileBytes {
+		return "", ""
+	}
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		return "", ""
+	}
+
+	if i := bytes.Index(data, []byte(devinDesktopTokenLiteral)); i >= 0 {
+		start := i
+		end := start + len(devinDesktopTokenLiteral)
+		for end < len(data) && isDevinTokenByte(data[end]) {
+			end++
+		}
+		// 字面量后面必须还有 payload(票面 [A-Za-z0-9_.\-]+ 的 "+"):
+		// 只有一个裸前缀不构成一个可用的 token。
+		if end > start+len(devinDesktopTokenLiteral) {
+			token = string(data[start:end])
+		}
+	}
+
+	if i := bytes.Index(data, []byte(devinDesktopServerLiteral)); i >= 0 {
+		start := i + len(devinDesktopServerLiteral)
+		if j := bytes.IndexByte(data[start:], '"'); j >= 0 {
+			server = string(data[start : start+j])
+		}
+	}
+	return token, server
+}
+
+// isDevinTokenByte 判定 token payload 的合法字节:[A-Za-z0-9_.\-]。
+func isDevinTokenByte(c byte) bool {
+	switch {
+	case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+		return true
+	case c == '_', c == '.', c == '-':
+		return true
+	}
+	return false
+}
+
+// devinResolveServer 按 AS-8 的顺序决定打到哪个 server(纯函数):
+// 注入值优先 → 本机读到的 apiServerUrl → 空串。空串由 devinStatusURL 兜底成默认端点;
+// 默认值只在那一处出现,绝不提前写进 f.serverURL(写进去本机值就再也无法生效)。
+func devinResolveServer(injected, local string) string {
+	if injected != "" {
+		return injected
+	}
+	return local
 }
 
 const (
@@ -203,7 +313,8 @@ type devinMetadata struct {
 
 // fetchPlanStatus 发起一次 GetUserStatus 并解析。状态码映射:
 // 401/403 = token 失效,其余非 200 透出状态码(AS-9)。
-func (f *DevinFetcher) fetchPlanStatus(client *http.Client, token string) (*devinPlanStatus, error) {
+// server 是调用方已按 AS-8 顺序解析好的值:空串 ⇒ devinStatusURL 兜底到默认端点。
+func (f *DevinFetcher) fetchPlanStatus(client *http.Client, token, server string) (*devinPlanStatus, error) {
 	payload := struct {
 		Metadata devinMetadata `json:"metadata"`
 	}{Metadata: devinMetadata{
@@ -221,7 +332,7 @@ func (f *DevinFetcher) fetchPlanStatus(client *http.Client, token string) (*devi
 		return nil, fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", devinStatusURL(f.serverURL), bytes.NewReader(body))
+	req, err := http.NewRequest("POST", devinStatusURL(server), bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %v", err)
 	}
@@ -328,6 +439,13 @@ func (f *DevinFetcher) applyPlanStatus(st *devinPlanStatus) QuotaResult {
 //
 // 开头就构造 QuotaResult 的三项身份(Platform/Kind/LastUpdated):错误路径只补 Error,
 // 那三项必须保留 —— 上层按 Platform 对齐球格,零值会让错误提示无处可落。
+//
+// 凭证与端点按 AS-8 的顺序解析(票 02 的增量):
+//   - token:手填(TrimSpace 后)优先 → 本机 Devin Desktop 登录态 → 报「未配置」且不发请求;
+//   - server:注入值优先 → 本机读到的 apiServerUrl → 默认端点(只由 devinStatusURL 兜底)。
+//
+// 本机 token 与 server 来自同一次 readDevinDesktopCredential 调用,不重复读文件;
+// 而且只在确有缺项时才读 —— 手填 token 与注入 server 都齐了就不碰用户的 state.vscdb。
 func (f *DevinFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
 		Platform:    "Devin",
@@ -335,14 +453,24 @@ func (f *DevinFetcher) Fetch() QuotaResult {
 		LastUpdated: time.Now(),
 	}
 
-	if strings.TrimSpace(f.apiKey) == "" {
-		// 本票只有手填分支;留空自动读本机登录态是票 02 的增量。
+	token := strings.TrimSpace(f.apiKey)
+	var localToken, localServer string
+	if f.readDesktopState && (token == "" || f.serverURL == "") {
+		localToken, localServer = readDevinDesktopCredential(f.stateFile)
+	}
+	if token == "" {
+		token = localToken
+	}
+	if token == "" {
 		result.Error = "未配置 Devin token（登录 Devin Desktop 后留空即可，或粘贴 token）"
 		return result
 	}
+	// 注意:本机 server 只作为本次请求的参数,绝不回写 f.serverURL
+	// (写进去等于把它固化,换机或手填 server 就再也不生效)。
+	server := devinResolveServer(f.serverURL, localServer)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	st, err := f.fetchPlanStatus(client, strings.TrimSpace(f.apiKey))
+	st, err := f.fetchPlanStatus(client, token, server)
 	if err != nil {
 		result.Error = err.Error()
 		return result

@@ -5,18 +5,25 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 )
 
-// 本文件覆盖票 01 的 AS-1..AS-9:手填 token 分支的请求形状、字段容错、
-// 剩余→已用反转、驱动窗口、倒计时、隐藏窗口、Remaining 文案与错误映射。
-// 全部走 httptest 注入 server,不发真实网络请求;本机登录态分支属票 02,此处不涉及。
+// 本文件覆盖票 01 的 AS-1..AS-9(手填 token 分支:请求形状、字段容错、
+// 剩余→已用反转、驱动窗口、倒计时、隐藏窗口、Remaining 文案与错误映射)
+// 与票 02 的 AS-8/8a..8d(本机 Devin Desktop 登录态读取、兜底顺序)。
+// 全部走 httptest 注入 server + 临时 state.vscdb 字节文件,不发真实网络请求;
+// 每个用例都 t.Setenv("APPDATA", t.TempDir()),绝不读开发机真实登录态(AS-8d)。
 
 // devinTestServer 起一个 httptest server,并返回与之绑定的 fetcher(注入 serverURL)。
+// 顺手把 APPDATA 指到临时目录:DevinFetcher 构造期会据此解析本机 state.vscdb,
+// 不隔离的话手填留空的用例会读到开发机真实登录态并发起真网络请求。
 func devinTestServer(t *testing.T, handler http.HandlerFunc) (*DevinFetcher, *httptest.Server) {
 	t.Helper()
+	t.Setenv("APPDATA", t.TempDir())
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	f := NewDevinFetcher("dv-test-token")
@@ -762,6 +769,384 @@ func TestDevinFetcher_DefaultServerURL(t *testing.T) {
 	want := "https://server.codeium.com/exa.seat_management_pb.SeatManagementService/GetUserStatus"
 	if got := devinStatusURL(f.serverURL); got != want {
 		t.Errorf("默认端点: got %q, want %q", got, want)
+	}
+}
+
+// ---------- 票 02:本机 Devin Desktop 登录态(AS-8 / 8a..8d) ----------
+
+// devinLocalStateBody 是一份最小可用的 state.vscdb 字节流。真实的库是 VS Code 风格
+// SQLite,凭证明文散落在页里;这里只留本票关心的两个字面量(token 与 apiServerUrl),
+// 正文字节排列与实测文件同形。
+const devinLocalStateBody = `{"apiKey":"devin-session-token$eyJhbGciOiJIUzI1NiJ9.abc-def_1",` +
+	`"apiServerUrl":"https://server.codeium.com"}`
+
+const (
+	devinLocalToken  = "devin-session-token$eyJhbGciOiJIUzI1NiJ9.abc-def_1"
+	devinLocalServer = "https://server.codeium.com"
+)
+
+// devinTempStateFile 在临时目录里造一个 state.vscdb 字节文件并返回其路径。
+// 调用方必须已经 t.Setenv("APPDATA", t.TempDir()):本文件只看临时文件,
+// 绝不读开发机真实登录态(AS-8d)。
+func devinTempStateFile(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "state.vscdb")
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("写临时 state.vscdb 失败: %v", err)
+	}
+	return path
+}
+
+// TestDefaultDevinStatePath_PathAndIsolation AS-8d:默认路径由 APPDATA 派生,
+// 落在 <APPDATA>\Devin\User\globalStorage\state.vscdb;APPDATA 为空时为空串(等于读不到)。
+func TestDefaultDevinStatePath_PathAndIsolation(t *testing.T) {
+	appData := t.TempDir()
+	t.Setenv("APPDATA", appData)
+
+	want := filepath.Join(appData, "Devin", "User", "globalStorage", "state.vscdb")
+	if got := defaultDevinStatePath(); got != want {
+		t.Errorf("defaultDevinStatePath: got %q, want %q", got, want)
+	}
+
+	t.Setenv("APPDATA", "")
+	if got := defaultDevinStatePath(); got != "" {
+		t.Errorf("APPDATA 为空时必须是空串(等于读不到), got %q", got)
+	}
+}
+
+// TestNewDevinFetcher_ResolvesStateFileOnce AS-8d:构造函数一次解析路径并打开本机读取,
+// 之后 APPDATA 再变也不影响已解析的 stateFile(构造期解析,与 factorydroid 同形)。
+func TestNewDevinFetcher_ResolvesStateFileOnce(t *testing.T) {
+	appData := t.TempDir()
+	t.Setenv("APPDATA", appData)
+
+	f := NewDevinFetcher("dv-test-token")
+	want := filepath.Join(appData, "Devin", "User", "globalStorage", "state.vscdb")
+	if f.stateFile != want {
+		t.Errorf("构造期解析的 stateFile: got %q, want %q", f.stateFile, want)
+	}
+	if !f.readDesktopState {
+		t.Error("readDesktopState 默认必须为 true(留空时才允许读本机登录态)")
+	}
+	if f.serverURL != "" {
+		t.Errorf("构造函数不得写死 serverURL(默认端点只在使用处兜底), got %q", f.serverURL)
+	}
+
+	t.Setenv("APPDATA", t.TempDir())
+	if f.stateFile != want {
+		t.Errorf("构造后再改 APPDATA 不该影响已解析路径: got %q, want %q", f.stateFile, want)
+	}
+}
+
+// TestReadDevinDesktopCredential_Hit AS-8a:文件里同时有 token 与 apiServerUrl ⇒ 两者都取到,
+// token 带 devin-session-token$ 前缀(这正是 metadata.api_key 该给的值)。
+func TestReadDevinDesktopCredential_Hit(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+	path := devinTempStateFile(t, devinLocalStateBody)
+
+	token, server := readDevinDesktopCredential(path)
+	if token != devinLocalToken {
+		t.Errorf("token: got %q, want %q", token, devinLocalToken)
+	}
+	if !strings.HasPrefix(token, "devin-session-token$") {
+		t.Errorf("token 必须带 devin-session-token$ 前缀(metadata.api_key 需要它), got %q", token)
+	}
+	if !strings.Contains(token, ".abc-def_1") {
+		t.Errorf("token 必须完整截到字面量后面的 payload, got %q", token)
+	}
+	if server != devinLocalServer {
+		t.Errorf("server: got %q, want %q", server, devinLocalServer)
+	}
+}
+
+// TestReadDevinDesktopCredential_PartialHit AS-8b:两者互相独立。
+func TestReadDevinDesktopCredential_PartialHit(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	t.Run("只有 token", func(t *testing.T) {
+		path := devinTempStateFile(t, `{"apiKey":"`+devinLocalToken+`"}`)
+		token, server := readDevinDesktopCredential(path)
+		if token != devinLocalToken {
+			t.Errorf("token: got %q, want %q", token, devinLocalToken)
+		}
+		if server != "" {
+			t.Errorf("没有 apiServerUrl 时 server 必须是空串, got %q", server)
+		}
+	})
+
+	t.Run("只有 apiServerUrl", func(t *testing.T) {
+		path := devinTempStateFile(t, `{"apiServerUrl":"`+devinLocalServer+`"}`)
+		token, server := readDevinDesktopCredential(path)
+		if token != "" {
+			t.Errorf("没有 token 字面量时 token 必须是空串, got %q", token)
+		}
+		if server != devinLocalServer {
+			t.Errorf("server: got %q, want %q", server, devinLocalServer)
+		}
+	})
+}
+
+// TestReadDevinDesktopCredential_Miss AS-8c:空文件 / 无关键字文本 / 文件不存在 /
+// 路径为空 ⇒ 两个空串,不 panic、不报错(读不到就是"没配置",不是"读取失败")。
+func TestReadDevinDesktopCredential_Miss(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	cases := []struct {
+		name string
+		path string
+	}{
+		{"空文件", devinTempStateFile(t, "")},
+		{"无关键字文本", devinTempStateFile(t, strings.Repeat("no-credentials-here ", 4096))},
+		{"文件不存在", filepath.Join(t.TempDir(), "state.vscdb")},
+		{"路径为空", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			token, server := readDevinDesktopCredential(c.path)
+			if token != "" || server != "" {
+				t.Errorf("未命中时必须返回两个空串, got token=%q server=%q", token, server)
+			}
+		})
+	}
+}
+
+// TestReadDevinDesktopCredential_OversizeFileIgnored 超过 64 MB 的文件一律不读(防御)。
+// 文件头故意放一份"看起来合法"的凭据:体积守卫必须在读取/扫描之前生效,
+// 否则这份凭据会被当成命中。
+func TestReadDevinDesktopCredential_OversizeFileIgnored(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	path := filepath.Join(t.TempDir(), "state.vscdb")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("创建超限文件失败: %v", err)
+	}
+	defer file.Close()
+	if _, err := file.WriteString(devinLocalStateBody); err != nil {
+		t.Fatalf("写入超限文件头失败: %v", err)
+	}
+	// Truncate 把体积顶到守卫线之上(尾部补零,内容不参与判定)。
+	if err := file.Truncate(devinMaxStateFileBytes + 1); err != nil {
+		t.Fatalf("撑大文件体积失败: %v", err)
+	}
+
+	token, server := readDevinDesktopCredential(path)
+	if token != "" || server != "" {
+		t.Errorf(">64 MB 的文件必须返回两个空串, got token=%q server=%q", token, server)
+	}
+}
+
+// TestDevinResolveServer_Order AS-8 的 server 顺序(纯函数,不发外网请求):
+// 注入值优先 → 本机 apiServerUrl → 空串(由 devinStatusURL 兜底到默认端点)。
+func TestDevinResolveServer_Order(t *testing.T) {
+	cases := []struct {
+		name     string
+		injected string
+		local    string
+		want     string
+	}{
+		{"注入值优先", "https://injected.test", "https://local.test", "https://injected.test"},
+		{"未注入用本机", "", "https://local.test", "https://local.test"},
+		{"两处都没有 ⇒ 空串", "", "", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := devinResolveServer(c.injected, c.local); got != c.want {
+				t.Errorf("devinResolveServer(%q, %q) = %q, want %q", c.injected, c.local, got, c.want)
+			}
+		})
+	}
+
+	// 两处都没有时打到默认端点:只断言纯函数拼出的字符串,不发真实网络请求。
+	want := "https://server.codeium.com/exa.seat_management_pb.SeatManagementService/GetUserStatus"
+	if got := devinStatusURL(devinResolveServer("", "")); got != want {
+		t.Errorf("默认端点兜底: got %q, want %q", got, want)
+	}
+}
+
+// TestDevinFetcher_ManualTokenWinsOverLocalState AS-8:手填 token 优先 ——
+// 即使 stateFile 里另有一份本机 token,请求里的 api_key 也必须是手填那个。
+func TestDevinFetcher_ManualTokenWinsOverLocalState(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	var (
+		gotKey string
+		hit    int32
+	)
+	f, _ := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hit, 1)
+		raw, _ := io.ReadAll(r.Body)
+		var payload struct {
+			Metadata map[string]string `json:"metadata"`
+		}
+		json.Unmarshal(raw, &payload)
+		gotKey = payload.Metadata["api_key"]
+		w.Write([]byte(devinOKBody))
+	})
+	f.apiKey = "manual-token"
+	f.stateFile = devinTempStateFile(t, devinLocalStateBody) // 本机另有一份 token
+
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if gotKey != "manual-token" {
+		t.Errorf("手填 token 必须优先: metadata.api_key got %q, want %q(本机值 %q 不得顶掉它)",
+			gotKey, "manual-token", devinLocalToken)
+	}
+	if hit != 1 {
+		t.Errorf("期望恰好 1 次请求,实际 %d", hit)
+	}
+}
+
+// TestDevinFetcher_LocalTokenFallback AS-8:手填留空 ⇒ 用本机读到的 token 出数。
+func TestDevinFetcher_LocalTokenFallback(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	var (
+		gotKey string
+		hit    int32
+	)
+	f, srv := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hit, 1)
+		raw, _ := io.ReadAll(r.Body)
+		var payload struct {
+			Metadata map[string]string `json:"metadata"`
+		}
+		json.Unmarshal(raw, &payload)
+		gotKey = payload.Metadata["api_key"]
+		w.Write([]byte(devinOKBody))
+	})
+	f.apiKey = ""
+	f.stateFile = devinTempStateFile(t, devinLocalStateBody)
+
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if gotKey != devinLocalToken {
+		t.Errorf("手填留空时必须用本机 token: got %q, want %q", gotKey, devinLocalToken)
+	}
+	if hit != 1 {
+		t.Errorf("期望恰好 1 次请求,实际 %d", hit)
+	}
+	if result.Percent != 80 {
+		t.Errorf("本机 token 出数后 Percent: got %v, want 80", result.Percent)
+	}
+	if f.serverURL != srv.URL {
+		t.Errorf("注入的 serverURL 不该被改写: got %q, want %q", f.serverURL, srv.URL)
+	}
+}
+
+// TestDevinFetcher_InjectedServerBeatsLocalApiServerURL AS-8:注入的 server 优先,
+// 本机读到的 apiServerUrl 不得把它顶掉。本机值故意指向一个连不上的地址:
+// 一旦被顶掉,请求会失败而不是打到 httptest。
+func TestDevinFetcher_InjectedServerBeatsLocalApiServerURL(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	var hit int32
+	f, srv := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hit, 1)
+		w.Write([]byte(devinOKBody))
+	})
+	f.apiKey = "" // 走本机 token,同时本机也有 apiServerUrl
+	f.stateFile = devinTempStateFile(t,
+		`{"apiKey":"`+devinLocalToken+`","apiServerUrl":"http://127.0.0.1:1/unreachable"}`)
+
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("注入的 server 必须优先(本机 apiServerUrl 不可达), got error: %s", result.Error)
+	}
+	if hit != 1 {
+		t.Errorf("请求必须落在注入的 httptest 上, 实际 %d 次", hit)
+	}
+	if f.serverURL != srv.URL {
+		t.Errorf("注入的 serverURL 不该被改写: got %q, want %q", f.serverURL, srv.URL)
+	}
+}
+
+// TestDevinFetcher_LocalApiServerURLUsedWhenNotInjected AS-8:未注入 server 且本机读到
+// apiServerUrl ⇒ 请求打到该地址。同时断言本机值不会被写进 f.serverURL
+// (写进去等于把它固化,后续手填/换机都不生效)。
+func TestDevinFetcher_LocalApiServerURLUsedWhenNotInjected(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	var (
+		hit  int32
+		path string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hit, 1)
+		path = r.URL.Path
+		w.Write([]byte(devinOKBody))
+	}))
+	t.Cleanup(srv.Close)
+
+	f := NewDevinFetcher("") // 手填留空:token 与 server 都从本机来
+	f.serverURL = ""         // 不注入
+	f.stateFile = devinTempStateFile(t,
+		`{"apiKey":"`+devinLocalToken+`","apiServerUrl":"`+srv.URL+`"}`)
+
+	result := f.Fetch()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if hit != 1 {
+		t.Errorf("请求必须打到本机 apiServerUrl, 实际 %d 次", hit)
+	}
+	if path != "/exa.seat_management_pb.SeatManagementService/GetUserStatus" {
+		t.Errorf("请求路径: got %q", path)
+	}
+	if f.serverURL != "" {
+		t.Errorf("本机读到的 apiServerUrl 不得写进 f.serverURL, got %q", f.serverURL)
+	}
+}
+
+// TestDevinFetcher_LocalStateEmpty_ExactErrorAndNoRequest AS-8:两处都空 ⇒
+// Error 逐字相等且零请求。stateFile 指向空文件(本机登录态读不到)是最贴近
+// 「Devin Desktop 未登录 / 改了存储格式」的真实形态。
+func TestDevinFetcher_LocalStateEmpty_ExactErrorAndNoRequest(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	var hit int32
+	f, _ := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hit, 1)
+		w.Write([]byte(devinOKBody))
+	})
+	f.apiKey = ""
+	f.stateFile = devinTempStateFile(t, "")
+
+	result := f.Fetch()
+	if result.Error != "未配置 Devin token（登录 Devin Desktop 后留空即可，或粘贴 token）" {
+		t.Errorf("Error 文案必须逐字相等:\n got %q\nwant %q", result.Error,
+			"未配置 Devin token（登录 Devin Desktop 后留空即可，或粘贴 token）")
+	}
+	if hit != 0 {
+		t.Errorf("两处都没 token 时不得发请求, 实际 %d 次", hit)
+	}
+	devinCheckBase(t, result)
+}
+
+// TestDevinFetcher_ReadDesktopStateDisabled readDesktopState=false ⇒ 完全不碰本机登录态,
+// 即使 stateFile 里有可用 token 也报「未配置」(开关是显式的,不是靠路径是否为空)。
+func TestDevinFetcher_ReadDesktopStateDisabled(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+
+	var hit int32
+	f, _ := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hit, 1)
+		w.Write([]byte(devinOKBody))
+	})
+	f.apiKey = ""
+	f.stateFile = devinTempStateFile(t, devinLocalStateBody)
+	f.readDesktopState = false
+
+	result := f.Fetch()
+	if result.Error != "未配置 Devin token（登录 Devin Desktop 后留空即可，或粘贴 token）" {
+		t.Errorf("关闭本机读取后必须报未配置, got %q", result.Error)
+	}
+	if hit != 0 {
+		t.Errorf("关闭本机读取后不得发请求, 实际 %d 次", hit)
 	}
 }
 

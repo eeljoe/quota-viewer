@@ -395,4 +395,4 @@ Devin 没有可用的公开额度 API：v2/v3 的 `/enterprise/consumption/*` �
 
 server 有三级兜底：调用方注入的 server → 本机读到的 `apiServerUrl` → 默认 `https://server.codeium.com`。**注意「`apiURL` 留空 = 默认端点」这条通用说明对 Devin 不成立**：`NewDevinFetcher` 不预填默认端点，留空会先试本机端点，读不到才回落默认值；默认值只允许出现在 URL 拼装那一处，提前写进构造期字段会让本机值永远失效。
 
-错误映射：401/403 = token 失效（提示重新登录 Devin Desktop 或更新 token），400 = 缺 `api_key`，其他非 200 透出状态码，结构不符报「无法解析额度数据（响应结构可能已变化）」。该路由是 Devin Desktop 的私有接口，无稳定性承诺；失效时对照 Devin Desktop 的 `resources/app/node_modules/@exa/chat-client/index.js`（`GetUserStatus` / `PlanStatus` 类型定义）更新 `devin.go`。
+错误映射：401/403 走专属文案「Devin token 已失效，请重新登录 Devin Desktop 或更新 token」；**400 没有专属分支**，与其它所有非 200 一样原样透出 `HTTP N`（用户看到的是 `HTTP 400`；该状态码的服务端语义是缺 `api_key`，只是实现不单独区分，500 等同样走这条兜底）；结构不符报「无法解析额度数据（响应结构可能已变化）」。该路由是 Devin Desktop 的私有接口，无稳定性承诺；失效时对照 Devin Desktop 的 `resources/app/node_modules/@exa/chat-client/index.js`（`GetUserStatus` / `PlanStatus` 类型定义）更新 `devin.go`。

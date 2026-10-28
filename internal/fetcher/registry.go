@@ -149,6 +149,19 @@ var registry = []ProviderDef{
 			return NewOpenDesignFetcher(creds["cookie"])
 		},
 	},
+	{
+		ID:          "devin",
+		DisplayName: "Devin",
+		Abbr:        "DV",
+		Kind:        KindUsage,
+		LoginURL:    "https://app.devin.ai",
+		Fields: []CredentialField{
+			{Key: "api_key", Label: "Token(留空自动读本机 Devin Desktop 登录态)", Type: "password"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewDevinFetcher(creds["api_key"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

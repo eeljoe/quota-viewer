@@ -75,6 +75,7 @@ func TestSaveThenLoad_RoundTrip(t *testing.T) {
 			{ID: "factory-droid", Enabled: false},
 			{ID: "minimax", Enabled: false},
 			{ID: "open-design", Enabled: false, Creds: map[string]string{"cookie": "session=od1"}},
+			{ID: "devin", Enabled: false, Creds: map[string]string{"api_key": "dv1"}},
 		},
 		RefreshIntervalMin: 30,
 		BallX:              100,
@@ -158,11 +159,11 @@ func TestLoad_NewProvider_AppendedToExistingV2Config(t *testing.T) {
 		t.Fatalf("expected %d providers after migration, got %d", len(AllProviderIDs), len(cfg.Providers))
 	}
 	last := cfg.Providers[len(cfg.Providers)-1]
-	if last.ID != "open-design" || last.Enabled {
-		t.Errorf("expected disabled open-design appended, got %+v", last)
+	if last.ID != "devin" || last.Enabled {
+		t.Errorf("expected disabled devin appended, got %+v", last)
 	}
-	// minimax / ollama / command-code / factory-droid 也应被补全且默认关闭
-	for _, id := range []string{"ollama", "command-code", "factory-droid", "minimax"} {
+	// minimax / ollama / command-code / factory-droid / open-design 也应被补全且默认关闭
+	for _, id := range []string{"ollama", "command-code", "factory-droid", "minimax", "open-design"} {
 		for _, p := range cfg.Providers {
 			if p.ID == id && p.Enabled {
 				t.Errorf("expected disabled %s appended, got %+v", id, p)
@@ -330,8 +331,10 @@ func TestAllProviderIDs_MatchesFetcherRegistry(t *testing.T) {
 }
 
 // TestLoad_ClampsObjectsOverNine 复现手工编辑配置绕过 SaveConfig 钳制的现场。
-// 上限按**监控对象**计(普通模式 9):10 家各 1 组凭证 = 10 个对象,Load 必须按顺序
+// 上限按**监控对象**计(普通模式 9):11 家各 1 组凭证 = 11 个对象,Load 必须按顺序
 // 钳回 9 个,否则配置面板会渲染出不可能的状态,保存时被静默钳掉。
+// 第 10 家 open-design 与第 11 家 devin 会**同时**被钳制关闭(clampEnabled 是
+// used+cost > limit 就 continue,超出后不会"跳过前一个再试下一个")。
 func TestLoad_ClampsObjectsOverNine(t *testing.T) {
 	ids := make([]string, 0, len(AllProviderIDs))
 	for i, id := range AllProviderIDs {
@@ -363,16 +366,20 @@ func TestLoad_ClampsObjectsOverNine(t *testing.T) {
 	if enabledCount != 9 {
 		t.Errorf("expected exactly 9 enabled after clamp, got %d", enabledCount)
 	}
-	// 注册表顺序在前的保留启用,末位 open-design 被钳制关闭
+	// 注册表顺序在前的保留启用
 	if !byID["kimi"].Enabled || !byID["ollama"].Enabled || !byID["command-code"].Enabled {
 		t.Error("expected first three enabled providers to survive clamp")
 	}
+	// 第 10 家 open-design 与第 11 家 devin 都被钳制关闭(11 个对象只装得下前 9 家)
 	if byID["open-design"].Enabled {
 		t.Error("expected open-design clamped to disabled (10th object)")
 	}
+	if byID["devin"].Enabled {
+		t.Error("expected devin clamped to disabled (11th object)")
+	}
 	// 钳制只关启用,不丢凭证
-	if byID["open-design"].Creds["api_key"] != "fk_keep" {
-		t.Errorf("clamping must preserve credentials, got %+v", byID["open-design"])
+	if byID["devin"].Creds["api_key"] != "fk_keep" {
+		t.Errorf("clamping must preserve credentials, got %+v", byID["devin"])
 	}
 }
 

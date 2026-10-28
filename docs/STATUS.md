@@ -9,35 +9,35 @@
 > 3. 如果下方有「知识库」区块且状态为已初始化，读取知识库获取项目结构和函数映射
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（滚动计划，了解接下来做什么）
 >    - 注：`ROADMAP.md` 自 2026-10-14 起**仅在本地存在、不入公开仓库**（与 `.scratch/`、`.agents/` 同）；若你拿到的是 clone，此文件缺席属正常，计划内容可临时向维护者索取
-> 5. **直接跳到最新一条「会话记录：2026-10-25 19:18」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-28 23:21」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 如果最新章节引用了更早的内容，再按需回溯
 > 7. 给用户一份简短进度汇报（每段 3-5 行）：**当前进度**（当前在做什么 → 做到哪了 → 下一步是什么 → 有无阻塞项）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-25 19:18`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`326f962` on `master`（与 origin/master 同步；tag `v1.4.1` 已发布并标 Latest）
-> 📊 累计会话数：主文档 2 条，另有 21 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-28 23:21`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`3f73a08` on `master`（v1.4.1 已发布并标 Latest；本会话只动本地 spec 与文档）
+> 📊 累计会话数：主文档 4 条，另有 21 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "326f962", "branch": "master", "dirty": false, "timestamp": "2026-10-25T19:18:00+08:00"} -->
+<!-- git-meta: {"last_commit": "3f73a08", "branch": "master", "dirty": false, "timestamp": "2026-10-28T23:21:00+08:00"} -->
 
-- **日期**：2026-10-25 19:18
-- **会话摘要**：发布 **v1.4.1**（Factory 额度行按最紧张的窗口展示）——打 tag、推 master、建 release 并上传 exe（digest 与本地逐字节一致），随后按任务组归档已关闭的 Multi-Key 组（主文档 413 → 304 行，归档页 19 → 21 条）。
+- **日期**：2026-10-28 23:21
+- **会话摘要**：规划 **Devin（第 11 家 Provider）**——查清可用额度通道（Devin 没有公开额度 API）并用本机 Devin Desktop 登录态实测打通，产出 `.scratch/devin-provider/`（spec + 3 张票），完成 Fidelity / Repo-fit / Soundness 三轴审票并按结论重切票面；本会话未动产品代码。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.4.1 已发布（2026-10-25，Latest，附 exe）**，master 与 origin/master 同步在 `326f962`；本轮增量 = Factory Droid「最紧张窗口打头、倒计时跟它走」（代码 + 构建产物 + 文档 + 发布）
+- 当前阶段：**v1.4.1 已发布（2026-10-25，Latest，附 exe）**，本地 HEAD `3f73a08`；当前在手 = 新增 **Devin（第 11 家）** 的 spec 与票（`.scratch/devin-provider/`，已过三轴审票），下一会话 `/implement devin-provider` 落地
 - 十家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`）
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
-- 下一步：「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次 12 条与 ROADMAP Now 栏超条（4 条 > 上限 3 条）待用户拍板（见本地 `ROADMAP.md`「Now」，该文件已不入仓库）
+- 下一步：下一会话 `/implement devin-provider`（spec + 3 张票已过三轴审票）；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次 12 条与 ROADMAP Now 栏超条（4 条 > 上限 3 条）待用户拍板（见本地 `ROADMAP.md`「Now」，该文件已不入仓库）
 - 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**公开仓库自 2026-10-14 起只含产品代码与对外文档**——`.scratch/`、`.agents/`、`.video_agent/`、`.superpowers/`、`docs/superpowers/`、`AGENTS.md`、`ROADMAP.md` 全部已进 `.gitignore`，提交仍应精确 `git add` 而非 `-A`（ignore 只管未跟踪文件，已跟踪文件不受保护）
 
 
@@ -85,6 +85,7 @@
 - 无
 
 ### 📋 待办
+- **Devin Provider（第 11 家）**：spec 与 3 张票已出并过三轴审票（`.scratch/devin-provider/`），下一会话 `/implement devin-provider`
 - 「对端告知」报文待发给 subagent-fallback（必须带上 probe `schema` 1→2）
 - 非阻断清理批次 12 条待用户拍板（清单见本文件「已知问题」与 ROADMAP「Now」）
 - 计划级事项见 `ROADMAP.md`
@@ -93,10 +94,11 @@
 
 ## 未完成 & 下一步
 
-1. **「对端告知」报文**（首要）：回 `subagent-fallback` 说明探针就绪并给出二进制名/开关名/构建命令，**必须写明 `schema` 已从 1 升到 2**（记录新增 `slot` / `sub_label` 两个键，纯增量，按名取键的旧消费方不受影响），否则对端按旧契约解析会对不上
-2. 非阻断清理批次 12 条待用户拍板（改代码的几条会作废对应票的 VERIFIED、需重验）
-3. Wails 版本升级对齐（Next）：go.mod v2.12.0 vs CLI v2.13.0，构建时仍打印该告警
-4. 前端渲染逻辑的可视化验证缺口：见最新会话「关键上下文」——改前端 DOM 结构前先确认探针覆盖到，否则「构建过 = 没事」不成立
+1. **下一会话 `/implement devin-provider`**（首要）：spec 与 3 张票已过三轴审票；按票序 01（手填 token 全链路，超限票先跑静态双轴）→ 02（本机登录态自动读取）→ 03（文档与真机冒烟），整体门照 `.scratch/devin-provider/review-leads.md` 的三条预测亲手复验
+2. **「对端告知」报文**：回 `subagent-fallback` 说明探针就绪并给出二进制名/开关名/构建命令，**必须写明 `schema` 已从 1 升到 2**（记录新增 `slot` / `sub_label` 两个键，纯增量，按名取键的旧消费方不受影响），否则对端按旧契约解析会对不上
+3. 非阻断清理批次 12 条待用户拍板（改代码的几条会作废对应票的 VERIFIED、需重验）
+4. Wails 版本升级对齐（Next）：go.mod v2.12.0 vs CLI v2.13.0，构建时仍打印该告警
+5. 前端渲染逻辑的可视化验证缺口：见最新会话「关键上下文」——改前端 DOM 结构前先确认探针覆盖到，否则「构建过 = 没事」不成立
 
 ---
 
@@ -111,6 +113,7 @@
 - **构建可复现性口径**：`wails build` 的产物字节与**构建目录**绑定（未加 `-trimpath` 时 Go 嵌入源码绝对路径）——`worktree`/副本里重建必然与主工作区交付件 hash 不同；核验"交付 exe 出自这个 commit"必须在**同一目录**重建比对，或用 `wails build -trimpath`（换了 flag 就是另一份字节，发版中途别换）
 - **托盘库语义（`energye/systray@v1.0.3` Windows 后端）**：真双击会依次触发 `onClick(0x202) → onDClick(0x203) → onClick(0x202)`；`onClick == nil` 时库对单击什么都不做；注册 `onRClick` 会顶掉默认右键弹菜单；图标标识 = 类 `SystrayClass` + `uID=100` + 回调消息 `0x401`（`Shell_NotifyIconGetRect` 可跨进程取图标物理矩形）
 - **注入点击类探针的硬坑**：本机主屏 2880x1800 @200%，未声明 DPI 感知的进程自报 1440x900 ⇒ 注入前必须 `SetThreadDpiAwarenessContext(-4)`，否则坐标 2 倍错位、点击落空；PowerShell 的 `$PID` 是只读变量，进程参数只能叫别的名字（本项目用 `-ProcId`）
+- **Devin 额度通道（2026-10-28 实测）**：没有公开额度 API（v2/v3 consumption 仅 Enterprise 管理员可用，self-serve 一律 403）；可用的是 Devin Desktop 的 `exa.seat_management_pb.SeatManagementService/GetUserStatus`（CONNECT POST，`metadata.api_key`，`ide_version`/`extension_version` 用 `1.126.0`）—— 返回日/周**剩余**百分比与 epoch 秒重置时间（protojson 把 int64 写成字符串），展示前必须反转成已用；本机登录态在 `%APPDATA%\Devin\User\globalStorage\state.vscdb` 里明文（`devin-session-token$…` + `apiServerUrl`）；403 = token 失效、400 = 缺 `api_key`。探针报文（schema 2）只有十个键，没有 `reset_label` 与 `remaining` 文本，真机判据只能看 `percent` / `remaining_percent` / `reset_at`
 
 ---
 
@@ -302,3 +305,46 @@
 - 当前线上：**v1.4.1 是 Latest**，release 页 `https://github.com/eeljoe/quota-viewer/releases/tag/v1.4.1`；发布提交 `326f962` 已在 origin/master，本章的文档提交随后跟进。
 - Wiki 漂移检测：`synced_commit` = `284a497`，自它以来只有文档与构建产物变更（`frontend/dist/*`、`frontend/wailsjs/go/models.ts`），都不在 wiki「关键文件」表覆盖的文件里 → 无漂移。
 - 归档页现有 21 条会话（新增 Multi-Key 组的 2 条）；主文档保留最近 2 条（Factory 组）+ 无关闭信号的 2026-08-25。
+
+---
+
+## 会话记录：2026-10-28 23:21
+
+> **会话摘要**：规划 Devin（第 11 家 Provider）——查清额度通道并用本机登录态实测打通，产出 spec 与 3 张票，三轴审票后按结论重切票面；未动产品代码
+> **Git**：`3f73a08` on `master`（本会话只产出本地 spec 与文档；`.scratch/` 与 `ROADMAP.md` 本就忽略）
+> **任务组**：Devin Provider（新开组）
+> **任务组状态**：规划完成，待实现
+
+### 本次完成
+
+- **通道勘察（实测，不是推测）**：Devin 没有可用的公开额度 API —— v2/v3 的 `/enterprise/consumption/*` 只对 Enterprise 管理员个人 Key 开放，self-serve 一律 403（官方文档写明「no per-account toggle for support to enable」）。可用通道是 Devin Desktop（Windsurf 内核）的 `exa.seat_management_pb.SeatManagementService/GetUserStatus`：CONNECT 协议 POST，`metadata.api_key` 带本机登录态 token，一次返回日/周两个窗口的**剩余**百分比、各自重置 epoch（protojson 把 int64 写成字符串）、`hideDailyQuota`/`hideWeeklyQuota`、`overageBalanceMicros` 与套餐名。
+- **本机实测**：用本机登录态（`%APPDATA%\Devin\User\globalStorage\state.vscdb` 里明文 `devin-session-token$…` 与 `apiServerUrl=https://server.codeium.com`）打通 —— HTTP 200、套餐 Pro（`TEAMS_TIER_DEVIN_PRO`、`BILLING_STRATEGY_QUOTA`）、日/周剩余均 100%、日重置 `1793260800`、周重置 `1793520000`；错误面同样实测：403 = token 失效、400 = 缺 `api_key`。
+- **产出（本地、不入库）**：`.scratch/devin-provider/spec.md`（17 条 Acceptance Statements + 接口契约）、3 张票（01 手填 token 全链路 / 02 本机登录态自动读取 / 03 文档与真机冒烟）、`review-leads.md`（三条红队预测）。
+- **三轴审票**：Fidelity 5 条、Repo-fit 12 条、Soundness 8 条；其中「原票 05 要探针输出 `reset_label` / `remaining`，而探针契约只有十个键」被两个轴独立命中。按结论把原「请求 / 展示 / 凭据」三张水平票重切成三张能力票，并修掉 server 兜底顺序、错误路径必须保留 `Platform`、README 两处平台数、`config_test` 钳制断言、`registry_test` 函数名与 `APPDATA` 隔离等全部机械问题。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 改走两段式，不在本会话实现 | 同类 provider 先例落地约 400-450 行、6 个文件，超轻量路线 300 行 / 3 文件上限 | 硬塞进轻量预算（验收强度达不到严格口径） |
+| 凭证留空自动读本机 Devin Desktop 登录态 | 与 factory-droid / command-code 同形，用户不必手抄 token | 只支持手填 token |
+| 一颗球、最紧张窗口驱动 | 与 Ollama / Factory / MiniMax 同一套告警口径，只占一格 | 日/周各占一格 |
+| 不引 SQLite 驱动，按字节扫 `state.vscdb` | 只取两个字段，引驱动等于为一个取值加大依赖 | 引入纯 Go SQLite 驱动 |
+| 票按能力切而不是按层切 | 审票判定层切的三张各自产不出可演示增量 | 保留原 5 张水平票（复核后否掉） |
+
+### 未完成 & 下一步
+
+1. 下一会话 `/implement devin-provider`：按票序 01（超限票，先静态双轴）→ 02 → 03；整体门照 `review-leads.md` 的三条预测亲手复验。
+2. **AS-11b 界面目验必须由用户本人做**：球格出现 `DV`、面板数字与 Devin Desktop 的 Usage 页一致。
+3. 三条旧尾巴不动：对端告知报文、非阻断清理 12 条、ROADMAP Now 栏超条。
+
+### 已知问题 & 注意事项
+
+- Devin 的通道与语义已写进上文「已知问题与注意事项」区（剩余百分比要反转、int64 是字符串、探针没有 `reset_label` / `remaining`）。
+- 本会话用到的 token 只在内存与探针命令里出现过，**没有落进任何仓库文件**；spec 与票在 `.scratch/`（gitignore）。
+
+### 关键上下文
+
+- 产品级事实全部来自真实请求：`server.codeium.com` 的 `GetUserStatus` 在 `ide_version`/`extension_version = 1.126.0`、UA 为浏览器型时返回 200；缺 `api_key` 返回 400 `invalid_argument`，坏 token 返回 403 `permission_denied`。
+- 本机 Devin Desktop 版本 `1.126.0`（`state.vscdb` 的 `devin.desktopStartup.lastLaunchedBuild`），与请求体里的版本号一致。
+- Wiki 本轮未动（无代码变更）；实现落地后再 `/wiki-update` 增量 00 / 02 / 05 / 07 / 08。

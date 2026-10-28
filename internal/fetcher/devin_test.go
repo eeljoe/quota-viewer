@@ -227,6 +227,43 @@ func TestDevinParsePlanStatus_StructuralErrors(t *testing.T) {
 	}
 }
 
+// TestDevinParsePlanStatus_NullTolerance 显式 null 的 int64 字段必须解析成功且为 0,
+// 不能被当成"结构不符"报错(票面第 4 条要求 devinJSONInt64 同时接受 123 / "123" / null)。
+// 百分比字段给 null 表示"本次没给该窗口",按 AS-2 只有两侧都缺才算结构错误。
+func TestDevinParsePlanStatus_NullTolerance(t *testing.T) {
+	// 三个 int64 字段(日/周重置时间、超额余额)显式 null。
+	st, err := devinParsePlanStatus([]byte(`{"userStatus":{"planStatus":{
+		"dailyQuotaRemainingPercent":35,
+		"dailyQuotaResetAtUnix":null,
+		"weeklyQuotaResetAtUnix":null,
+		"overageBalanceMicros":null}}}`))
+	if err != nil {
+		t.Fatalf("null 的 int64 字段必须能解析(票面第 4 条), got error: %v", err)
+	}
+	if st.DailyResetAt != 0 {
+		t.Errorf("dailyQuotaResetAtUnix:null 应解析成 0, got %d", st.DailyResetAt)
+	}
+	if st.WeeklyResetAt != 0 {
+		t.Errorf("weeklyQuotaResetAtUnix:null 应解析成 0, got %d", st.WeeklyResetAt)
+	}
+	if st.OverageMicros != nil {
+		t.Errorf("overageBalanceMicros:null 应为 nil(缺失同义), got %d", *st.OverageMicros)
+	}
+	if st.DailyRemaining == nil || *st.DailyRemaining != 35 {
+		t.Errorf("DailyRemaining: got %v, want 35", st.DailyRemaining)
+	}
+
+	// 百分比字段显式 null = 该窗口本次没给值 ⇒ nil,不是 0% 剩余,也不是解析错误。
+	st, err = devinParsePlanStatus([]byte(`{"userStatus":{"planStatus":{
+		"dailyQuotaRemainingPercent":35,"weeklyQuotaRemainingPercent":null}}}`))
+	if err != nil {
+		t.Fatalf("单侧百分比为 null 不该报结构错误, got error: %v", err)
+	}
+	if st.WeeklyRemaining != nil {
+		t.Errorf("weeklyQuotaRemainingPercent:null 应为 nil(不是 0), got %v", *st.WeeklyRemaining)
+	}
+}
+
 // ---------- AS-3 反转与夹取 ----------
 
 // TestDevinApplyPlanStatus_InversionAndClamp 已用 = 100 - 剩余,越界夹到 [0,100]。
@@ -301,6 +338,34 @@ func TestDevinApplyPlanStatus_DrivingWindow(t *testing.T) {
 	}
 	if r.ResetLabel != "周额度" {
 		t.Errorf("周驱动 ResetLabel: got %q, want 周额度", r.ResetLabel)
+	}
+}
+
+// TestDevinApplyPlanStatus_TiePicksDailyWindow 两侧已用并列时必须取日窗口:
+// 球面百分比相同看不出差别,但倒计时的标签与时间会错标成周(票面第 6 条「并列取日」)。
+// 日/周重置 epoch 故意不同,所以 ResetAt 一条断言就能分开"取了哪个窗口"。
+func TestDevinApplyPlanStatus_TiePicksDailyWindow(t *testing.T) {
+	f := NewDevinFetcher("t")
+
+	// 日剩余 20、周剩余 20 ⇒ 两侧都已用 80,并列。
+	r := f.applyPlanStatus(&devinPlanStatus{
+		DailyRemaining:  devinF(20),
+		WeeklyRemaining: devinF(20),
+		DailyResetAt:    1793260800, // 2026-10-29T08:00:00Z
+		WeeklyResetAt:   1793520000, // 2026-11-01T08:00:00Z
+	})
+	if r.Error != "" {
+		t.Fatalf("unexpected error: %s", r.Error)
+	}
+	if r.Percent != 80 || r.Used != 80 || r.Total != 100 {
+		t.Errorf("并列: Percent/Used/Total = %v/%v/%v, want 80/80/100", r.Percent, r.Used, r.Total)
+	}
+	if r.ResetLabel != "日额度" {
+		t.Errorf("并列必须取日: ResetLabel got %q, want 日额度", r.ResetLabel)
+	}
+	if r.ResetAt != "2026-10-29T08:00:00Z" {
+		t.Errorf("并列必须取日的重置时间: ResetAt got %q, want 2026-10-29T08:00:00Z (2026-11-01T08:00:00Z 是周)",
+			r.ResetAt)
 	}
 }
 
@@ -424,6 +489,61 @@ func TestDevinApplyPlanStatus_HideBoth(t *testing.T) {
 	devinCheckBase(t, r)
 }
 
+// ---------- 单侧缺百分比(票面第 6 条 r1 补定) ----------
+
+// TestDevinApplyPlanStatus_MissingPercentIsInvisible 本次响应没给某窗口剩余百分比 ⇒ 该窗口不可见:
+// 不当作「0% 剩余」渲染成 100% 已用、不 panic、Remaining 只剩另一侧一段、
+// 驱动窗口落在给了百分比的那一侧。两侧都缺由解析层报结构错误(见 StructuralErrors)。
+func TestDevinApplyPlanStatus_MissingPercentIsInvisible(t *testing.T) {
+	f := NewDevinFetcher("t")
+
+	// 只给了周(日窗口 DailyRemaining == nil)。日的重置时间故意给非零:
+	// 若把缺百分比当成可见,它会以"0% 剩余 ⇒ 100% 已用"顶成驱动窗口并抢走倒计时。
+	r := f.applyPlanStatus(&devinPlanStatus{
+		WeeklyRemaining: devinF(30),
+		DailyResetAt:    1793260800, // 2026-10-29T08:00:00Z
+		WeeklyResetAt:   1793520000, // 2026-11-01T08:00:00Z
+	})
+	if r.Error != "" {
+		t.Fatalf("单侧缺百分比不该整体报错, got %q", r.Error)
+	}
+	if r.Percent != 70 || r.Used != 70 || r.Total != 100 {
+		t.Errorf("只给周(剩余 30): Percent/Used/Total = %v/%v/%v, want 70/70/100",
+			r.Percent, r.Used, r.Total)
+	}
+	if r.ResetLabel != "周额度" {
+		t.Errorf("驱动窗口应落在有百分比的一侧: ResetLabel got %q, want 周额度", r.ResetLabel)
+	}
+	if r.ResetAt != "2026-11-01T08:00:00Z" {
+		t.Errorf("ResetAt 应取周的重置时间: got %q, want 2026-11-01T08:00:00Z", r.ResetAt)
+	}
+	if r.Remaining != "周 70.0% 已用" {
+		t.Errorf("Remaining 只应有周一段: got %q, want %q", r.Remaining, "周 70.0% 已用")
+	}
+
+	// 对称:只给了日。
+	r = f.applyPlanStatus(&devinPlanStatus{
+		DailyRemaining: devinF(30),
+		DailyResetAt:   1793260800, // 2026-10-29T08:00:00Z
+		WeeklyResetAt:  1793520000, // 2026-11-01T08:00:00Z
+	})
+	if r.Error != "" {
+		t.Fatalf("单侧缺百分比不该整体报错, got %q", r.Error)
+	}
+	if r.Percent != 70 || r.Used != 70 {
+		t.Errorf("只给日(剩余 30): Percent/Used = %v/%v, want 70/70", r.Percent, r.Used)
+	}
+	if r.ResetLabel != "日额度" {
+		t.Errorf("ResetLabel: got %q, want 日额度", r.ResetLabel)
+	}
+	if r.ResetAt != "2026-10-29T08:00:00Z" {
+		t.Errorf("ResetAt 应取日的重置时间: got %q, want 2026-10-29T08:00:00Z", r.ResetAt)
+	}
+	if r.Remaining != "日 70.0% 已用" {
+		t.Errorf("Remaining 只应有日一段: got %q, want %q", r.Remaining, "日 70.0% 已用")
+	}
+}
+
 // ---------- AS-7 Remaining 文案 ----------
 
 // TestDevinApplyPlanStatus_RemainingText 按已用降序、一位小数、超额追加、不含套餐名。
@@ -481,6 +601,24 @@ func TestDevinApplyPlanStatus_RemainingText(t *testing.T) {
 	})
 	if strings.Contains(r.Remaining, "Pro") || strings.Contains(r.Remaining, "Free") {
 		t.Errorf("Remaining 不得出现套餐名, got %q", r.Remaining)
+	}
+}
+
+// TestDevinApplyPlanStatus_RemainingText_TieDailyFirst 两侧已用并列时 Remaining 的日段在前
+// (票面第 6 条「按已用降序(并列日在前)」)。排序一旦把并列当成可交换,两段顺序会随排序实现漂移。
+func TestDevinApplyPlanStatus_RemainingText_TieDailyFirst(t *testing.T) {
+	f := NewDevinFetcher("t")
+
+	r := f.applyPlanStatus(&devinPlanStatus{
+		DailyRemaining:  devinF(20), // 已用 80
+		WeeklyRemaining: devinF(20), // 已用 80,与日并列
+	})
+	if r.Error != "" {
+		t.Fatalf("unexpected error: %s", r.Error)
+	}
+	if r.Remaining != "日 80.0% 已用 · 周 80.0% 已用" {
+		t.Errorf("并列时 Remaining 日段必须在前: got %q, want %q",
+			r.Remaining, "日 80.0% 已用 · 周 80.0% 已用")
 	}
 }
 

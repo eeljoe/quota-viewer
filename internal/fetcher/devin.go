@@ -34,10 +34,11 @@ import (
 // 什么都不填也能出数(与 factory-droid 读 ~/.factory/.env 同形)。
 type DevinFetcher struct {
 	apiKey    string
-	serverURL string // 调用方注入(测试注入 httptest);留空 = 走默认端点
+	serverURL string // 调用方注入(测试注入 httptest);留空 ≠ 走默认端点:注入值优先 → 本机读到的 apiServerUrl → 默认端点(默认值不回写本字段)
 	stateFile string // state.vscdb 路径,构造期一次解析
-	// readDesktopState 是「是否允许读本机登录态」:api_key 留空时是否去读
-	// Devin Desktop 的登录态。默认 true;关掉就等于只认手填 token。
+	// readDesktopState 是「是否允许读本机登录态」:它为真且(手填 token 为空 或
+	// 未注入 serverURL)时,Fetch 才去读 Devin Desktop 的登录态。默认 true;
+	// 关掉就等于只认手填 token 与注入端点(token 与 server 都不再兜底)。
 	readDesktopState bool
 }
 

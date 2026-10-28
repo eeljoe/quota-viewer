@@ -966,6 +966,10 @@ func TestDevinResolveServer_Order(t *testing.T) {
 
 // TestDevinFetcher_ManualTokenWinsOverLocalState AS-8:手填 token 优先 ——
 // 即使 stateFile 里另有一份本机 token,请求里的 api_key 也必须是手填那个。
+//
+// 这里故意只填 token、不注入 server(serverURL 留空):只有这样 Fetch 才会真的去读
+// state.vscdb(读到的 apiServerUrl 才让请求落到 httptest 上)。两份都齐时不会读文件,
+// 那样的用例对"谁优先"是空转的 —— 变异自检里"本机顶掉手填"改动就抓不住。
 func TestDevinFetcher_ManualTokenWinsOverLocalState(t *testing.T) {
 	t.Setenv("APPDATA", t.TempDir())
 
@@ -973,7 +977,7 @@ func TestDevinFetcher_ManualTokenWinsOverLocalState(t *testing.T) {
 		gotKey string
 		hit    int32
 	)
-	f, _ := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt32(&hit, 1)
 		raw, _ := io.ReadAll(r.Body)
 		var payload struct {
@@ -982,20 +986,28 @@ func TestDevinFetcher_ManualTokenWinsOverLocalState(t *testing.T) {
 		json.Unmarshal(raw, &payload)
 		gotKey = payload.Metadata["api_key"]
 		w.Write([]byte(devinOKBody))
-	})
+	}))
+	t.Cleanup(srv.Close)
+
+	f := NewDevinFetcher("")
 	f.apiKey = "manual-token"
-	f.stateFile = devinTempStateFile(t, devinLocalStateBody) // 本机另有一份 token
+	f.serverURL = "" // 不注入 ⇒ 本机 apiServerUrl 生效,证明这次确实读了文件
+	f.stateFile = devinTempStateFile(t,
+		`{"apiKey":"`+devinLocalToken+`","apiServerUrl":"`+srv.URL+`"}`)
 
 	result := f.Fetch()
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
+	if hit != 1 {
+		t.Errorf("本机 apiServerUrl 应让请求落到 httptest, 实际 %d 次", hit)
+	}
 	if gotKey != "manual-token" {
 		t.Errorf("手填 token 必须优先: metadata.api_key got %q, want %q(本机值 %q 不得顶掉它)",
 			gotKey, "manual-token", devinLocalToken)
 	}
-	if hit != 1 {
-		t.Errorf("期望恰好 1 次请求,实际 %d", hit)
+	if f.serverURL != "" {
+		t.Errorf("本机 apiServerUrl 不得写进 f.serverURL, got %q", f.serverURL)
 	}
 }
 

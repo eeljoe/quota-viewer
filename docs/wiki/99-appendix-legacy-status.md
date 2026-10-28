@@ -1088,3 +1088,101 @@
 - **环境笔记**：Go 不在 PATH，在 `C:\Users\joe\sdk\go1.26.5\bin\go.exe`；wails CLI 在 `C:\Users\joe\go\bin\wails.exe`；两者都需先加 PATH。
 - **Wiki 指针状态**：`docs/wiki/` 本轮同步 02 / 05 / 07 / 08（`.covered-files` 57 → 59）；本次收尾无代码改动，wiki 无漂移。
 
+
+## 会话记录：2026-10-25 18:45
+
+> **会话摘要**：用户现场报告「Factory Droid 最紧张的月额度看不到、倒计时也不对」——单会话轻量路线修好展示口径（最紧张窗口打头 + 倒计时标明所属窗口），重建 exe、重启实例，截图确认
+> **Git**：`284a497` on `master`（实现提交；随后 `19c29fe` 同步构建产物、文档跟进，master 领先 origin 3 个提交）
+> **任务组**：Factory Droid 窗口展示口径（无 spec 拆票，单会话轻量路线）
+> **任务组状态**：已完成（已构建并重启实例；未切版本号、未发 release、未推送）
+
+### 本次完成
+
+- **定位到两处根因**。① 面板头部那行（`.quota-remaining`）只有 210px 宽 + `text-overflow: ellipsis`，而 `Remaining` 按「5小时 → 周 → 月」固定顺序拼串，月百分比排第三段必然被截掉 —— 可球色与进度条是由月窗口（最紧张）驱动的，于是出现「条是红的、数字看不见」；② 进度条下的倒计时取的是 5 小时窗口的 `secondsRemaining`，跟驱动告警的窗口不是同一个。
+- **展示口径改成「按紧张度排序 + 倒计时跟排头」**。`Remaining` 各段按已用百分比降序拼接，最紧张的窗口打头；Core 接管时 Core 段仍固定首位（保住 10-13 那条「球看着满了、其实 Core 还有量」的语义），`Extra` 恒居末位。新增 `QuotaResult.ResetLabel`（`json:"reset_label,omitempty"`），`ResetAt` 改取排头那段窗口的重置时间并标明窗口名。
+- **前端倒计时带窗口名与天粒度**。`formatCountdown(iso, label)` 渲染成「距月额度刷新: 4天21时」，≥24 小时按天计（此前月窗口只能显示「288时41分」）；`reset_label` 经 `data-reset-label` 落位，30 秒一次的定时刷新会读回，不会被抹成通用措辞。
+- **真机验证与交付**：`wails build` 重建 23s；旧实例（PID 28328）结束后重启（PID 22364）；桌面 `Quota Viewer.lnk` 仍指向 `build/bin/quota-viewer.exe`（11,662,336 字节，18:42:40）。截图确认 Factory 行现为「月 98.0% 已用 · Core 45.0% 已用 · 5小…」，倒计时「距月额度刷新: 4天21时」。
+- **验收**：一个静态双轴审查（Standards/Spec，无 blocking）+ 一个独立动态验收门（VERIFIED：`go vet`/`go test ./...` 全绿、既有探针 7/7、自写探针 10/10、4000 组属性夹具不变量成立、三条指定变异全被杀且还原复绿）。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 排头窗口缺 `secondsRemaining` 时倒计时整行不显示 | 用户 2026-10-19 拍板；与既有「驱动窗口缺秒数就留空、不借别的窗口」口径一致 | 退一步显示 5 小时窗口的倒计时并标明来源 |
+| 只改 Factory，不动 Kimi / Ollama 等兄弟 provider | 用户只报了这一家；其余平台倒计时仍锚 5 小时窗口（ROADMAP Later 的 Kimi 打磨项仍在） | 顺手把「倒计时跟驱动窗口」推广到全部 usage 型 provider |
+| 单会话轻量路线（1 个静态审查 + 1 个动态验收） | 改动 4 文件 +207/−60，不触认证/schema/并发/构建配置 | 严格规划 → 出票 → 逐票 worker |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|---|---|---|
+| 修改 | `internal/fetcher/factorydroid.go` | `parseTokenRateLimits` 改为「段 + 紧张度排序 + 排头驱动倒计时」；`factoryDrivingWindow` 同时返回窗口名 |
+| 修改 | `internal/fetcher/types.go` | 新增 `ResetLabel`（`json:"reset_label,omitempty"`） |
+| 修改 | `internal/fetcher/factorydroid_test.go` | 新增 `TestFactoryDroid_TightestWindowLeadsDisplay`；AC 表顺序/倒计时期望同步到新口径 |
+| 修改 | `frontend/src/main.js` | 倒计时带窗口名与天粒度；`data-reset-label` 写入与读回 |
+| 新增 | `.scratch/factory-tightest-window/` | 本票 spec + 票 + 倒计时探针（不入库） |
+
+> 本次变更：+207/−60 行，4 个源码文件（另有构建产物 `frontend/dist` 与 `wailsjs` 绑定随 `19c29fe` 入库）
+> 变更基准：`git diff 211047c..284a497 --stat`
+
+### 未完成 & 下一步
+
+1. **要不要发 v1.4.1 并推送**（新）：master 领先 origin 3 个提交，未打 tag、未发 release —— 等用户定。
+2. **对端告知报文**（持续中）。
+3. **非阻断清理批次 12 条**（持续中）。
+4. **Kimi 倒计时口径**（持续中，ROADMAP Later）：「倒计时取正在驱动告警的窗口」这次只在 Factory 落地，Kimi 仍固定 5h。
+
+### 已知问题 & 注意事项
+
+- **GUI 像素级截断没测**：无头环境只能按 CSS 规则 + 字宽估算。排头段一定落在可见区内，但三段全展开（约 245px > 210px）时第二段尾部仍可能出现省略号 —— 那不是告警来源，可接受。
+- **探针契约**：`internal/probe` 的 `schema` 仍为 2、记录 10 键形状未变；`reset_at` 现在随最紧张窗口漂移（此前固定 5h），`reset_label` 未进报文。消费方若要区分窗口，才需要 schema 3 纯增量补键。
+
+### 关键上下文
+
+- Factory 私有路由 `/api/billing/limits` 的三窗口只有 `usedPercent` + `secondsRemaining`，没有绝对值；`Percent` = 全部窗口（含 Core 池）最大值，球色阈值 60% 黄 / 80% 红 / 100% 熄灭。
+- 本次固定点：SPEC_BASELINE `211047c` → 实现 `284a497`。静态审查 1 个实例（无 blocking），动态验收 1 个独立实例（VERIFIED）。前端探针在 `.scratch/factory-tightest-window/probe/countdown-probe.js`（7/7）。
+- 环境：Go 不在 PATH（`C:\Users\joe\sdk\go1.26.5\bin`），wails CLI 在 `C:\Users\joe\go\bin`；实例在跑时 `wails build` 会把旧 exe 改名成 `quota-viewer.exe~` 留在 `build/bin`（本次构建前先杀了实例，故没有残留）。
+- Wiki 指针状态：`docs/wiki/` 同步 00 / 02 / 05（Factory bullet 的排序与倒计时口径、契约清单补 `reset_label`、模块清册行数与说明），`synced_commit` 刷到 `284a497`；文件数仍 11。
+
+---
+
+## 会话记录：2026-10-25 19:18
+
+> **会话摘要**：发布 **v1.4.1**（Factory 展示口径修复）——打 tag、推 master、建 release 并上传 exe；随后按任务组归档旧会话
+> **Git**：`326f962` on `master`（已推 origin；tag `v1.4.1` 已推）
+> **任务组**：Factory Droid 窗口展示口径（承 2026-10-25 18:45 那条）
+> **任务组状态**：已完成（已发版 v1.4.1）
+
+### 本次完成
+
+- **v1.4.1 发布**：`gh release create --draft` → 单独 `gh release upload` 上传 `build/bin/quota-viewer.exe`（11,662,336 字节）→ `gh release edit --draft=false --latest` 转正。沿用「先建草稿、再单独传产物、最后转正」的做法绕开上传超时。GitHub 返回的资源 digest `sha256:0e65bc85…a4eae0` 与本地 `Get-FileHash` 逐字节一致；v1.4.1 已是 **Latest**，v1.4.0 退为普通版本。
+- **推送**：`master` 三个提交（`284a497` 修复 + `19c29fe` 构建产物 + `326f962` 文档）推上 origin，注释 tag `v1.4.1` 一并推远端。
+- **发布说明**只写可见行为变化（额度行按紧张度排序、倒计时跟最紧张的窗口并标明窗口、超过一天按天显示），末尾一句「修复了一些简单的小问题」—— 按用户的发布口径不写 bug 细节（含这次「月额度被截断」的病灶）。
+- **会话归档**（Step 8）：主文档追加本章后 413 行 ≥ 400 → 把已关闭的「同 URL 多 Key / 多套餐」任务组（2026-10-18 21:00 + 2026-10-19 00:50 两条）整组原样搬进 `docs/wiki/99-appendix-legacy-status.md`，主文档回落到 304 行，归档页 19 → 21 条。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 发 v1.4.1 而不是复用 v1.4.0 | 展示口径变了、用户看得见，patch 语义合适 | 直接改 v1.4.0 的 release notes |
+| 发布说明不写 bug 细节 | 用户长期口径 | 把「月额度被截断」写进 notes |
+| 归档 Multi-Key 组、保留 Factory 组 | 该组最新会话标了「任务组状态：已完成」且已合并发版；Factory 组是最新活跃组，永不归档 | 什么都不归档（主文档继续涨） |
+
+### 未完成 & 下一步
+
+1. **对端告知报文**（持续中）。
+2. **非阻断清理批次 12 条**（持续中）。
+3. **Kimi 倒计时口径**（持续中，ROADMAP Later）。
+4. **ROADMAP Now 栏超条**（新）：4 条超过 3 条上限，等用户定要不要把「前端渲染探针纳入常规验证」降到 Next。
+
+### 已知问题 & 注意事项
+
+- `gh release view --json isLatest` 在本机 gh 版本会报「Unknown JSON field」，改用 `gh release list` 看 Latest 标记。
+- 发布产物校验用：`gh api repos/eeljoe/quota-viewer/releases/tags/v1.4.1 --jq '.assets[] | "\(.name) | \(.size) | \(.digest)"'`，与本地 `Get-FileHash -Algorithm SHA256` 对比。
+
+### 关键上下文
+
+- 当前线上：**v1.4.1 是 Latest**，release 页 `https://github.com/eeljoe/quota-viewer/releases/tag/v1.4.1`；发布提交 `326f962` 已在 origin/master，本章的文档提交随后跟进。
+- Wiki 漂移检测：`synced_commit` = `284a497`，自它以来只有文档与构建产物变更（`frontend/dist/*`、`frontend/wailsjs/go/models.ts`），都不在 wiki「关键文件」表覆盖的文件里 → 无漂移。
+- 归档页现有 21 条会话（新增 Multi-Key 组的 2 条）；主文档保留最近 2 条（Factory 组）+ 无关闭信号的 2026-08-25。
+

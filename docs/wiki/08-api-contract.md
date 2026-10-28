@@ -136,7 +136,7 @@ window.runtime.EventsOn("quota:update", (results) => render(results));
 ## Must NOT Change
 
 - 改 Go 方法签名后必须重新生成 wailsjs 绑定（`wails build` 自动），否则前端调用断裂
-- `TestConnection` 的 platform 字符串 = 注册表 id（当前 10 个：kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design），是前后端契约
+- `TestConnection` 的 platform 字符串 = 注册表 id（当前 11 个：kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design/devin），是前后端契约
 - GetConfig 的 providers 数组结构与 `extended_mode` 字段（前端 main.js 渲染依赖）
 - SaveConfig 的钳制语义（0 个监控对象 → 全部启用;超过上限 → 按顺序保留到上限为止;上限由 extendedMode 决定:普通 9 / 扩展 16，计算口径是“启用 Provider 的凭证组数之和”,套餐卡数拿到才知、由前端展示层截断）
 - `CredGroup.Key` 的对齐语义（删中间一行不得让后面的凭证值整体错位）

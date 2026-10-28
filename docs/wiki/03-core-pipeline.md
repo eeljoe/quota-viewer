@@ -68,7 +68,7 @@ App.Refresh()                          [app.go:109]
 
 ```
 前端 [测试] → App.TestConnection(platform)   [app.go:268]
-  platform ∈ 注册表 id(当前 10 个: kimi|xfyun|opencode-go|mimo|deepseek|ollama|command-code|factory-droid|minimax|open-design)
+  platform ∈ 注册表 id(当前 11 个: kimi|xfyun|opencode-go|mimo|deepseek|ollama|command-code|factory-droid|minimax|open-design|devin)
   → 按 id 查注册表 → Build(已存 creds).Fetch() → "成功: 剩余描述" 或 "失败: 错误"
 ```
 

@@ -62,7 +62,7 @@ func (p ProviderConfig) CredSets() []map[string]string
 ### 常量
 
 ```go
-var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid", "minimax", "open-design"}
+var AllProviderIDs    = []string{"kimi", "xfyun", "opencode-go", "mimo", "deepseek", "ollama", "command-code", "factory-droid", "minimax", "open-design", "devin"}
 var DefaultProviderIDs = []string{"kimi", "xfyun", "opencode-go"} // 默认启用前三个
 // 上限按**监控对象**计(不再按 Provider 计):
 // 一个监控对象 = 一组凭证 × 一张套餐卡。60x60 的悬浮球里:
@@ -80,7 +80,7 @@ func clampEnabled(providers []ProviderConfig, limit int) // 超限的 Provider �
 > 套餐卡数拿到才知(要打过上游),所以这里的上限按「凭证组」计;拿到套餐卡后的超限由前端展示层以 `+N` 格呈现。
 
 > 清单与 fetcher 注册表的同步由 `config_test.go` 的 `TestAllProviderIDs_MatchesFetcherRegistry` 守护——注册表新增 Provider 时两处必须同步改。
-> **上限计的是监控对象而不是 Provider 数**：一家挂 3 把 Key 就占 3 格。注册表已有 10 家，但它们并不会同时启用——真正的很现是先到 9 / 16 格的那一家。
+> **上限计的是监控对象而不是 Provider 数**：一家挂 3 把 Key 就占 3 格。注册表已有 11 家，但它们并不会同时启用——真正的很现是先到 9 / 16 格的那一家。
 
 ### 旧格式迁移（config v1 → v2，Load 时自动）
 

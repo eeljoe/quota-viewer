@@ -14,6 +14,8 @@
 
 **2026-10-18 21:00 复核**（同 URL 多 Key / 多套餐任务组）：重数并新增两行（`internal/fetcher/abbr.go` / `abbr_test.go`）——`app.go` 435→**529**（编排层改为「Provider × 凭证组 × 套餐卡」）、`types.go` 新增 `MultiFetcher`、`probe.go` 记录由 8 键增至 10 键；前端 `main.js` 382→**512**（凭证组增删 + 球格 9/16 布局 + `+N` 溢出格）、`style.css` 402→**440**、`index.html` 59→**60**。
 
+**2026-10-29 02:23 复核**（`dc127dc`，第 11 家 Provider Devin 落地）：按同一口径重数并新增两行——`internal/fetcher/registry.go` 164→**177**（新增 `devin` 条目，注册表 11 家、`devin` 末位）、新增 `internal/fetcher/devin.go` **446** 与 `internal/fetcher/devin_test.go` **1070**；其余行未重数。
+
 | 模块 | 文件 | 行数 | 职责 |
 |---|---|---|---|
 | 应用编排 | `app.go` | 529 | 启动/刷新/动态配置/窗口定位/事件转发（含 `tray:activate` 唤出到前台）；`fetchAll` 按「Provider × 凭证组 × 套餐卡」展开监控对象 |
@@ -27,7 +29,7 @@
 | 监控对象身份 | `internal/fetcher/abbr.go` | 127 | 球格缩写派生(不重复)、`planAbbrSetter`、`SettleIdentity`(缩写/后缀/slot 归一,app.go 与 probe 共用) |
 | 身份测试 | `internal/fetcher/abbr_test.go` | 129 | SettleIdentity 五种组合 + 缩写派生/去重 + `FetchAll` 兜底用例 |
 | 预算换算 | `internal/fetcher/budget.go` | 24 | 余额型预算 → 消耗百分比(ApplyBudget,默认预算 300) |
-| Provider 注册表 | `internal/fetcher/registry.go` | 164 | 十平台元数据 + Build 工厂 |
+| Provider 注册表 | `internal/fetcher/registry.go` | 177 | 十一家平台元数据 + Build 工厂 |
 | 数字格式化 | `internal/fetcher/format.go` | 22 | 千分位 formatNum |
 | Kimi 抓取器 | `internal/fetcher/kimi.go` | 239 | Kimi 开放平台额度 API；Percent 取 5h/7d 窗口较紧张者 |
 | Kimi 测试 | `internal/fetcher/kimi_test.go` | 204 | httptest 用例 |
@@ -49,6 +51,8 @@
 | MiniMax 测试 | `internal/fetcher/minimax_test.go` | 226 | httptest 用例（域名回退/百分比语义守护/周无限制） |
 | Open Design 抓取器 | `internal/fetcher/opendesign.go` | 207 | 控制面两步 GET(workspace 发现 + coding-plan-usage)，Cookie 认证，302 并入失效分支 |
 | Open Design 测试 | `internal/fetcher/opendesign_test.go` | 369 | httptest 用例（两步流程/窗口按 durationSeconds 识别/302 与鉴权失效） |
+| Devin 抓取器 | `internal/fetcher/devin.go` | 446 | Devin Desktop 私有席位接口 `GetUserStatus`（CONNECT POST，`metadata.api_key`）：无公开额度 API，v2/v3 consumption 仅 Enterprise 管理员；token 手填优先、留空读本机 `%APPDATA%\Devin\User\globalStorage\state.vscdb` 登录态；响应是**剩余**百分比 → `clampPercent(100-剩余)` 反转；日/周可见窗口里已用较大者驱动 `Percent`/`ResetAt`/`ResetLabel`（并列取日），`Remaining` 按已用降序 + 超额金额 |
+| Devin 测试 | `internal/fetcher/devin_test.go` | 1070 | httptest 用例（本机登录态扫描与体积守卫/server 三级兜底/字符串型 int64/剩余百分比反转/隐藏窗口与缺失窗口/驱动窗口与 ResetLabel/401-403 与 HTTP N 文案） |
 | 注册表测试 | `internal/fetcher/registry_test.go` | 59 | 注册表完整性（离线） |
 | CLI 入口 | `cmd/quotaviewer/main.go` | 10 | 无界面探针的独立 main（console 子系统，不 import wails）；逻辑全在 `internal/probe` |
 | 探针契约 | `internal/probe/probe.go` | 302 | `--json` 的 JSON 契约（`schema: 2`）：顶层 7 键 + **记录 10 键**(新增 `slot`/`sub_label`)、一监控对象一条记录、结果归一（四句 + `def.Kind` 兜底）、`reset_at` 三条规则、失败信封、退出码三分（0/2/1） |

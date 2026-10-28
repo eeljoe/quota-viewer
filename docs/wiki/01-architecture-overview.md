@@ -8,7 +8,7 @@
 
 ### 是什么
 
-桌面悬浮球 + 额度监控工具：可配置 1-3 个（扩展模式最多 9 个）AI 平台的 API 配额/余额监控。注册表当前 10 家：Kimi / 讯飞星辰 / OpenCode Go / 小米 MiMo / DeepSeek / Ollama / Command Code / Factory Droid / MiniMax / Open Design。单窗口（60×60 悬浮球 ⇄ 展开详情面板），常驻系统托盘，关闭到托盘不退出。
+桌面悬浮球 + 额度监控工具：可配置 1-3 个（扩展模式最多 9 个）AI 平台的 API 配额/余额监控。注册表当前 11 家：Kimi / 讯飞星辰 / OpenCode Go / 小米 MiMo / DeepSeek / Ollama / Command Code / Factory Droid / MiniMax / Open Design / Devin。单窗口（60×60 悬浮球 ⇄ 展开详情面板），常驻系统托盘，关闭到托盘不退出。
 
 ### 技术栈
 
@@ -37,7 +37,7 @@
 │ fetcher      │ │ config     │ │ (托盘菜单)      │
 │ registry.go  │ │ 动态        │ │ systray.Run    │
 │ (注册表)      │ │ Provider   │ │ + LockOSThread │
-│ 十平台实现    │ │ 列表持久化  │ │                │
+│ 11 家平台实现 │ │ 列表持久化  │ │                │
 │ (见 05 页)   │ │ + Cookie   │ │                │
 │ budget.go    │ │ 解析        │ │                │
 └──────────────┘ └────────────┘ └────────────────┘
@@ -79,7 +79,7 @@ tray:refresh 事件 ─────────────┤→ App.Refresh()
 | `main.go` | 入口，Wails 运行时选项（frameless/透明/置顶/隐藏关闭） |
 | `app.go` | 编排层：启动流程、刷新编排、配置读写、窗口定位、事件转发 |
 | `workarea_windows.go` | Win32：显示器工作区查询、DPI、窗口样式/子类（Windows only） |
-| `internal/fetcher/*.go` | 注册表 + 十平台抓取器 + 统一类型 + 预算换算(budget.go) |
+| `internal/fetcher/*.go` | 注册表 + 十一家平台抓取器 + 统一类型 + 预算换算(budget.go) |
 | `internal/config/*.go` | 配置持久化 + Cookie 解析 |
 | `internal/tray/tray.go` | 系统托盘 |
 | `frontend/src/*` | 全部 UI |

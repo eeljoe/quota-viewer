@@ -28,6 +28,8 @@ internal/fetcher/*.go
 internal/fetcher/abbr.go
 internal/fetcher/abbr_test.go
 internal/fetcher/budget.go
+internal/fetcher/devin.go
+internal/fetcher/devin_test.go
 internal/fetcher/format.go
 internal/fetcher/kimi_test.go
 internal/fetcher/kimi.go

@@ -7,13 +7,15 @@
 ![悬浮球](docs/screenshots/preview-1.png)
 ![展开面板](docs/screenshots/preview-2.png)
 
+<sub>悬浮球：一个监控对象一格，格字颜色 = 状态色（绿 / 黄 / 红，额度耗尽时熄灭）。展开面板：逐行列出每个对象的窗口用量与倒计时，倒计时标明它属于哪个窗口。</sub>
+
 **十一家平台**：[Kimi](https://platform.kimi.com) · [讯飞星辰](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [小米 MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai)
 
 > 注册表支持 11 家平台。一个**监控对象** = 一组凭证 × 一张套餐卡，所以同平台两把 Key、两个套餐都会各占一格。悬浮球**普通模式最多 9 个对象，扩展模式最多 16 个**；超出的合并成一格 `+N`（展开面板仍逐行列出全部对象）。
 
 - **技术栈**: Go 1.24 + Wails v2.12.0 + 原生 HTML/CSS/JS (Vite 打包)
 - **平台**: Windows 10+ (WebView2 运行时)
-- **体积**: 单个 exe 约 10.9 MB，运行中工作集约 60 MB
+- **体积**: 单个 exe 约 11.1 MB，运行中工作集约 66 MB
 
 ## 功能
 
@@ -37,7 +39,7 @@
 | [DeepSeek](https://www.deepseek.com/platform) | API Key (`sk-...`) | balance | 账户余额（余额型） |
 | [Ollama](https://ollama.com/settings) | 浏览器会话 Cookie | usage | Cloud 5 小时 Session 用量 / 周用量（设置页） |
 | [Command Code](https://commandcode.ai) | API Key (`user_...`,留空自动读 `~/.commandcode/auth.json`) | usage | 5 小时 / 周滚动窗口用量 + 剩余 credits |
-| [Factory Droid](https://factory.ai) | API Key (`fk-...`,留空自动读 `~/.factory/.env`) | usage | 5 小时 / 周 / 月窗口 + Core 池用量 |
+| [Factory Droid](https://factory.ai) | API Key (`fk-...`,留空自动读 `~/.factory/.env`) | usage | 5 小时 / 周 / 月窗口；Standard 用满后改由 Core 池接管展示 |
 | [MiniMax](https://platform.minimaxi.com) | 订阅 Key (`sk-cp-...`) | usage | 5 小时 / 周窗口用量（Token Plan） |
 | [Open Design](https://open-design.ai) | 浏览器会话 Cookie | usage | Design Plan 5 小时 / 7 天额度用量 |
 | [Devin](https://app.devin.ai) | Token（留空自动读本机 Devin Desktop 登录态） | usage | Devin 套餐的每日 / 每周额度用量 |

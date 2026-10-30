@@ -7,13 +7,15 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 ![Floating Ball](docs/screenshots/preview-1.png)
 ![Expanded Panel](docs/screenshots/preview-2.png)
 
+<sub>Floating ball: one cell per monitored object, cell color = status (green / yellow / red, off when exhausted). Expanded panel: every object's windows and countdown, the countdown labelled with the window it belongs to.</sub>
+
 **11 platforms**: [Kimi](https://platform.kimi.com) · [Xfyun](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [Xiaomi MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai)
 
 > The registry supports 11 platforms. A **monitored object** is one credential × one plan card, so a platform with two API keys or two plans takes more than one cell. The floating ball shows **up to 9 objects normally, up to 16 in extended mode**; anything beyond that collapses into a `+N` cell (the panel still lists every object).
 
 - **Tech Stack**: Go 1.24 + Wails v2.12.0 + Vanilla HTML/CSS/JS (Vite bundling)
 - **Platform**: Windows 10+ (WebView2 Runtime)
-- **Footprint**: ~10.9 MB single executable, ~60 MB working set while running
+- **Footprint**: ~11.1 MB single executable, ~66 MB working set while running
 
 ## Features
 
@@ -37,7 +39,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 | [DeepSeek](https://www.deepseek.com/platform) | API Key (`sk-...`) | balance | Account balance (balance type) |
 | [Ollama](https://ollama.com/settings) | Browser session Cookie | usage | Cloud 5-hour Session usage / weekly usage (settings page) |
 | [Command Code](https://commandcode.ai) | API Key (`user_...`, or auto-read `~/.commandcode/auth.json` if empty) | usage | 5-hour / weekly rolling window usage + remaining credits |
-| [Factory Droid](https://factory.ai) | API Key (`fk-...`, or auto-read `~/.factory/.env` if empty) | usage | 5-hour / weekly / monthly windows + Core pool usage |
+| [Factory Droid](https://factory.ai) | API Key (`fk-...`, or auto-read `~/.factory/.env` if empty) | usage | 5-hour / weekly / monthly windows; the Core pool takes over the display once Standard is capped |
 | [MiniMax](https://platform.minimaxi.com) | Subscription Key (`sk-cp-...`) | usage | 5-hour / weekly window usage (Token Plan) |
 | [Open Design](https://open-design.ai) | Browser session Cookie | usage | Design Plan 5-hour / 7-day quota usage |
 | [Devin](https://app.devin.ai) | Token (or auto-read the local Devin Desktop login if empty) | usage | Daily / weekly quota usage of the Devin plan |

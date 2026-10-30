@@ -40,9 +40,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "dc127dc", "synced_at": "2026-10-29T02:23:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "2e43531", "synced_at": "2026-10-30T17:05:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `dc127dc`（2026-10-29 02:23），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：新增第 11 家 Provider Devin（手填 token + 留空自动读本机 Desktop 登录态、`GetUserStatus` 私有通道、日/周剩余反转成已用、单球最紧张窗口驱动；05 补 Devin 一节与平台表一行；02 补 `devin.go`/`devin_test.go` 两行；00/01/03/07/08/09 的数量与清单改 11）。上一同步点为 `284a497`（2026-10-25 18:45，Factory Droid 展示口径 + 05 契约清单补 `reset_label` + 02 Factory 两条行数）。
+> **Wiki 同步状态**：最后同步于 `2e43531`（2026-10-30 17:05），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：Factory Droid 球色口径修正——Standard 未封顶时 Core 完全不参与（不驱色/不展示/不占倒计时），`Percent` 只由 Standard 三窗口决定；05 的 droid 段改掉 `Percent = max(stdMax, coreMax)` 与「Core 一有消耗即显示」，02 的两条行数与说明刷新。上一同步点为 `dc127dc`（2026-10-29 02:23，第 11 家 Provider Devin 全量同步）。
 
 ## Wiki 文件索引
 

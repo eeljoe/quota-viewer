@@ -79,8 +79,8 @@ type factoryLegacyResp struct {
 
 // Fetch 拉取并解析 Factory Droid 额度。优先 token-rate limits 模型(5h/周/月窗口,
 // 与官方 Usage 页一致),未启用该计费模式时回退旧账单模型的 Standard/Premium 用量。
-// Percent 取全部窗口中更紧张的一个(窗口告警契约,与 Kimi/Ollama/Command Code 一致);
-// Used/Total 以 5 小时主窗口为准(Core 接管时改跟 Core 驱动窗口);
+// Percent 取 Standard 三个窗口里更紧张的一个(窗口告警契约,与 Kimi/Ollama/Command Code
+// 一致);Used/Total 以 5 小时主窗口为准(Core 接管时改跟 Core 驱动窗口);
 // ResetAt/ResetLabel 跟 Remaining 排头那一段的窗口走(见 parseTokenRateLimits)。
 func (f *FactoryDroidFetcher) Fetch() QuotaResult {
 	result := QuotaResult{
@@ -139,16 +139,21 @@ type factorySegment struct {
 }
 
 // parseTokenRateLimits 解析新账单模型。窗口只有百分比、无绝对值,沿用 Ollama 先例:
-// Total=100、Used=5h 百分比;Percent 取全部窗口(含 Core 池)最紧张的一个。
-// Remaining 的段按**紧张度降序**排列,最紧张的窗口打头;月度/Core 仍是"成为最紧张者
-// 才出现"——长窗口耗尽不能只算不显示,但平时不做展示噪音。之所以按紧张度排序而不是
+// Total=100、Used=5h 百分比;Percent 取 Standard 三窗口里最紧张的一个。
+// Remaining 的段按**紧张度降序**排列,最紧张的窗口打头;月度仍是"成为最紧张者才出现"
+// ——长窗口耗尽不能只算不显示,但平时不做展示噪音。之所以按紧张度排序而不是
 // 固定顺序:头部那行只有 210px 宽,最紧张的数字排在第三段会被截掉,球红了却看不到原因
 // (2026-10-19 现场)。ResetAt / ResetLabel 同样跟排头那一段的窗口走。
 //
-// Core 接管:Standard 池顶格(>=100%)且上游 overagePreference 表明超额走 Core 时,
-// 展示主体(Percent/Used/ResetAt/Remaining)整体切到 Core 池,且 Core 段固定排首位——
-// 否则 Standard 的 100% 会把球面钉死成"用满",用户看不出 Core(第二管血)还剩多少量
-// (2026-10-13 误判事故)。
+// 两管血的分界:Factory 的计费顺序是「Standard 先烧,三个滚动窗口都有余量才能发请求;
+// Droid Core 是 Standard 跑完之后才生效的开源模型池,有独立的额度窗口」。所以
+//   - Standard 未封顶:Core 的读数**完全不参与**——不驱球色、不进 Remaining、不占倒计时。
+//     旧实现把 Core 并进 Percent,Standard 刷新后 Core 还挂在 100% 就会让球灯一直是熄灭灰
+//     (2026-10-30 现场:F 灯灰着,而实际周窗只用了 24%)。
+//   - Standard 封顶(>=100%)且上游 overagePreference 表明超额走 Core:展示主体
+//     (Percent/Used/ResetAt/Remaining)整体切到 Core 池,且 Core 段固定排首位——
+//     否则 Standard 的 100% 会把球面钉死成"用满",用户看不出 Core(第二管血)还剩多少量
+//     (2026-10-13 误判事故)。
 func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *factoryLimitsResp) QuotaResult {
 	std := limits.Limits.Standard
 	fiveHour := std.FiveHour
@@ -166,7 +171,8 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 		return m
 	}
 	stdMax := poolMax(std)
-	// Core 池是独立计费窗口,仅在确实有数据时纳入告警与展示。
+	// Core 池是 Standard 跑完之后才生效的第二管血。它只在 Standard 封顶后接管展示主体时
+	// 才参与计算(见下方 takesOver);Standard 还有余量时它的读数不构成任何约束。
 	coreHasData := false
 	core := limits.Limits.Core
 	if core != nil {
@@ -219,9 +225,6 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 			window:  fiveHour,
 			label:   factoryResetLabel("", "5小时"),
 		})
-		if coreMax > result.Percent {
-			result.Percent = coreMax
-		}
 	}
 	if std.Weekly != nil && std.Weekly.UsedPercent != nil {
 		p := clampPercent(*std.Weekly.UsedPercent)
@@ -251,17 +254,6 @@ func (f *FactoryDroidFetcher) parseTokenRateLimits(result QuotaResult, limits *f
 				label:   factoryResetLabel("", "月"),
 			})
 		}
-	}
-	if coreMax > 0 && !takesOver {
-		// Core 仓只在 Standard 限流后接管计费,一有消耗就值得展示
-		// (用户常驻开源模型 + overage 回退 Core 的场景);接管时主体就是 Core,不再重复。
-		driver, driverName := factoryDrivingWindow(core)
-		segs = append(segs, factorySegment{
-			text:    fmt.Sprintf("Core %.1f%% 已用", coreMax),
-			percent: coreMax,
-			window:  driver,
-			label:   factoryResetLabel("Core ", driverName),
-		})
 	}
 	if limits.ExtraUsageBalanceCents != nil && *limits.ExtraUsageBalanceCents > 0 {
 		segs = append(segs, factorySegment{

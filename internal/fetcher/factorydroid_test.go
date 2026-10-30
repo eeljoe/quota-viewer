@@ -165,12 +165,19 @@ func TestFactoryDroid_WeeklyExhausted_DrivesPercent(t *testing.T) {
 	}
 }
 
-// TestFactoryDroid_CoreWindow_Alerts 验证 Core 池(独立计费窗口)耗尽同样驱动告警。
-func TestFactoryDroid_CoreWindow_Alerts(t *testing.T) {
+// TestFactoryDroid_CoreExhausted_HiddenWhileStandardHealthy 守护 2026-10-30 的用户现场:
+// Standard 刷新后只用了 10%,Core 月度却还挂在 100% —— 球灯必须是 Standard 的绿/黄,
+// 不能被 Core 的 100% 判成熄灭,Core 也不该出现在面板上(用户 2026-10-30 拍板:不显示)。
+//
+// Factory 的计费顺序是「Standard 先烧,三个窗口都有余量才能发请求;Core 是 Standard
+// 跑完之后才生效的第二管血,有独立窗口」⇒ Standard 未封顶时 Core 的读数不构成任何
+// 约束,拿它判球色等于用第二管血的余量去判断第一管血能不能用。
+func TestFactoryDroid_CoreExhausted_HiddenWhileStandardHealthy(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
   "usesTokenRateLimitsBilling": true,
+  "overagePreference": "droidCore",
   "limits": {
     "standard": {"fiveHour": {"usedPercent": 10}},
     "core": {"monthly": {"usedPercent": 100}}
@@ -185,11 +192,53 @@ func TestFactoryDroid_CoreWindow_Alerts(t *testing.T) {
 	if result.Error != "" {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	if result.Percent != 100 {
-		t.Errorf("expected Percent=100 (core exhausted drives ball color), got %f", result.Percent)
+	if result.Percent != 10 {
+		t.Errorf("Percent = %f, want 10 (Standard 未封顶 ⇒ 球色只跟 Standard,Core 的 100%% 不算)", result.Percent)
 	}
-	if !strings.Contains(result.Remaining, "Core") {
-		t.Errorf("expected Core info in Remaining, got '%s'", result.Remaining)
+	if strings.Contains(result.Remaining, "Core") {
+		t.Errorf("Remaining = '%s', want 不含 Core(Standard 健康时不显示第二管血)", result.Remaining)
+	}
+}
+
+// TestFactoryDroid_CoreQuotaStale_BallFollowsStandard 逐字复刻 2026-10-30 16:48 的真机响应:
+// 新计费月翻转后 Standard 只剩周窗 24%,而 Core 月窗还挂在 100%(2026-11-11 才恢复)。
+// 旧实现把 Percent 顶成 100 ⇒ 前端 `percent >= 100` 判熄灭,用户报「额度刷新了 F 灯还是灰的」;
+// 同一个 Core 段还排到首位,把倒计时带去了 11-11 的月窗口。
+func TestFactoryDroid_CoreQuotaStale_BallFollowsStandard(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(realFactoryLimitsJSON20261030))
+	}))
+	defer server.Close()
+
+	f := NewFactoryDroidFetcher("fk_test")
+	f.baseURL = server.URL
+	t0 := time.Now()
+	result := f.Fetch()
+	t1 := time.Now()
+	if result.Error != "" {
+		t.Fatalf("unexpected error: %s", result.Error)
+	}
+	if result.Percent != 24 {
+		t.Errorf("Percent = %f, want 24 (Standard 周窗才是当前约束)", result.Percent)
+	}
+	if result.Used != 0 || result.Total != 100 {
+		t.Errorf("Used/Total = %f/%f, want 0/100 (5 小时窗口)", result.Used, result.Total)
+	}
+	if want := "周 24.0% 已用 · 5小时 0.0% 已用"; result.Remaining != want {
+		t.Errorf("Remaining = '%s', want '%s'", result.Remaining, want)
+	}
+	if result.ResetLabel != "周额度" {
+		t.Errorf("ResetLabel = '%s', want '周额度' (倒计时不许落到 Core 月窗)", result.ResetLabel)
+	}
+	reset, err := time.Parse(time.RFC3339, result.ResetAt)
+	if err != nil {
+		t.Fatalf("ResetAt '%s' 不可解析: %v", result.ResetAt, err)
+	}
+	want := 1991 * time.Second
+	if reset.Before(t0.Add(want-time.Second)) || reset.After(t1.Add(want)) {
+		t.Errorf("ResetAt = '%s'(抓取时刻后 %.0fs), want 抓取时刻 + %.0fs(周窗口)",
+			result.ResetAt, reset.Sub(t0).Seconds(), want.Seconds())
 	}
 }
 
@@ -219,9 +268,10 @@ func TestFactoryDroid_MonthlyDrives_Shows(t *testing.T) {
 	}
 }
 
-// TestFactoryDroid_CoreActive_Shows 验证 Core 仓(Standard 限流后的接管计费)
-// 一有消耗就展示——即使其百分比低于 Standard 窗口(回退场景,用户常驻开源模型)。
-func TestFactoryDroid_CoreActive_Shows(t *testing.T) {
+// TestFactoryDroid_CoreActive_HiddenWhileStandardHealthy 保护同一口径的另一面:
+// Standard 还有量时,Core 即便有消耗也不进面板(2026-09-30 的「Core 一有消耗即展示」
+// 已作废——那会让 Standard 健康时的倒计时与截断顺序被第二管血带偏)。
+func TestFactoryDroid_CoreActive_HiddenWhileStandardHealthy(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -243,8 +293,8 @@ func TestFactoryDroid_CoreActive_Shows(t *testing.T) {
 	if result.Percent != 40 {
 		t.Errorf("expected Percent=40 (standard still drives), got %f", result.Percent)
 	}
-	if !strings.Contains(result.Remaining, "Core 5.0% 已用") {
-		t.Errorf("expected active Core tank surfaced, got '%s'", result.Remaining)
+	if strings.Contains(result.Remaining, "Core") {
+		t.Errorf("Remaining = '%s', want 不含 Core(Standard 健康时不显示)", result.Remaining)
 	}
 }
 
@@ -384,8 +434,8 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 			coreCounts: -1,
 		},
 		{
-			// AC-3:Standard 未顶格 → 不接管,Core 只作为附带说明。
-			// Core 80 仍是最紧张的一段 ⇒ 打头;它的窗口没有 secondsRemaining ⇒ 倒计时留空。
+			// AC-3:Standard 未顶格 → 不接管。Core 80 比 Standard 高也不许进面板、不许驱球色
+			// (2026-10-30 口径:第二管血在 Standard 健康时不构成约束,不显示)。
 			name: "AC3_Standard未顶格不接管", body: `{
   "usesTokenRateLimitsBilling": true,
   "overagePreference": "droidCore",
@@ -394,9 +444,9 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
     "core": {"fiveHour": {"usedPercent": 80}}
   }
 }`,
-			percent: 80, used: 50, resetSecs: -1,
-			remaining:  "Core 80.0% 已用 · 5小时 50.0% 已用 · 周 50.0% 已用",
-			coreCounts: 1,
+			percent: 50, used: 50, resetSecs: 300,
+			remaining:  "5小时 50.0% 已用 · 周 50.0% 已用",
+			coreCounts: 0,
 		},
 		{
 			// AC-4:Core 无数据(全 null)→ 不接管,Percent 不许掉成 0
@@ -421,7 +471,7 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 			remaining: "周 100.0% 已用 · 5小时 0.0% 已用", coreCounts: 0,
 		},
 		{
-			// AC-5:顶格判据是 >= 100,99.9 不算顶格
+			// AC-5:顶格判据是 >= 100,99.9 不算顶格 ⇒ 不接管,Core 也不显示
 			name: "AC5_99.9不算顶格", body: `{
   "usesTokenRateLimitsBilling": true,
   "overagePreference": "droidCore",
@@ -431,11 +481,11 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   }
 }`,
 			percent: 99.9, used: 30, resetSecs: -1,
-			remaining:  "周 99.9% 已用 · Core 60.0% 已用 · 5小时 30.0% 已用",
-			coreCounts: -1,
+			remaining:  "周 99.9% 已用 · 5小时 30.0% 已用",
+			coreCounts: 0,
 		},
 		{
-			// AC-6:超额没走 Core(走 extraUsage)→ 不许把主体切过去
+			// AC-6:超额没走 Core(走 extraUsage)→ 不许把主体切过去;Core 也不显示
 			name: "AC6_extraUsage不接管", body: `{
   "usesTokenRateLimitsBilling": true,
   "overagePreference": "extraUsage",
@@ -445,8 +495,8 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
   }
 }`,
 			percent: 100, used: 0, resetSecs: -1,
-			remaining:  "周 100.0% 已用 · Core 60.0% 已用 · 5小时 0.0% 已用",
-			coreCounts: -1,
+			remaining:  "周 100.0% 已用 · 5小时 0.0% 已用",
+			coreCounts: 0,
 		},
 		{
 			// AC-7:字段缺失(老上游)按空串处理 → 接管
@@ -595,6 +645,11 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 		})
 	}
 }
+
+// realFactoryLimitsJSON20261030 是 2026-10-30 16:48 真机 /api/billing/limits 的逐字响应:
+// 新计费月翻转后 Standard 只走了周窗 24%(5h 与月都是 0),而 Core 的月窗仍挂在 100%
+// (2026-11-11 才恢复)、周窗 75%。用户现场即「Factory 额度已刷新,F 灯还是灰的」。
+const realFactoryLimitsJSON20261030 = `{"usesTokenRateLimitsBilling":true,"limits":{"standard":{"fiveHour":{"usedPercent":0,"windowEnd":null,"secondsRemaining":null},"weekly":{"usedPercent":24,"windowEnd":"2026-10-30T09:21:15.443Z","secondsRemaining":1991},"monthly":{"usedPercent":0,"windowEnd":null,"secondsRemaining":null}},"core":{"fiveHour":{"usedPercent":0,"windowEnd":null,"secondsRemaining":null},"weekly":{"usedPercent":75,"windowEnd":"2026-11-01T16:43:03.517Z","secondsRemaining":201299},"monthly":{"usedPercent":100,"windowEnd":"2026-11-11T20:04:35.466Z","secondsRemaining":1077391}}},"overagePreference":"droidCore","canManageOverage":true,"extraUsageBalanceCents":0,"extraUsageAllowed":true}`
 
 // validFactoryLimitsJSON 是真实 /api/billing/limits 返回结构的代表
 // (token-rate limits 计费:5h/周/月窗口 + 预付 Extra Usage 余额;

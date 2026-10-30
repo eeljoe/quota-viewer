@@ -407,15 +407,19 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 		percent    float64
 		used       float64
 		resetSecs  float64 // 期望的剩余秒数;<0 表示 ResetAt 必须是空串(驱动窗口无剩余秒数)
+		resetLabel string  // 非空时校验 ResetLabel 全串
 		remaining  string  // 期望全串(空串表示只校验前缀/tail)
 		hasPrefix  string
 		hasTail    string
 		coreCounts int // >=0 时校验 "Core" 出现次数;-1 表示不校验
 	}{
 		{
-			// AC-1:真机夹具 → 接管,重置时间取 Core 5h 的 7974s
+			// AC-1:真机夹具 → 接管,重置时间取 Core 5h 的 7974s。
+			// ResetLabel 必须带 "Core " 前缀:接管时倒计时是第二管血的重置时间,
+			// 只写「5小时额度」会被读成 Standard 的(变异实测该断言是唯一挡得住丢前缀的)。
 			name: "AC1_真机夹具接管", body: realFactoryLimitsJSON,
 			percent: 100, used: 100, resetSecs: 7974,
+			resetLabel: "Core 5小时额度",
 			remaining:  "Core 100.0% 已用（Standard 已限流） · 周 100.0% 已用",
 			coreCounts: 1,
 		},
@@ -636,6 +640,9 @@ func TestFactoryDroid_CoreTakeover_SwitchesDisplay(t *testing.T) {
 			}
 			if tc.hasTail != "" && !strings.HasSuffix(result.Remaining, tc.hasTail) {
 				t.Errorf("Remaining = '%s', want suffix '%s'", result.Remaining, tc.hasTail)
+			}
+			if tc.resetLabel != "" && result.ResetLabel != tc.resetLabel {
+				t.Errorf("ResetLabel = '%s', want '%s'", result.ResetLabel, tc.resetLabel)
 			}
 			if tc.coreCounts >= 0 {
 				if got := strings.Count(result.Remaining, "Core"); got != tc.coreCounts {

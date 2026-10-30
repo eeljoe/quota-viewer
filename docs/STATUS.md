@@ -9,35 +9,35 @@
 > 3. 读「会话索引」拿全历史地图（一行一次会话）；索引没点名的内容一律不读
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（只读 Now；Next/Later 属按需层，任务点名才读）
 >    - 注：`ROADMAP.md` 自 2026-10-14 起**仅在本地存在、不入公开仓库**（与 `.scratch/`、`.agents/` 同）；若你拿到的是 clone，此文件缺席属正常，计划内容可临时向维护者索取
-> 5. **直接跳到最新一条「会话记录：2026-10-29 02:45」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-10-30 17:45」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 更早内容只经「会话索引」按需回溯（📦 行的章节在 `docs/wiki/99-appendix-legacy-status.md`）；「当前任务进度」「关键文件索引」等常驻节默认不读
 > 7. 给用户一份简短进度汇报（每段 3-5 行，大白话、可读性优先）：**当前进度**（现在在干什么 → 干到哪了 → 下一步是什么 → 有没有卡点）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-29 02:45`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`81d4224` on `master`（Devin 第 11 家全链路已实现并过整体门；v1.4.1 仍是线上 Latest）
-> 📊 累计会话数：主文档 3 条，另有 23 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-10-30 17:45`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`0ed9651` on `master`（Factory 球灯修复已修好并进桌面实例，尚未打 tag 发版；v1.4.1 仍是线上 Latest）
+> 📊 累计会话数：主文档 4 条，另有 23 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "81d4224", "branch": "master", "dirty": false, "timestamp": "2026-10-29T02:45:00+08:00"} -->
+<!-- git-meta: {"last_commit": "0ed9651", "branch": "master", "dirty": false, "timestamp": "2026-10-30T17:45:00+08:00"} -->
 
-- **日期**：2026-10-29 02:45
-- **会话摘要**：按两段式把 **Devin（第 11 家 Provider）** 落地——三张票逐票实现 + 逐票验收门（01/02 各返工一轮、03 返工一轮）+ 整体双轴审查 + 集成验收门 VERIFIED；顺带同步 wiki 与文档。唯一未验的是界面目视。
+- **日期**：2026-10-30 17:45
+- **会话摘要**：修 Factory Droid 的球灯——额度刷新后 F 灯仍灰，根因是非接管路径把 Core 池并进了球色百分比；改为 Standard 未封顶时 Core 完全不参与，动态验收 VERIFIED，真机与球面截图确认转绿，尚未发版。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**Devin（第 11 家）已实现并过整体验收门（`81d4224`）**，尚未发版（v1.4.1 仍是线上 Latest）；唯一未验项 = 界面目视（球格出现 `DV` 且数字与 Devin Desktop Usage 页一致），桌面实例已在跑（devin 已启用、凭证留空）
+- 当前阶段：**Factory 球灯修复已上线到桌面实例**（`0ed9651`，本次改动已 `wails build` 进产物并重启）；Devin（第 11 家）此前已过整体验收门。仍未发版，v1.4.1 是线上 Latest；唯一未验项仍是 Devin 的界面目视（球格 `DV` 且数字与 Devin Desktop Usage 页一致）
 - 十一家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`；注意对象数超上限时 `clampEnabled` 会把排在后面的 Provider 静默禁用）
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
-- 下一步：**你在界面上目视一次 Devin 格**（`DV` 出现、面板日/周百分比与 Devin Desktop 的 Usage 页一致）→ 通过后发版（v1.5.0，11 家平台）；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次待你拍板（原有的 12 条 + 本轮新增 6 条，见本地 `ROADMAP.md`「Now」/「Later」）
+- 下一步：**决定发版口径**（本次修复单发 v1.4.2，还是并入含 Devin 的 v1.5.0）；再目视一次 Devin 格；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次待你拍板（原有 12 条 + Devin 组 6 条，见本地 `ROADMAP.md`「Now」/「Later」）
 - 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**公开仓库自 2026-10-14 起只含产品代码与对外文档**——`.scratch/`、`.agents/`、`.video_agent/`、`.superpowers/`、`docs/superpowers/`、`AGENTS.md`、`ROADMAP.md` 全部已进 `.gitignore`，提交仍应精确 `git add` 而非 `-A`（ignore 只管未跟踪文件，已跟踪文件不受保护）
 
 
@@ -197,6 +197,7 @@
 | 3 | 10-25 19:18 | Factory 窗口展示口径 | 发布 v1.4.1 并按任务组归档旧会话 | 📦 |
 | 4 | 10-28 23:21 | Devin Provider | 规划第 11 家：查清私有额度通道、实测打通，出 spec + 3 张票并三轴审票 | 本文 |
 | 5 | 10-29 02:45 | Devin Provider | 三张票逐票实现与验收（含三轮返工），整体门 VERIFIED；wiki 与文档同步 | 本文 |
+| 6 | 10-30 17:45 | Factory Droid 球色口径 | 修 F 灯在 Standard 刷新后仍灰：Core 不再并入球色，真机与截图确认转绿 | 本文 |
 
 ---
 
@@ -348,3 +349,68 @@
 - **Devin 的真实字段形态已定档**（真机两次独立取证）：`dailyQuotaResetAtUnix`/`weeklyQuotaResetAtUnix` 是字符串；`planName` 在 `planInfo` 里而不在 `planStatus` 顶层；`hideDailyQuota`/`hideWeeklyQuota`/`overageBalanceMicros` 在本机**整个缺失**（所以「缺失 vs false」仍未证实，实现按「缺失 = 不隐藏」处理）；响应约 405 KB，带顶层 `planInfo` 与 `planStatus.planInfo` 两份（`devinInfo` 只在后者）。
 - **探针契约没动**：仍是 schema 2、每记录十个键（无 `reset_label` / `remaining`）；本块所有真机判据只用了这十个键。
 - Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（23 条），`.covered-files` 61 项，`synced_commit` = `dc127dc`。
+
+---
+
+## 会话记录：2026-10-30 17:45
+
+> **会话摘要**：修 Factory Droid 的球灯——Standard 额度刷新后 F 灯仍灰，根因是非接管路径把 Core 池并进了 `Percent`（Core 未恢复就一直判成耗尽）；改为 Standard 未封顶时 Core 完全不参与，真机复测与球面截图确认转绿
+> **Git**：`0ed9651` on `master`（本组 4 个提交，未发版）
+> **任务组**：Factory Droid 球色口径（单会话轻量路线，无 spec 拆票）
+
+### 本次完成
+
+- **根因定位**：`parseTokenRateLimits` 的非接管路径有一句 `if coreMax > result.Percent { result.Percent = coreMax }`（旧 `factorydroid.go:222-224`），把 Core 池并进球色。真机现场 standard 5h/周/月 = 0/24/0、core = 0/75/**100**（11-11 才恢复）⇒ `Percent` 被顶成 100 ⇒ 前端 `percent >= 100` 判熄灭灰。同一 Core 段还排到 `Remaining` 首位，把倒计时带去 11-11 的 Core 月窗（探针 `reset_at` 实测就是这个值）。
+- **口径依据**：Factory 官方计费是「Standard 先烧，三个滚动窗口都有余量才能发请求；Droid Core 是 Standard 跑完之后才生效的第二管血，有独立窗口」⇒ Standard 未封顶时 Core 的读数不构成任何约束。2026-09-30 的「Core 仓一有消耗即展示」是同一个语义错误的另一面，本次一并作废。
+- **实现**（`2e43531`）：非接管路径删掉上面那句与「Core 一有消耗即展示」整块；`Percent` 只由 Standard 三窗口决定。Standard 封顶后的 Core 接管逻辑**一字不动**（2026-10-13「球看着满了、其实 Core 还有量」的语义仍在）。
+- **测试**：新增 10-30 真机夹具回归用例 + 两条「Core 健康态必须隐藏」用例；改写两条前提已作废的 Core 用例；AC 表 AC3/AC5/AC6 期望同步到新口径。变异实测：加回 `coreMax` 顶高 → 3 处红；`>= 100` 改 `> 99` → AC5 红；退回「一有消耗即展示」→ 6 处红。
+- **独立动态验收 VERIFIED**（`27c331c` 固定点）：AS-1…AS-5 逐条亲手取证、全量 204 用例绿、8 发变异 7 杀、真机 CLI `percent` 与 Standard 一致且 `reset_at` 落在 Standard 窗口。门挑出的唯一 finding 是测试盲区——接管路径 `ResetLabel` 的 `Core ` 前缀没有断言（变异 M6 存活），已用 `63db78c` 补断言并复验该变异被杀，产品代码未动。
+- **交付**：`wails build` 重建（18.9s）→ 旧实例（PID 39228）结束、新实例（PID 28996）启动 → 桌面 `.lnk` 确认指向新产物 → 球面截图确认 **F 格已从暗灰变成绿色**。
+- **wiki 同步**（`27c331c` + `8695cc5` + `0ed9651`）：05 的 droid 段改掉 `Percent = max(stdMax, coreMax)` 与「Core 一有消耗即显示」，02 两条行数与说明刷新，`synced_commit` 推进到 `63db78c`。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| Standard 健康时 Core **完全不显示** | 用户 2026-10-30 明确选择；面板保持「当前在烧哪管血」的单一叙事，Core 什么时候恢复去 Factory 页面看 | Core 退到 `Remaining` 尾部作信息位（被否） |
+| 接管路径（Standard 封顶）一字不动 | 2026-10-13 事故的守护仍在生效，本次现场不涉及该分支 | 顺手一起改（会作废已 VERIFIED 的那块） |
+| 作废「Core 一有消耗即展示」 | 它就是同一个语义错误：让 Standard 健康时的展示顺序与倒计时被第二管血带偏 | 保留展示但只放到尾部（与用户选择冲突） |
+| 门挑出的 `ResetLabel` 盲区当场补断言 | 机械可修、不动产品代码、不推翻 VERIFIED | 留给清理批次（会在接管场景静默错标窗口名） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/factorydroid.go` | 非接管路径不再并入 Core；注释重写「两管血的分界」（465 行） |
+| 修改 | `internal/fetcher/factorydroid_test.go` | 10-30 真机夹具回归 + 两条健康态隐藏用例 + 接管 `ResetLabel` 前缀断言（674 行） |
+| 修改 | `docs/wiki/05-fetching-platforms.md` + `02-module-catalog.md` + `00-agent-rules.md` | droid 段口径、模块行数、同步点 |
+| 新增 | `.scratch/factory-core-ball-color/` | 不出库：spec、票与裁决、门的变异脚本 |
+
+> 本次变更：`fa1a732..0ed9651` +108/−52 行（另有 2 次 wiki 提交），7 个文件
+> 变更基准：`git diff --stat fa1a732..HEAD`
+
+### 未完成 & 下一步
+
+- **发版**：本次修复已进 `build/bin/quota-viewer.exe` 并在桌面实例生效，但**没有打 tag、没有发 Release**——等你决定是单发 v1.4.2 还是并入 v1.5.0
+- **Devin 界面目视（AS-11b）**（持续中）：桌面实例刚重启过（PID 28996），球格 `DV` 现在就能看，面板日/周百分比与 Devin Desktop 的 Usage 页对比
+- **「对端告知」报文**（持续中）：必须带 probe `schema` 1→2
+- **非阻断清理批次**（持续中）：原有 12 条 + Devin 组 6 条，见 `ROADMAP.md`「Now」
+
+### 已知问题 & 注意事项
+
+- **Factory 两管血的展示边界**（本次定档）：`limits.core` 的三窗口**只在 Standard 顶格时**参与任何展示；Standard 没顶满时 Core 怎么满都不影响球色与文字。若日后上游改了「Core 先烧」的顺序，这条要重审。
+- `wails build` 后 `frontend/` 三个生成物会变脏（CRLF），本次已 `git checkout -- frontend/` 还原，未提交
+- 无 git stash；仓库仍是 `master` 单线，无额外 worktree
+
+### 推荐 Skill
+
+- `/wiki-update` - 本次已手动同步（Factory 一条事实）；后续大改 Factory 后重跑
+- `/update-status` - 本会话记账（已执行）
+
+### 关键上下文
+
+- **Factory 检测逻辑的分叉点**（新会话要改这块先看这里）：`parseTokenRateLimits` 里 `takesOver = stdMax >= 100 && coreHasData && (overagePreference ∈ {"", "droidCore"})`。`takesOver` 为真 ⇒ 主体切 Core（Percent/Used/ResetAt/Remaining 全跟 Core 最紧张窗口，Core 段钉首位）；为假 ⇒ **只看 Standard**，Core 一个字段都不读。
+- **2026-10-30 真机数据**（`realFactoryLimitsJSON20261030` 夹具逐字存档）：standard 0/24/0、core 0/75/100、`overagePreference=droidCore`、`extraUsageBalanceCents=0`。旧代码在此数据下 `Percent=100`（错）、新代码 `Percent=24`（对，球绿）。
+- **验收证据链**：`.scratch/factory-core-ball-color/spec.md`（AS-1…AS-5）→ `issues/01-*.md` 的 `## Verdicts`（r1 VERIFIED 27c331c）→ `verifier-probes/mutate.mjs`（门的 8 发变异脚本）。
+- **探针契约没动**：仍是 schema 2、每记录十个键。
+- Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（23 条），`synced_commit` = `63db78c`。

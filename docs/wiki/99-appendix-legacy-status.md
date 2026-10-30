@@ -1186,3 +1186,116 @@
 - Wiki 漂移检测：`synced_commit` = `284a497`，自它以来只有文档与构建产物变更（`frontend/dist/*`、`frontend/wailsjs/go/models.ts`），都不在 wiki「关键文件」表覆盖的文件里 → 无漂移。
 - 归档页现有 21 条会话（新增 Multi-Key 组的 2 条）；主文档保留最近 2 条（Factory 组）+ 无关闭信号的 2026-08-25。
 
+
+---
+
+## 会话记录：2026-10-28 23:21
+
+> **会话摘要**：规划 Devin（第 11 家 Provider）——查清额度通道并用本机登录态实测打通，产出 spec 与 3 张票，三轴审票后按结论重切票面；未动产品代码
+> **Git**：`3f73a08` on `master`（本会话只产出本地 spec 与文档；`.scratch/` 与 `ROADMAP.md` 本就忽略）
+> **任务组**：Devin Provider（新开组）
+> **任务组状态**：规划完成，待实现
+
+### 本次完成
+
+- **通道勘察（实测，不是推测）**：Devin 没有可用的公开额度 API —— v2/v3 的 `/enterprise/consumption/*` 只对 Enterprise 管理员个人 Key 开放，self-serve 一律 403（官方文档写明「no per-account toggle for support to enable」）。可用通道是 Devin Desktop（Windsurf 内核）的 `exa.seat_management_pb.SeatManagementService/GetUserStatus`：CONNECT 协议 POST，`metadata.api_key` 带本机登录态 token，一次返回日/周两个窗口的**剩余**百分比、各自重置 epoch（protojson 把 int64 写成字符串）、`hideDailyQuota`/`hideWeeklyQuota`、`overageBalanceMicros` 与套餐名。
+- **本机实测**：用本机登录态（`%APPDATA%\Devin\User\globalStorage\state.vscdb` 里明文 `devin-session-token$…` 与 `apiServerUrl=https://server.codeium.com`）打通 —— HTTP 200、套餐 Pro（`TEAMS_TIER_DEVIN_PRO`、`BILLING_STRATEGY_QUOTA`）、日/周剩余均 100%、日重置 `1793260800`、周重置 `1793520000`；错误面同样实测：403 = token 失效、400 = 缺 `api_key`。
+- **产出（本地、不入库）**：`.scratch/devin-provider/spec.md`（17 条 Acceptance Statements + 接口契约）、3 张票（01 手填 token 全链路 / 02 本机登录态自动读取 / 03 文档与真机冒烟）、`review-leads.md`（三条红队预测）。
+- **三轴审票**：Fidelity 5 条、Repo-fit 12 条、Soundness 8 条；其中「原票 05 要探针输出 `reset_label` / `remaining`，而探针契约只有十个键」被两个轴独立命中。按结论把原「请求 / 展示 / 凭据」三张水平票重切成三张能力票，并修掉 server 兜底顺序、错误路径必须保留 `Platform`、README 两处平台数、`config_test` 钳制断言、`registry_test` 函数名与 `APPDATA` 隔离等全部机械问题。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 改走两段式，不在本会话实现 | 同类 provider 先例落地约 400-450 行、6 个文件，超轻量路线 300 行 / 3 文件上限 | 硬塞进轻量预算（验收强度达不到严格口径） |
+| 凭证留空自动读本机 Devin Desktop 登录态 | 与 factory-droid / command-code 同形，用户不必手抄 token | 只支持手填 token |
+| 一颗球、最紧张窗口驱动 | 与 Ollama / Factory / MiniMax 同一套告警口径，只占一格 | 日/周各占一格 |
+| 不引 SQLite 驱动，按字节扫 `state.vscdb` | 只取两个字段，引驱动等于为一个取值加大依赖 | 引入纯 Go SQLite 驱动 |
+| 票按能力切而不是按层切 | 审票判定层切的三张各自产不出可演示增量 | 保留原 5 张水平票（复核后否掉） |
+
+### 未完成 & 下一步
+
+1. 下一会话 `/implement devin-provider`：按票序 01（超限票，先静态双轴）→ 02 → 03；整体门照 `review-leads.md` 的三条预测亲手复验。
+2. **AS-11b 界面目验必须由用户本人做**：球格出现 `DV`、面板数字与 Devin Desktop 的 Usage 页一致。
+3. 三条旧尾巴不动：对端告知报文、非阻断清理 12 条、ROADMAP Now 栏超条。
+
+### 已知问题 & 注意事项
+
+- Devin 的通道与语义已写进上文「已知问题与注意事项」区（剩余百分比要反转、int64 是字符串、探针没有 `reset_label` / `remaining`）。
+- 本会话用到的 token 只在内存与探针命令里出现过，**没有落进任何仓库文件**；spec 与票在 `.scratch/`（gitignore）。
+
+### 关键上下文
+
+- 产品级事实全部来自真实请求：`server.codeium.com` 的 `GetUserStatus` 在 `ide_version`/`extension_version = 1.126.0`、UA 为浏览器型时返回 200；缺 `api_key` 返回 400 `invalid_argument`，坏 token 返回 403 `permission_denied`。
+- 本机 Devin Desktop 版本 `1.126.0`（`state.vscdb` 的 `devin.desktopStartup.lastLaunchedBuild`），与请求体里的版本号一致。
+- Wiki 本轮未动（无代码变更）；实现落地后再 `/wiki-update` 增量 00 / 02 / 05 / 07 / 08。
+
+---
+
+## 会话记录：2026-10-29 02:45
+
+> **会话摘要**：按两段式把 Devin（第 11 家 Provider）落地——三张票逐票实现 + 逐票验收门（01/02/03 各返工一轮）+ 整体双轴审查 + 集成验收门 VERIFIED；wiki 与文档同步，界面目视仍待用户
+> **Git**：`81d4224` on `master`（Devin 任务组 10 个提交，未发版）
+> **任务组**：Devin Provider（承 2026-10-28 23:21 规划会话）
+> **任务组状态**：实现与验收已完成；界面目视（AS-11b）与发版待用户
+
+### 本次完成
+
+- **三张票逐票落地，每票都过独立动态验收门**：
+  - 01 手填 token 全链路（`69a0f3e`，6 文件 1069 行 ⇒ 超限票，先跑静态双轴）：`devin.go` 请求/解析/展示映射 + 注册表第 11 家 + `config.AllProviderIDs`；门 r1 判 REJECTED，拒因只在测试侧（并列取日 / null 容错 / 单侧缺百分比三条口径无断言，变异 M4/M15/M16 存活），返工 `ce19008` 补 4 个用例后 r2 VERIFIED。
+  - 02 本机登录态自动读取（`9848208` + `acbf6d1`）：`state.vscdb` 按字节扫 token 与 `apiServerUrl`、server 三级兜底、默认值不回写字段；超限（553 行）先静态双轴；门 r1 REJECTED（11 处用例未隔离 `APPDATA` 且注释失实 + `devin.go` 注释与生产事实相反），返工 `24a006d` 后 r2 VERIFIED。
+  - 03 文档与真机冒烟（`c031ca5` + `4adfe6c`）：两份 README 改 11 家、`ADDING_A_PROVIDER.md` 加 Devin 速查行与专节、ROADMAP 记 web 通道退路；真机直连取证（真实 `APPDATA`、凭证留空）十键齐、`percent=0`、`remaining=100`、`reset_at` 非空；门 r1 REJECTED（「多命中形态」被写成会退化为「未配置」，与代码不符），返工只改一句后 r2 VERIFIED。
+- **整体验收门 VERIFIED**：全范围双轴静态审查（基线 `8e0a691`）+ 集成动态门；门独立重跑「前沿普查」（本仓无 `frontier.mjs`，按逐票 Status 取证：3/3 `resolved`）、全量 `go test ./...`、`wails build`（23.6s）、AS-1..AS-11a 逐条成立性、跨票接缝红队、三条红队预测亲手复验。
+- **顺手修掉整体门挑出的两处硬违规**：`16fd6f0` 订正 `ADDING_A_PROVIDER.md` 的 400 口径（实现只透出 `HTTP 400`）、`dc127dc` 订正 `devin.go` 字段注释的 server 兜底语义（旧口径「留空 = 默认端点」已作废）。
+- **wiki 同步**（`81d4224`）：00/01/02/03/05/07/08/09 八页 + `.covered-files`，残留检索「十家/十平台」清零，`wiki-meta` 推进到 `dc127dc`。
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 动态门 r1 的「单侧缺百分比」与「超额金额」两条由主会话补口径、不挂起 | 票面只是欠规定：前者按「不可见」比渲染成 100% 已用安全，后者票面晚于 spec 且出现两次 | 挂 `needs-human` 等用户裁决（会白停一轮） |
+| 「超额金额」判为票面覆盖 spec | 票面是本票操作判据、晚于 spec、示例金额按夹具重算过；spec 已同步并留作废说明 | 改回「超额余额」（要动实现 + 测试 + 文档三处） |
+| 首命中点（多命中取第一个）不返工 | 票面未规定多命中语义，失败模式安全（退化为「未配置」）；由票 03 真机冒烟兜住，文档已如实写清 | 改成扫到第一个带 payload 的命中（属新范围，需新票） |
+| 票 02 的「手填 token 仍读整份 state.vscdb」只订正注释、不改行为 | 行为是 AS-8 server 兜底的直接后果；改行为会动已 VERIFIED 的实现 | 加「只缺 server 才读文件」优化（作废 VERIFIED、需重验） |
+| 整体门挑出的 wiki 漂移与 ROADMAP 过期条目在收尾一次做掉 | 两者都是「文档写错事实」，越留下一个会话越贵 | 留给下个会话（带着错文档交付） |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `internal/fetcher/devin.go` | Devin 抓取器：GetUserStatus、剩余→已用、本机登录态、三级 server 兜底（484 行） |
+| 新增 | `internal/fetcher/devin_test.go` | 44 个用例，含隔离 APPDATA 的本机凭据与请求形状断言（1177 行） |
+| 修改 | `internal/fetcher/registry.go` + `internal/config/config.go` | 注册第 11 家 `devin`（DV / usage / app.devin.ai）+ `AllProviderIDs` |
+| 修改 | `docs/ADDING_A_PROVIDER.md` + `README.md` + `README.zh-CN.md` | 11 家口径、Devin 专节、server 三级兜底例外、400 口径订正 |
+| 新增 | `.scratch/devin-provider/{spec.md,issues/,verifier-probes/}` | 不出库：spec、三票与逐票裁决、三轮返工的攻击面与变异日志 |
+
+> 本次变更：`8e0a691..81d4224` +1811/−39 行，18 个文件（其中 9 个是 wiki 与文档）
+> 变更基准：`git diff --shortstat 8e0a691..81d4224`
+
+### 未完成 & 下一步
+
+- **AS-11b 界面目视**（唯一未验项，只能你本人做）：桌面实例在跑（devin 已启用、凭证留空、exe 已是含票 01+02 的重建产物），看球格 `DV` 与面板日/周百分比是否与 Devin Desktop 的 Usage 页一致
+- 目视通过 → 发版 v1.5.0（11 家）；未通过 → 记下实际显示，按症状重开票
+- 「对端告知」报文（必须带 probe `schema` 1→2）
+- 非阻断清理批次：原有 12 条 + 本轮 6 条（`devin_test.go:835` 提示文案、`devin.go` 浮点兜底无测试、两份 README 未提「超上限 Provider 静默禁用」、`clampPercent` 寄居 `factorydroid.go`、两个 UnmarshalJSON 同形、`applyPlanStatus` 不读接收者）
+
+### 已知问题 & 注意事项
+
+- **`.scratch/` 被 `.gitignore` 忽略**：票面的 `Status` 改动、`## Verdicts` 裁决行、`## 实现说明` 都进不了 commit —— 这是本仓既有约定（内部过程产物不入公开仓），不是缺陷；跨会话可靠性靠本地文件本身
+- **`wails build` 会把 `frontend/dist/*.css` 与 `frontend/wailsjs/go/main/App.{d.ts,js}` 置成 CRLF**，`git status` 变脏但 `git diff` 为空：每次构建后 `git checkout -- frontend/` 还原，别顺手提交
+- **门用 Gate Kit 副本时会镜像宿主目录（junction）**：在副本里 `wails build` 也可能写穿到主工作区的 `frontend/`，收尾务必核一次 `git status`
+- 无 git stash；仓库仍是 `main/master` 单线，无额外 worktree
+
+### 推荐 Skill
+
+- `/update-status` - 本会话记账（已执行）
+- `/wiki-update` - 已执行（`81d4224`）；后续改 `devin.go` 后重跑
+- `/code-review` - 整体门双轴已跑；后续大改再跑
+
+### 关键上下文
+
+- **三张票的裁决链**（新会话要追细节时按这个顺序读）：`.scratch/devin-provider/issues/01*.md` → `02*.md` → `03*.md` 的 `## Verdicts`；每票格式是 `<日期> r<N> <VERDICT> <HEAD> <一句话>`。本轮共 6 次门裁决：01 r1 REJECTED → r2 VERIFIED；02 r1 REJECTED → r2 VERIFIED；03 r1 REJECTED → r2 VERIFIED；整体门 VERIFIED。
+- **返工全部是机械项，没有一次是实现缺陷**：01 缺测试断言、02 缺测试隔离 + 注释失实、03 文档一句话与代码不符。这说明本块的实现质量靠「门亲手跑变异」兜住，而不是靠实现者自检 —— 三次都是实现者自检全绿、门一打变异就露。
+- **Devin 的真实字段形态已定档**（真机两次独立取证）：`dailyQuotaResetAtUnix`/`weeklyQuotaResetAtUnix` 是字符串；`planName` 在 `planInfo` 里而不在 `planStatus` 顶层；`hideDailyQuota`/`hideWeeklyQuota`/`overageBalanceMicros` 在本机**整个缺失**（所以「缺失 vs false」仍未证实，实现按「缺失 = 不隐藏」处理）；响应约 405 KB，带顶层 `planInfo` 与 `planStatus.planInfo` 两份（`devinInfo` 只在后者）。
+- **探针契约没动**：仍是 schema 2、每记录十个键（无 `reset_label` / `remaining`）；本块所有真机判据只用了这十个键。
+- Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（23 条），`.covered-files` 61 项，`synced_commit` = `dc127dc`。

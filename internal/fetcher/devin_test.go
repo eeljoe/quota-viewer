@@ -45,6 +45,16 @@ const devinOKBody = `{"userStatus":{"planStatus":{
   "overageBalanceMicros":"70870000",
   "planInfo":{"planName":"Pro","hideDailyQuota":false,"hideWeeklyQuota":false}}}}`
 
+// devinDailyExhaustedBody 是 2026-11-05 实测的真实响应形状:proto3 JSON 省略零值字段,
+// 日剩余 0% ⇒ dailyQuotaRemainingPercent 整个缺席(同样缺席的还有 overageBalanceMicros
+// 与 hide*Quota —— 均为 proto3 默认值),但 dailyQuotaResetAtUnix 照发、周窗口照常。
+// 官方前端按 protobuf 默认值 0 读该字段 ⇒ 日已用 100%,不是「窗口不存在」。
+const devinDailyExhaustedBody = `{"userStatus":{"planStatus":{
+  "dailyQuotaResetAtUnix":"1793865600",
+  "weeklyQuotaRemainingPercent":50,
+  "weeklyQuotaResetAtUnix":"1794124800",
+  "planInfo":{"planName":"Pro","billingStrategy":"BILLING_STRATEGY_QUOTA"}}}}`
+
 // devinCheckBase 断言错误路径仍保留 Platform / Kind / LastUpdated
 // (registry_test 会断言空凭证 Fetch 也有 Platform,错误路径必须同口径)。
 func devinCheckBase(t *testing.T, r QuotaResult) {
@@ -226,7 +236,6 @@ func TestDevinParsePlanStatus_StructuralErrors(t *testing.T) {
 		{"缺 userStatus", `{}`},
 		{"缺 planStatus", `{"userStatus":{}}`},
 		{"planStatus 为 null", `{"userStatus":{"planStatus":null}}`},
-		{"两个窗口都缺", `{"userStatus":{"planStatus":{"planInfo":{"planName":"Pro"}}}}`},
 		{"非 JSON", `<html>not json</html>`},
 	}
 	for _, c := range cases {
@@ -500,59 +509,120 @@ func TestDevinApplyPlanStatus_HideBoth(t *testing.T) {
 	devinCheckBase(t, r)
 }
 
-// ---------- 单侧缺百分比(票面第 6 条 r1 补定) ----------
+// ---------- 单侧缺百分比 = proto3 零值省略(2026-11-05 真机实证口径) ----------
 
-// TestDevinApplyPlanStatus_MissingPercentIsInvisible 本次响应没给某窗口剩余百分比 ⇒ 该窗口不可见:
-// 不当作「0% 剩余」渲染成 100% 已用、不 panic、Remaining 只剩另一侧一段、
-// 驱动窗口落在给了百分比的那一侧。两侧都缺由解析层报结构错误(见 StructuralErrors)。
-func TestDevinApplyPlanStatus_MissingPercentIsInvisible(t *testing.T) {
+// TestDevinApplyPlanStatus_AbsentPercentIsExhausted proto3 JSON 省略零值字段:
+// *QuotaRemainingPercent 缺席 = 剩余 0% = 已用 100%(与官方前端 tgX/tg3 同口径,
+// protobuf 默认值 0),不是「窗口不存在」。可见性只由 hide*Quota 决定。
+// 2026-11-05 真机:日额度爆了 ⇒ dailyQuotaRemainingPercent 整个缺席 ⇒ 日窗口隐身、
+// 球灯只跟周走常绿 —— 本用例即该 bug 的回归。
+func TestDevinApplyPlanStatus_AbsentPercentIsExhausted(t *testing.T) {
 	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
 
-	// 只给了周(日窗口 DailyRemaining == nil)。日的重置时间故意给非零:
-	// 若把缺百分比当成可见,它会以"0% 剩余 ⇒ 100% 已用"顶成驱动窗口并抢走倒计时。
+	// 日百分比缺席(dailyQuotaResetAtUnix 照发)⇒ 日已用 100%,驱动与倒计时都落日。
 	r := f.applyPlanStatus(&devinPlanStatus{
 		WeeklyRemaining: devinF(30),
 		DailyResetAt:    1793260800, // 2026-10-29T08:00:00Z
 		WeeklyResetAt:   1793520000, // 2026-11-01T08:00:00Z
 	})
 	if r.Error != "" {
-		t.Fatalf("单侧缺百分比不该整体报错, got %q", r.Error)
+		t.Fatalf("unexpected error: %q", r.Error)
 	}
-	if r.Percent != 70 || r.Used != 70 || r.Total != 100 {
-		t.Errorf("只给周(剩余 30): Percent/Used/Total = %v/%v/%v, want 70/70/100",
+	if r.Percent != 100 || r.Used != 100 || r.Total != 100 {
+		t.Errorf("日缺席应视为 0 剩余: Percent/Used/Total = %v/%v/%v, want 100/100/100",
 			r.Percent, r.Used, r.Total)
 	}
-	if r.ResetLabel != "周额度" {
-		t.Errorf("驱动窗口应落在有百分比的一侧: ResetLabel got %q, want 周额度", r.ResetLabel)
+	if r.ResetLabel != "日额度" {
+		t.Errorf("驱动窗口应落在已爆的日侧: ResetLabel got %q, want 日额度", r.ResetLabel)
 	}
-	if r.ResetAt != "2026-11-01T08:00:00Z" {
-		t.Errorf("ResetAt 应取周的重置时间: got %q, want 2026-11-01T08:00:00Z", r.ResetAt)
+	if r.ResetAt != "2026-10-29T08:00:00Z" {
+		t.Errorf("ResetAt 应取日的重置时间: got %q, want 2026-10-29T08:00:00Z", r.ResetAt)
 	}
-	if r.Remaining != "周 70.0% 已用" {
-		t.Errorf("Remaining 只应有周一段: got %q, want %q", r.Remaining, "周 70.0% 已用")
+	if r.Remaining != "日 100.0% 已用 · 周 70.0% 已用" {
+		t.Errorf("Remaining 应有日(100)周两段: got %q", r.Remaining)
 	}
 
-	// 对称:只给了日。
+	// 对称:周百分比缺席 ⇒ 周已用 100%,驱动落周。
 	r = f.applyPlanStatus(&devinPlanStatus{
 		DailyRemaining: devinF(30),
 		DailyResetAt:   1793260800, // 2026-10-29T08:00:00Z
 		WeeklyResetAt:  1793520000, // 2026-11-01T08:00:00Z
 	})
 	if r.Error != "" {
-		t.Fatalf("单侧缺百分比不该整体报错, got %q", r.Error)
+		t.Fatalf("unexpected error: %q", r.Error)
 	}
-	if r.Percent != 70 || r.Used != 70 {
-		t.Errorf("只给日(剩余 30): Percent/Used = %v/%v, want 70/70", r.Percent, r.Used)
+	if r.Percent != 100 || r.Used != 100 {
+		t.Errorf("周缺席应视为 0 剩余: Percent/Used = %v/%v, want 100/100", r.Percent, r.Used)
+	}
+	if r.ResetLabel != "周额度" {
+		t.Errorf("ResetLabel: got %q, want 周额度", r.ResetLabel)
+	}
+	if r.Remaining != "周 100.0% 已用 · 日 70.0% 已用" {
+		t.Errorf("Remaining: got %q", r.Remaining)
+	}
+
+	// 两侧百分比都缺席但重置时间照发 = 两侧都爆了(不是无窗口):并列 100 取日。
+	r = f.applyPlanStatus(&devinPlanStatus{
+		DailyResetAt:  1793260800,
+		WeeklyResetAt: 1793520000,
+	})
+	if r.Error != "" {
+		t.Fatalf("unexpected error: %q", r.Error)
+	}
+	if r.Percent != 100 || r.ResetLabel != "日额度" {
+		t.Errorf("双侧缺席: Percent/ResetLabel = %v/%q, want 100/日额度", r.Percent, r.ResetLabel)
+	}
+	if r.Remaining != "日 100.0% 已用 · 周 100.0% 已用" {
+		t.Errorf("Remaining: got %q", r.Remaining)
+	}
+}
+
+// TestDevinApplyPlanStatus_NoQuotaSignal 完全没有配额信号(无百分比且无重置时间)
+// 或显式 CREDITS 计费套餐 ⇒ 报「不提供可读的额度窗口」,不渲染成 100% 已用。
+// proto3 省略 UNSPECIFIED(0),故 CREDITS 只能靠字段值区分,缺席不能当 CREDITS。
+func TestDevinApplyPlanStatus_NoQuotaSignal(t *testing.T) {
+	f := new(DevinFetcher) // 纯映射:零值够用,不构造 ⇒ 不解析本机登录态路径(AS-8d)
+
+	for _, st := range []*devinPlanStatus{
+		{},                 // 空 planStatus:无任何配额信号
+		{PlanName: "Free"}, // 只有套餐名
+		{BillingStrategy: "BILLING_STRATEGY_CREDITS", WeeklyRemaining: devinF(50)}, // 积分计费
+	} {
+		r := f.applyPlanStatus(st)
+		if !strings.Contains(r.Error, "不提供可读的额度窗口") {
+			t.Errorf("%+v: Error 应含「不提供可读的额度窗口」, got %q", st, r.Error)
+		}
+		if r.Percent != 0 {
+			t.Errorf("%+v: 无配额信号不得渲染出百分比, got %v", st, r.Percent)
+		}
+	}
+}
+
+// TestDevinFetch_DailyPercentAbsentMeansExhausted 端到端回归:2026-11-05 实测响应形状
+// (日百分比缺席、日重置照发、QUOTA)经 fetchPlanStatus → applyPlanStatus 必须得出
+// 日 100% 已用并驱动球灯,而不是只剩周一段绿灯。
+func TestDevinFetch_DailyPercentAbsentMeansExhausted(t *testing.T) {
+	f, _ := devinTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(devinDailyExhaustedBody))
+	})
+	r := f.Fetch()
+	if r.Error != "" {
+		t.Fatalf("unexpected error: %q", r.Error)
+	}
+	if r.Percent != 100 || r.Used != 100 {
+		t.Errorf("日额度爆时应 100%% 已用: Percent/Used = %v/%v", r.Percent, r.Used)
 	}
 	if r.ResetLabel != "日额度" {
 		t.Errorf("ResetLabel: got %q, want 日额度", r.ResetLabel)
 	}
-	if r.ResetAt != "2026-10-29T08:00:00Z" {
-		t.Errorf("ResetAt 应取日的重置时间: got %q, want 2026-10-29T08:00:00Z", r.ResetAt)
+	if r.ResetAt != "2026-11-05T08:00:00Z" {
+		t.Errorf("ResetAt: got %q, want 2026-11-05T08:00:00Z", r.ResetAt)
 	}
-	if r.Remaining != "日 70.0% 已用" {
-		t.Errorf("Remaining 只应有日一段: got %q, want %q", r.Remaining, "日 70.0% 已用")
+	if r.Remaining != "日 100.0% 已用 · 周 50.0% 已用" {
+		t.Errorf("Remaining: got %q, want %q", r.Remaining, "日 100.0% 已用 · 周 50.0% 已用")
 	}
+	devinCheckBase(t, r)
 }
 
 // ---------- AS-7 Remaining 文案 ----------

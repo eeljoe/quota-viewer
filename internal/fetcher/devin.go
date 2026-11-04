@@ -225,8 +225,10 @@ func (v *devinJSONFloat) UnmarshalJSON(raw []byte) error {
 // devinPlanStatus 是解析后的额度快照。
 // 两个 Remaining 字段语义是**剩余**百分比(与接口字段名一致),
 // 换算成"已用"由 applyPlanStatus 负责,避免解析层埋反向语义。
+// proto3 JSON 省略零值字段 ⇒ Remaining 为 nil 是「剩余 0%」而不是「没给这窗口」;
+// 同样 hide*Quota / overageBalanceMicros / billingStrategy 缺席也只是默认值,不带缺席语义。
 type devinPlanStatus struct {
-	DailyRemaining  *float64 // dailyQuotaRemainingPercent,语义 = 剩余
+	DailyRemaining  *float64 // dailyQuotaRemainingPercent,语义 = 剩余;nil = 缺席 = 0
 	WeeklyRemaining *float64
 	DailyResetAt    int64 // dailyQuotaResetAtUnix,epoch 秒,缺失 = 0
 	WeeklyResetAt   int64
@@ -234,6 +236,7 @@ type devinPlanStatus struct {
 	HideWeekly      bool
 	OverageMicros   *int64 // overageBalanceMicros,缺失 = nil
 	PlanName        string // planInfo.planName,只解析不展示
+	BillingStrategy string // planInfo.billingStrategy,枚举串;缺席 = UNSPECIFIED
 }
 
 // devinRawPlanStatus 是线上响应的直接映射(用容错类型接字段),由 devinParsePlanStatus 翻译成 devinPlanStatus。
@@ -245,6 +248,7 @@ type devinRawPlanStatus struct {
 	OverageBalanceMicros        *devinJSONInt64 `json:"overageBalanceMicros"`
 	PlanInfo                    *struct {
 		PlanName        string `json:"planName"`
+		BillingStrategy string `json:"billingStrategy"`
 		HideDailyQuota  bool   `json:"hideDailyQuota"`
 		HideWeeklyQuota bool   `json:"hideWeeklyQuota"`
 	} `json:"planInfo"`
@@ -258,8 +262,10 @@ type devinGetUserStatusResp struct {
 }
 
 // devinParsePlanStatus 把响应体翻译成 devinPlanStatus(纯函数,供单测直接喂字节)。
-// 缺 userStatus / 缺 planStatus / 两个窗口的剩余百分比都缺 ⇒ 明确报错,
-// 不 panic、也不当作 0% 已用(那样会静默渲染成"额度全新")。
+// 缺 userStatus / 缺 planStatus ⇒ 明确报错,不 panic。
+// 百分比字段缺席不报错:proto3 零值省略使其等义于剩余 0%(2026-11-05 真机实证,
+// 日额度爆了时 dailyQuotaRemainingPercent 整个缺席);「套餐到底有没有可读窗口」
+// 由 applyPlanStatus 的配额信号闸判定。
 func devinParsePlanStatus(raw []byte) (*devinPlanStatus, error) {
 	const unparsable = "无法解析额度数据（响应结构可能已变化）"
 
@@ -271,9 +277,6 @@ func devinParsePlanStatus(raw []byte) (*devinPlanStatus, error) {
 		return nil, errors.New(unparsable)
 	}
 	ps := resp.UserStatus.PlanStatus
-	if ps.DailyQuotaRemainingPercent == nil && ps.WeeklyQuotaRemainingPercent == nil {
-		return nil, errors.New(unparsable)
-	}
 
 	st := &devinPlanStatus{
 		DailyResetAt:  int64(ps.DailyQuotaResetAtUnix),
@@ -293,6 +296,7 @@ func devinParsePlanStatus(raw []byte) (*devinPlanStatus, error) {
 	}
 	if ps.PlanInfo != nil {
 		st.PlanName = ps.PlanInfo.PlanName
+		st.BillingStrategy = ps.PlanInfo.BillingStrategy
 		st.HideDaily = ps.PlanInfo.HideDailyQuota
 		st.HideWeekly = ps.PlanInfo.HideWeeklyQuota
 	}
@@ -369,11 +373,24 @@ type devinWindow struct {
 	resetAt int64
 }
 
+// BILLING_STRATEGY 枚举值(proto3:UNSPECIFIED=0 会被省略,只有非默认才出现在 JSON)。
+const (
+	devinBillingQuota   = "BILLING_STRATEGY_QUOTA"
+	devinBillingCredits = "BILLING_STRATEGY_CREDITS"
+)
+
 // applyPlanStatus 把额度快照映射成 QuotaResult(票面 AS-3..AS-7)。
 //
 // 口径:已用 = 100 − 剩余,夹取复用同包的 clampPercent;可见窗口里已用更大者驱动
 // 百分比与倒计时(并列取日);驱动窗口没有重置时间时 ResetAt/ResetLabel 都留空,
 // 不借另一个窗口的时间(借了会把"日额度 3 小时后重置"错标成周的时间)。
+//
+// 窗口可见性只看 hide*Quota(与官方前端 tgX 同口径):百分比字段缺席 = proto3
+// 零值省略 = 剩余 0% = 已用 100%,不是「套餐没给这窗口」——2026-11-05 真机实证
+// (日额度爆了,响应里 dailyQuotaRemainingPercent 整个缺席)。
+// 「套餐是否提供可读额度窗口」靠配额信号判定:显式 CREDITS 一律没有;
+// 其余要有 QUOTA 标记或至少一项配额数据(任一百分比/任一重置时间)才算有,
+// 全无信号(积分套餐/空 planStatus)报「不提供可读的额度窗口」,不渲染 100% 已用。
 func (f *DevinFetcher) applyPlanStatus(st *devinPlanStatus) QuotaResult {
 	result := QuotaResult{
 		Platform:    "Devin",
@@ -381,19 +398,36 @@ func (f *DevinFetcher) applyPlanStatus(st *devinPlanStatus) QuotaResult {
 		LastUpdated: time.Now(),
 	}
 
-	// 可见窗口 = 未被套餐隐藏 且 本次响应确实给了剩余百分比。
+	readable := st.BillingStrategy != devinBillingCredits &&
+		(st.BillingStrategy == devinBillingQuota ||
+			st.DailyRemaining != nil || st.WeeklyRemaining != nil ||
+			st.DailyResetAt > 0 || st.WeeklyResetAt > 0)
+	if !readable {
+		result.Error = "当前套餐不提供可读的额度窗口"
+		return result
+	}
+
+	// 可见窗口 = 未被套餐隐藏;缺席的百分比按 protobuf 默认 0 剩余计(已用 100%)。
 	var windows []devinWindow
-	if !st.HideDaily && st.DailyRemaining != nil {
+	if !st.HideDaily {
+		rem := 0.0
+		if st.DailyRemaining != nil {
+			rem = *st.DailyRemaining
+		}
 		windows = append(windows, devinWindow{
 			label:   "日",
-			used:    clampPercent(100 - *st.DailyRemaining),
+			used:    clampPercent(100 - rem),
 			resetAt: st.DailyResetAt,
 		})
 	}
-	if !st.HideWeekly && st.WeeklyRemaining != nil {
+	if !st.HideWeekly {
+		rem := 0.0
+		if st.WeeklyRemaining != nil {
+			rem = *st.WeeklyRemaining
+		}
 		windows = append(windows, devinWindow{
 			label:   "周",
-			used:    clampPercent(100 - *st.WeeklyRemaining),
+			used:    clampPercent(100 - rem),
 			resetAt: st.WeeklyResetAt,
 		})
 	}

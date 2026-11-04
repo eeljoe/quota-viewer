@@ -16,25 +16,25 @@
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-10-30 21:05`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`aca413f` on `master`（tag `v1.5.0` 已发布并标 Latest）
-> 📊 累计会话数：主文档 3 条，另有 25 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-11-05 01:45`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`87b6fc1` on `master`（tag `v1.5.1` 已发布并标 Latest）
+> 📊 累计会话数：主文档 4 条，另有 25 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "aca413f", "branch": "master", "dirty": false, "timestamp": "2026-10-30T21:05:00+08:00"} -->
+<!-- git-meta: {"last_commit": "87b6fc1", "branch": "master", "dirty": true, "timestamp": "2026-11-05T01:45:00+08:00"} -->
 
-- **日期**：2026-10-30 21:05
-- **会话摘要**：发布 **v1.5.0**（十一家平台，新增 Devin；含 Factory 球灯修复）——本地重建 exe、打 tag 推送、建 Release 并核验上传件 SHA256 与本地一致；两份 README 换新截图并订正体积与 Factory 展示描述。
+- **日期**：2026-11-05 01:45
+- **会话摘要**：修复 Devin 日额度耗尽被误作窗口不可见（proto3 零值省略：百分比缺席=剩余 0%，镜像官方口径）——真机探针定位、回归测试与口径文档同步，发布 **v1.5.1** 并回拉核验 SHA256 一致。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.5.0 已发布并标 Latest**（`aca413f`，tag `v1.5.0`，11 家平台含 Devin，含 Factory 球灯修复）；桌面实例已重启跑新产物。唯一未做的核对仍是 Devin 界面目视（球格 `DV` 与 Devin Desktop Usage 页逐项比对）
+- 当前阶段：**v1.5.1 已发布并标 Latest**（`87b6fc1`，tag `v1.5.1`）——修 Devin 日额度耗尽被误作窗口不可见（proto3 零值省略：百分比缺席=剩余 0%=已用 100%，镜像官方前端口径）；桌面实例已重启跑新产物。唯一未做的核对仍是 Devin 界面目视（球格 `DV` 与 Devin Desktop Usage 页逐项比对）
 - 十一家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`；注意对象数超上限时 `clampEnabled` 会把排在后面的 Provider 静默禁用）
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
 - 下一步：目视确认 Devin 后本轮迭代即闭合；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次待你拍板（原有 12 条 + Devin 组 6 条，见本地 `ROADMAP.md`「Now」/「Later」）
@@ -199,6 +199,7 @@
 | 5 | 10-29 02:45 | Devin Provider | 三张票逐票实现与验收（含三轮返工），整体门 VERIFIED；wiki 与文档同步 | 📦 |
 | 6 | 10-30 17:45 | Factory Droid 球色口径 | 修 F 灯在 Standard 刷新后仍灰：Core 不再并入球色，真机与截图确认转绿 | 本文 |
 | 7 | 10-30 21:05 | v1.5.0 发版 | 发 v1.5.0（十一家含 Devin，含球灯修复）+ README 换新截图并订正体积 | 本文 |
+| 8 | 11-05 01:45 | Devin 日窗口零值省略修复 | 修日耗尽被误作无窗口：缺席=0剩余镜像官方，发 v1.5.1 | 本文 |
 
 ---
 
@@ -371,3 +372,68 @@
 - **截图资产**：`docs/screenshots/preview-1.png`（悬浮球）、`preview-2.png`（展开面板），两份 README 共用；换图时两张 README 的引用路径不用改，但要同步图注与「覆盖几家平台」的措辞。
 - 探针契约没动：仍是 schema 2、每记录十个键。
 - Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（23 条），`synced_commit` = `63db78c`；本次只改 README 与截图，均不在 wiki「关键文件」表覆盖面内 → 无漂移。
+
+---
+
+## 会话记录：2026-11-05 01:45
+
+> **会话摘要**：修复 Devin 日额度耗尽被误作窗口不可见（proto3 零值省略按官方口径计 0 剩余），回归测试 + 真机复核，发 v1.5.1 并回拉核验 SHA256
+> **Git**：`87b6fc1` on `master`（dirty：`.gitignore` 本地改动未提交）
+> **任务组**：Devin 日窗口零值省略修复
+> **任务组状态**：已完成
+
+### 本次完成
+
+- **真机探针定位根因**：复刻整体验收门 AS-11a 探针打真实接口——`planStatus` 里 `dailyQuotaRemainingPercent` 整个缺席（`dailyQuotaResetAtUnix`/`weeklyQuotaRemainingPercent` 照发）；对照本机 Devin Desktop 的 `@exa/chat-client/index.js`：proto3 JSON 省略零值字段，官方前端 `tgX`/`tg3` 按 protobuf 默认 0 读 ⇒ 缺席 = 剩余 0% = 已用 100%，可见性只看 `hide*Quota`。旧实现把「百分比缺席」当「套餐没给这窗口」⇒ 日窗口隐身、球只跟周 50% 走常绿
+- **修复 + 回归**（`918efa0`）：`devin.go` 解析层新增 `billingStrategy`；apply 层改为「缺席 = 0 剩余」+ 配额信号闸（显式 CREDITS 一律无窗口；其余要 QUOTA 或至少一项配额数据，全无信号才报「不提供可读的额度窗口」）；`devin_test.go` 重写「单侧缺百分比」用例为缺席=已爆 + 新增无配额信号/端到端真机形状回归，全绿
+- **口径文档同步**（`87b6fc1`）：wiki 05 与 `docs/ADDING_A_PROVIDER.md` 订正「缺字段不能当 0% 已用」的旧口径为 proto3 零值省略语义
+- **发版 v1.5.1**：杀旧实例 → `wails build`（62.7s，11,685,376 字节）→ `git checkout -- frontend/` → tag 推送 → `gh release create` → 回拉核 SHA256 `FA633859…3159` 两边一致 → 新实例 PID 33244，`.lnk` 指向新产物
+- **端到端复核**：`go run ./cmd/quotaviewer --json`（当前代码）devin 行 `percent=100 remaining_percent=0 reset_at=2026-11-05T08:00:00Z`（日重置）——球灯按契约灭灯、面板「日 100.0% 已用 · 周 50.0% 已用」
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 百分比缺席 = 剩余 0%（镜像官方） | 官方 tgX/tg3 按 protobuf 默认 0 读，proto3 省略零值是服务端一贯行为（10-28 实测 overage/hide* 已缺席） | 维持「缺席=窗口不可见」——正是本次 bug |
+| 配额信号闸（billingStrategy + 任一百分比/重置时间） | 要区分「双侧都爆」与「积分套餐本就无额度窗口」 | 双缺席仍报结构错误（会把双爆误报成结构变化） |
+| 真机探针归档 .scratch 不进测试包 | 打真实网络+读真实凭证，`go test ./...` 不能默认跑它（无凭证机器必 fail） | 留包内加环境变量 skip 闸（多一个恒 skip 的死测试） |
+| 发 v1.5.1 而非并入下次 | 用户线上正踩此 bug，球灯常绿误导 | 攒到下个迭代 |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 修改 | `internal/fetcher/devin.go` | 缺席=0 剩余 + billingStrategy 配额信号闸 |
+| 修改 | `internal/fetcher/devin_test.go` | 重写缺百分比用例 + 端到端真机形状回归 |
+| 修改 | `docs/wiki/05-fetching-platforms.md` + `docs/ADDING_A_PROVIDER.md` | Devin 口径订正（proto3 零值省略） |
+| 新增 | `.scratch/devin-provider/verifier-probes/2026-11-05-daily-exhausted-live-probe.go.txt` | 不出库：真机脱敏探针源码 |
+| — | `build/bin/quota-viewer.exe` | 交付件（不入库），11,685,376 字节，SHA256 `FA633859…3159` |
+
+> 本次变更：`7e60573..87b6fc1` +143/−38 行，4 个文件
+> 变更基准：`git diff --shortstat 7e60573..87b6fc1`
+
+### 未完成 & 下一步
+
+- **Devin 界面目视（AS-11b）**（持续中）：本次已修一例真实偏差（日耗尽隐身）；球格 `DV` 与面板「日 100.0% 已用 · 周 50.0% 已用 · 距日额度刷新」仍待与 Devin Desktop Usage 页逐项对一遍
+- **「对端告知」报文**（持续中）：必须带 probe `schema` 1→2
+- **非阻断清理批次**（持续中）：原有 12 条 + Devin 组 6 条，见 `ROADMAP.md`「Now」
+- Wails 版本升级对齐与前端渲染探针纳管（持续中，挂在 ROADMAP）
+
+### 已知问题 & 注意事项
+
+- **proto3 省略语义是本类私有接口的通用坑**：缺席标量 = proto3 默认值，不等于「未提供」——下一个 protojson 端点别再按「缺字段=窗口不存在」写
+- `gh release view --json isLatest` 本机仍报「Unknown JSON field」，看 Latest 用 `gh release list`
+- `.gitignore` 有一处本地未提交改动（`.agents/memory/.backups/`），与本次修复无关，未提交
+- 无 git stash；`wails build` 产物与构建目录绑定的口径不变，本次在同一目录重建核验
+
+### 推荐 Skill
+
+- `/wiki-update` - wiki-meta `synced_commit` 仍标 `63db78c`；本次 `devin.go`/`devin_test.go` 变更与 wiki 05 已同步订正，建议跑一次把基线推到 HEAD
+
+### 关键上下文
+
+- **当前线上版本**：**v1.5.1 是 Latest**（2026-11-05 发布，tag 指向 `87b6fc1`），可见变化 = Devin 日额度耗尽时面板显示「日 100.0% 已用」、球灯按日窗口告警（100% 按契约灭灯）、倒计时回落「距日额度刷新」。
+- **Devin 服务端行为（2026-11-05 实测，409,870 字节响应）**：`planStatus` 7 键——`availablePromptCredits`/`dailyQuotaResetAtUnix`/`planEnd`/`planInfo`（24 键，含 `devinInfo` 组织信息与 `billingStrategy`）/`planStart`/`weeklyQuotaRemainingPercent`/`weeklyQuotaResetAtUnix`；`dailyQuotaRemainingPercent`、`overageBalanceMicros`、`hide*Quota` 均因 proto3 零值省略缺席。`BillingStrategy` 枚举：`UNSPECIFIED=0`（省略）/`CREDITS=1`/`QUOTA=2`，官方只在 QUOTA 显示额度条。
+- **诊断手法可复用**：探针源码在 `.scratch/devin-provider/verifier-probes/2026-11-05-daily-exhausted-live-probe.go.txt`——拦 `http.DefaultTransport` 抓真实响应、脱敏打印字段树（深度 5 层），下次接口再变形先跑它再改解析。
+- 桌面实例已重启（PID 33244），`.lnk` → `build/bin/quota-viewer.exe`。
+- Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（25 条）；wiki-meta `synced_commit` 仍为 `63db78c`，但 05 页 Devin 口径已随 `87b6fc1` 同步订正。

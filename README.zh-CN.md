@@ -9,9 +9,9 @@
 
 <sub>悬浮球：一个监控对象一格，格字颜色 = 状态色（绿 / 黄 / 红，额度耗尽时熄灭）。展开面板：逐行列出每个对象的窗口用量与倒计时，倒计时标明它属于哪个窗口。</sub>
 
-**十一家平台**：[Kimi](https://platform.kimi.com) · [讯飞星辰](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [小米 MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai)
+**十二家平台**：[Kimi](https://platform.kimi.com) · [讯飞星辰](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [小米 MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai) · [Mistral](https://console.mistral.ai)
 
-> 注册表支持 11 家平台。一个**监控对象** = 一组凭证 × 一张套餐卡，所以同平台两把 Key、两个套餐都会各占一格。悬浮球**普通模式最多 9 个对象，扩展模式最多 16 个**；超出的合并成一格 `+N`（展开面板仍逐行列出全部对象）。
+> 注册表支持 12 家平台。一个**监控对象** = 一组凭证 × 一张套餐卡，所以同平台两把 Key、两个套餐都会各占一格。悬浮球**普通模式最多 9 个对象，扩展模式最多 16 个**；超出的合并成一格 `+N`（展开面板仍逐行列出全部对象）。
 
 - **技术栈**: Go 1.24 + Wails v2.12.0 + 原生 HTML/CSS/JS (Vite 打包)
 - **平台**: Windows 10+ (WebView2 运行时)
@@ -43,6 +43,7 @@
 | [MiniMax](https://platform.minimaxi.com) | 订阅 Key (`sk-cp-...`) | usage | 5 小时 / 周窗口用量（Token Plan） |
 | [Open Design](https://open-design.ai) | 浏览器会话 Cookie | usage | Design Plan 5 小时 / 7 天额度用量 |
 | [Devin](https://app.devin.ai) | Token（留空自动读本机 Devin Desktop 登录态） | usage | Devin 套餐的每日 / 每周额度用量 |
+| [Mistral](https://console.mistral.ai) | API Key（`mstrl_...`） | usage | Vibe 与 API 两张月预算的用量 |
 
 > 提示：Cookie 类凭证支持在浏览器 F12 → 网络标签 → 复制请求头后，直接粘贴 "Copy as PowerShell" 格式的整段脚本，保存时自动解析为 Cookie 请求头。
 
@@ -84,6 +85,14 @@ Quota Viewer 从 Open Design 的控制面读取这两个窗口，而它是唯一
 Devin 没有公开额度 API——self-serve 套餐请求企业版 consumption 接口一律 403，官方也没有可以放开的开关——所以 Quota Viewer 读的是 Devin Desktop 自己调用的那个私有席位管理接口。**本机登录过 Devin Desktop 的话，token 留空即可**，登录态会自动读出来（按字节扫本机 `state.vscdb`，不引 SQLite 驱动）。只有这条自动路径失效时才需要手填：token 就是 `%APPDATA%\Devin\User\globalStorage\state.vscdb` 里 `devin-session-token$...` 这一串。
 
 悬浮球只有一个 `DV` 格：百分比取**日 / 周两个窗口里更紧张的那个**，倒计时标明它属于哪个窗口（日额度 / 周额度）。token 失效时重新登录 Devin Desktop，或粘一串新的。套餐名不展示。
+
+## 怎么监控 Mistral
+
+[Mistral](https://console.mistral.ai) 没有"剩余额度"这种口径，只有**每月预算 + 已用百分比**。Education 计划给两张独立预算：**Vibe**（CLI / IDE / Web 里的编程会话）与 **API**（Studio 的模型调用），两张同一个月度重置点。
+
+去 `console.mistral.ai` → API Keys 建一把 Key，粘进 Mistral 卡片，悬浮球出现一个 `MS` 格。百分比与倒计时**跟 Vibe 那张预算走**——编程套餐真正烧掉的是它。面板右侧两张都列：`Vibe $0.01/$150 · API $0.00/$15`，写金额不写百分比，因为这种价位下百分比永远显示 `0.0%`、看着像没动。
+
+如果响应里没有 Vibe 预算，改由 API 预算驱动展示，倒计时标签同时换成「API 额度」。接口是官方 **Beta** 路由（`GET /v1/billing/budget`）；Mistral 改形状时照公开的 OpenAPI schema 更新 `internal/fetcher/mistral.go`。
 
 ## 开发
 

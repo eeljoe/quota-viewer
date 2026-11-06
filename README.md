@@ -9,9 +9,9 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 
 <sub>Floating ball: one cell per monitored object, cell color = status (green / yellow / red, off when exhausted). Expanded panel: every object's windows and countdown, the countdown labelled with the window it belongs to.</sub>
 
-**11 platforms**: [Kimi](https://platform.kimi.com) · [Xfyun](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [Xiaomi MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai)
+**12 platforms**: [Kimi](https://platform.kimi.com) · [Xfyun](https://maas.xfyun.cn) · [OpenCode Go](https://opencode.ai/zen) · [Xiaomi MiMo](https://platform.xiaomimimo.com) · [DeepSeek](https://www.deepseek.com/platform) · [Ollama](https://ollama.com/settings) · [Command Code](https://commandcode.ai) · [Factory Droid](https://factory.ai) · [MiniMax](https://platform.minimaxi.com) · [Open Design](https://open-design.ai) · [Devin](https://app.devin.ai) · [Mistral](https://console.mistral.ai)
 
-> The registry supports 11 platforms. A **monitored object** is one credential × one plan card, so a platform with two API keys or two plans takes more than one cell. The floating ball shows **up to 9 objects normally, up to 16 in extended mode**; anything beyond that collapses into a `+N` cell (the panel still lists every object).
+> The registry supports 12 platforms. A **monitored object** is one credential × one plan card, so a platform with two API keys or two plans takes more than one cell. The floating ball shows **up to 9 objects normally, up to 16 in extended mode**; anything beyond that collapses into a `+N` cell (the panel still lists every object).
 
 - **Tech Stack**: Go 1.24 + Wails v2.12.0 + Vanilla HTML/CSS/JS (Vite bundling)
 - **Platform**: Windows 10+ (WebView2 Runtime)
@@ -43,6 +43,7 @@ A desktop floating ball + AI platform quota monitoring tool: displays API quota 
 | [MiniMax](https://platform.minimaxi.com) | Subscription Key (`sk-cp-...`) | usage | 5-hour / weekly window usage (Token Plan) |
 | [Open Design](https://open-design.ai) | Browser session Cookie | usage | Design Plan 5-hour / 7-day quota usage |
 | [Devin](https://app.devin.ai) | Token (or auto-read the local Devin Desktop login if empty) | usage | Daily / weekly quota usage of the Devin plan |
+| [Mistral](https://console.mistral.ai) | API Key (`mstrl_...`) | usage | Monthly Vibe and API budget usage |
 
 > Tip: For Cookie-based providers, you can paste the entire "Copy as PowerShell" script from your browser's F12 → Network tab, and it will be automatically parsed into a Cookie header on save.
 
@@ -84,6 +85,14 @@ To get it: sign in at `open-design.ai/cloud/dashboard`, open F12 → Network, co
 Devin has no public quota API — self-serve plans get a `403` from the enterprise consumption endpoints, with no switch to enable it — so Quota Viewer reads those two windows from the same private seat-management endpoint Devin Desktop itself calls. **If you are signed in to Devin Desktop on this machine, leave the token field empty** and the login is picked up automatically (the local `state.vscdb` is byte-scanned, no SQLite driver involved). Paste a token by hand only if that automatic path stops working: the token is the `devin-session-token$...` string stored in `%APPDATA%\Devin\User\globalStorage\state.vscdb`.
 
 The ball shows a single `DV` cell: the percentage comes from the **busier of the two windows**, and the countdown is labelled with the window it belongs to (daily / weekly). When the token expires, sign in to Devin Desktop again or paste a fresh one. The plan name is never displayed.
+
+## How to monitor Mistral
+
+[Mistral](https://console.mistral.ai) does not expose a "quota remaining" figure. A Mistral plan carries **monthly budgets** with a used percentage, and the Education plan gives two of them separately: **Vibe** (coding sessions in the CLI / IDE / web) and **API** (Studio model calls). Both reset at the same monthly boundary.
+
+Create an API key at `console.mistral.ai` → API Keys, paste it into the Mistral card, and the ball shows a single `MS` cell. The percentage and the countdown **follow the Vibe budget**, because that is the one a coding plan actually burns through. The panel's right-hand text lists both: `Vibe $0.01/$150 · API $0.00/$15` — amounts rather than percentages, since at these prices a percentage reads as `0.0%` and never seems to move.
+
+If the response carries no Vibe budget, the API budget takes over the display and the countdown label changes to "API budget". The endpoint is an official but **beta** route (`GET /v1/billing/budget`); if Mistral reshapes it, update `internal/fetcher/mistral.go` against the published OpenAPI schema.
 
 ## Development
 

@@ -356,6 +356,7 @@ wails build
 | `minimax` | MiniMax | MX | Token Plan Key (`sk-cp-` 订阅 Key) | usage | `minimax.go` |
 | `open-design` | Open Design | OD | Browser session Cookie | usage | `opendesign.go` |
 | `devin` | Devin | DV | 本机 Devin Desktop 登录态（留空自动读）或手填 token | usage | `devin.go` |
+| `mistral` | Mistral | MS | API Key（`x-api-key` 头，`mstrl_...`） | usage | `mistral.go` |
 
 ### Ollama Cloud 特殊说明
 
@@ -397,3 +398,27 @@ Devin 没有可用的公开额度 API：v2/v3 的 `/enterprise/consumption/*` �
 server 有三级兜底：调用方注入的 server → 本机读到的 `apiServerUrl` → 默认 `https://server.codeium.com`。**注意「`apiURL` 留空 = 默认端点」这条通用说明对 Devin 不成立**：`NewDevinFetcher` 不预填默认端点，留空会先试本机端点，读不到才回落默认值；默认值只允许出现在 URL 拼装那一处，提前写进构造期字段会让本机值永远失效。
 
 错误映射：401/403 走专属文案「Devin token 已失效，请重新登录 Devin Desktop 或更新 token」；**400 没有专属分支**，与其它所有非 200 一样原样透出 `HTTP N`（用户看到的是 `HTTP 400`；该状态码的服务端语义是缺 `api_key`，只是实现不单独区分，500 等同样走这条兜底）；结构不符报「无法解析额度数据（响应结构可能已变化）」。该路由是 Devin Desktop 的私有接口，无稳定性承诺；失效时对照 Devin Desktop 的 `resources/app/node_modules/@exa/chat-client/index.js`（`GetUserStatus` / `PlanStatus` 类型定义）更新 `devin.go`。
+
+### Mistral 特殊说明
+
+Mistral 没有「剩余额度」这种口径，只有**每月预算 + 已用百分比**。`mistral.go` 打官方 Beta 路由 `GET https://api.mistral.ai/v1/billing/budget`，认证是普通 API Key 走 **`x-api-key`** 头（不是 Cookie，也不需要 Enterprise 的 Admin Key —— Admin API 只对 Enterprise 开放，这里用不到）。
+
+响应给两张独立预算：
+
+```json
+{"vibe_budget":{"usage_percentage":0.00460872,"initial_budget":150.0,"currency":"USD",
+                "reset_at":"2026-12-01T00:00:00Z","payg_enabled":false},
+ "api_budget":{"usage_percentage":0.0,"initial_budget":15.0,"currency":"USD",
+               "reset_at":"2026-12-01T00:00:00Z","payg_enabled":false},
+ "usage_percentage":0.0,"initial_budget":15.0,"currency":"USD","reset_at":"2026-12-01T00:00:00Z"}
+```
+
+三个坑位：
+
+1. **顶层那四个字段（`usage_percentage` / `initial_budget` / `currency` / `reset_at`）是 `api_budget` 的旧版镜像**，留给只认顶层的老客户端。只读 `vibe_budget` / `api_budget` 两个嵌套对象 —— 读顶层会把 API 预算当成总额，Education 计划下直接错 10 倍。
+2. `usage_percentage` 是**已用**百分比（0–100，实测 8 位小数），不是剩余，不需要反转（与 Devin / MiniMax 相反）。`clampPercent` 夹取到 `[0,100]`。
+3. 这种价位下百分比没有分辨率（$0.0069 已用 = 0.0046%），所以金额进 `Remaining`、百分比只驱动球色。`initial_budget <= 0` 时该侧退化为纯百分比（`Vibe 3.2% 已用`），不出现 `/0`。
+
+驱动窗口固定取 **Vibe**（用户 2026-11-06 拍板：两张预算 10:1，编程套餐真正烧的是 Vibe）；Vibe 缺席（`null` 或没有 `usage_percentage`，proto3 零值省略同样会缺席）时退回 `api_budget`，`ResetLabel` 同时由「Vibe 额度」换成「API 额度」；两张都不可用报「响应中未找到预算数据」，不返回 0% 假数据。**不要改成「取更紧的那张」**——实战里 Vibe 永远更大，那个写法只会让一张 15 刀的备用预算抢走球色。
+
+401 与 403 都映射成「API Key 无效或已过期」（403 = 账号没有 `see_org_inference_usage` 权限，对用户的可执行动作与 Key 失效一样）；其余非 200 透出 `HTTP N`。该路由是官方 Beta 接口（OpenAPI tag `beta.billing`），无稳定性承诺；失效时对照 `https://docs.mistral.ai/openapi.yaml` 的 `/v1/billing/budget` 与 `BudgetDetail` schema 更新 `mistral.go`。配套的 `GET /v1/billing/subscription`（`plan_name` = FREE / EDU / INDIVIDUAL / TEAM）本实现**不调用** —— 少一次网络往返，套餐名也放不进球面。

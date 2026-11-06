@@ -9,35 +9,35 @@
 > 3. 读「会话索引」拿全历史地图（一行一次会话）；索引没点名的内容一律不读
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（只读 Now；Next/Later 属按需层，任务点名才读）
 >    - 注：`ROADMAP.md` 自 2026-10-14 起**仅在本地存在、不入公开仓库**（与 `.scratch/`、`.agents/` 同）；若你拿到的是 clone，此文件缺席属正常，计划内容可临时向维护者索取
-> 5. **直接跳到最新一条「会话记录：2026-10-30 21:05」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-11-06 16:40」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 更早内容只经「会话索引」按需回溯（📦 行的章节在 `docs/wiki/99-appendix-legacy-status.md`）；「当前任务进度」「关键文件索引」等常驻节默认不读
 > 7. 给用户一份简短进度汇报（每段 3-5 行，大白话、可读性优先）：**当前进度**（现在在干什么 → 干到哪了 → 下一步是什么 → 有没有卡点）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-11-05 01:45`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`87b6fc1` on `master`（tag `v1.5.1` 已发布并标 Latest）
-> 📊 累计会话数：主文档 4 条，另有 25 条已归档（docs/wiki/99-appendix-legacy-status.md）
+> 📍 最新章节位置：`## 会话记录：2026-11-06 16:40`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`58f7431` on `master`（v1.5.1 仍是线上 Latest，Mistral 未发版）
+> 📊 累计会话数：主文档 5 条，另有 25 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "87b6fc1", "branch": "master", "dirty": true, "timestamp": "2026-11-05T01:45:00+08:00"} -->
+<!-- git-meta: {"last_commit": "58f7431", "branch": "master", "dirty": true, "timestamp": "2026-11-06T16:40:00+08:00"} -->
 
-- **日期**：2026-11-05 01:45
-- **会话摘要**：修复 Devin 日额度耗尽被误作窗口不可见（proto3 零值省略：百分比缺席=剩余 0%，镜像官方口径）——真机探针定位、回归测试与口径文档同步，发布 **v1.5.1** 并回拉核验 SHA256 一致。
+- **日期**：2026-11-06 16:40
+- **会话摘要**：新增第 12 家 Provider **Mistral**（Education 计划双月预算：Vibe $150 / API $15，官方 Beta 路由 `GET /v1/billing/budget`）——真机实测接口形状、实现 + 测试、静态审查与独立动态门各一轮；动态门判 REJECTED 于一处测试空转，已修但**未重新过门**，票保持 `claimed`。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**v1.5.1 已发布并标 Latest**（`87b6fc1`，tag `v1.5.1`）——修 Devin 日额度耗尽被误作窗口不可见（proto3 零值省略：百分比缺席=剩余 0%=已用 100%，镜像官方前端口径）；桌面实例已重启跑新产物。唯一未做的核对仍是 Devin 界面目视（球格 `DV` 与 Devin Desktop Usage 页逐项比对）
-- 十一家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`；注意对象数超上限时 `clampEnabled` 会把排在后面的 Provider 静默禁用）
+- 当前阶段：**第 12 家 Provider Mistral 已实现并提交（`58f7431`），但动态验收门判 REJECTED 且未重验**——票 `01-mistral-budget-fetcher` 保持 `claimed`，下一会话须从 `f30df47..HEAD` 重跑一次独立动态门才能改 `resolved`。线上 Latest 仍是 **v1.5.1**（`87b6fc1`），Mistral 未发版
+- 十二家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`；注意对象数超上限时 `clampEnabled` 会把排在后面的 Provider 静默禁用）
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
-- 下一步：目视确认 Devin 后本轮迭代即闭合；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次待你拍板（原有 12 条 + Devin 组 6 条，见本地 `ROADMAP.md`「Now」/「Later」）
+- 下一步：**先给 Mistral 补过动态门**（唯一卡点，M8 段序变异已修但无独立实例复验）；然后目视确认 Devin；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次待你拍板（原有 12 条 + Devin 组 6 条，见本地 `ROADMAP.md`「Now」/「Later」）
 - 注意事项：**`wails build` 的产物字节与构建目录绑定**（未加 `-trimpath` 时 Go 把源码绝对路径编进二进制）⇒ 核验交付 exe 必须在同目录重建；**公开仓库自 2026-10-14 起只含产品代码与对外文档**——`.scratch/`、`.agents/`、`.video_agent/`、`.superpowers/`、`docs/superpowers/`、`AGENTS.md`、`ROADMAP.md` 全部已进 `.gitignore`，提交仍应精确 `git add` 而非 `-A`（ignore 只管未跟踪文件，已跟踪文件不受保护）
 
 
@@ -51,14 +51,20 @@
 - **项目根目录**：`C:/Users/joe/Desktop/工作学习/软件开发/quota viewer`
 - **平台**：Windows 10+（WebView2 运行时）
 - **功能**：悬浮球（1-9 格动态，颜色=状态，方圆角）+ 展开面板（进度条 + 剩余量明细）+ 配置面板（勾选 Provider + 各平台凭证 + 扩展模式开关）+ 系统托盘 + 关闭到托盘
-- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（API Key，留空读 opencode CLI 凭证）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）、Open Design（浏览器会话 Cookie，Design Plan 5 小时/7 天窗口）、Devin（手填 token 或留空自动读本机 Devin Desktop 登录态，日/周窗口）
-- **同屏上限**：注册表 11 家，悬浮球同屏最多 9 格（普通模式 3 格 / 扩展模式 9 格，`config.go:35-36`）；对象数超上限时 `clampEnabled` 按注册表顺序禁用靠后的 Provider（第 10、11 家是 `open-design` 与 `devin`，凭证保留）
+- **支持 Provider**：Kimi（API Key）、讯飞星辰（Cookie）、OpenCode Go（API Key，留空读 opencode CLI 凭证）、小米 MiMo（Cookie）、DeepSeek（API Key，余额型 + 预算进度条）、Ollama（Cookie，Cloud 5 小时/周用量）、Command Code（API Key，5 小时/周窗口 + 剩余 credits）、Factory Droid（API Key，双账单模型 + Core 池）、MiniMax（Token Plan 订阅 Key，5 小时/周窗口）、Open Design（浏览器会话 Cookie，Design Plan 5 小时/7 天窗口）、Devin（手填 token 或留空自动读本机 Devin Desktop 登录态，日/周窗口）、Mistral（API Key，`x-api-key`，Education 计划 Vibe/API 双月预算，Vibe 驱动球色）
+- **同屏上限**：注册表 12 家，悬浮球同屏最多 9 格（普通模式 3 格 / 扩展模式 9 格，`config.go:35-36`）；对象数超上限时 `clampEnabled` 按注册表顺序禁用靠后的 Provider（第 10、11、12 家是 `open-design`、`devin` 与 `mistral`，凭证保留）
 
 ## 当前分支与最近提交
 
 - **分支**：master
-- **HEAD**：`81d4224`
-- **最近提交**（Devin 任务组，按时间倒序）：
+- **HEAD**：`58f7431`
+- **最近提交**（Mistral 任务组，按时间倒序）：
+  - `58f7431` - test: 锁住 Mistral Remaining 的段序与 API 兜底的 ResetAt
+  - `0492397` - docs: wiki 同步第 12 家 Provider Mistral
+  - `862a184` - fix: 订正 Mistral 花费金额的小数口径并夹取越界百分比
+  - `e6de059` - docs: 补 Mistral 第 12 家 Provider 文档
+  - `603a9ed` - feat: 新增 Mistral Provider 监控 Vibe 与 API 双月预算
+- **上一任务组**（Devin，按时间倒序）：
   - `81d4224` - docs: wiki 同步第 11 家 Provider Devin（十家 → 十一家）
   - `dc127dc` - docs: 订正 devin.go 字段注释的 server 兜底语义
   - `16fd6f0` - docs: 订正 Devin 400 错误码的文档口径
@@ -69,7 +75,7 @@
   - `9848208` - feat: Devin 凭证留空自动读本机 Desktop 登录态
   - `ce19008` - test: 补 Devin 三条口径断言（并列取日 / null 容错 / 单侧缺百分比）
   - `69a0f3e` - feat: 新增 Devin Provider 手填 token 全链路
-- **Release**：v1.4.1（2026-10-25，Latest，附 exe）← v1.4.0（2026-10-19）← v1.3.0 ← v1.2.0 ← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0
+- **Release**：v1.5.1（2026-11-05，Latest）← v1.5.0（2026-10-30）← v1.4.1 ← v1.4.0 ← v1.3.0 ← v1.2.0 ← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0
 
 ---
 
@@ -89,11 +95,13 @@
 - **Devin Provider（第 11 家）**（10/29，`69a0f3e`…`dc127dc`）：`devin.go` 走 Devin Desktop 的 `SeatManagementService/GetUserStatus`（CONNECT POST，`metadata.api_key`），日/周**剩余**百分比反转成已用、单球由最紧张窗口驱动；凭证手填优先、留空自动读 `%APPDATA%\Devin\User\globalStorage\state.vscdb`（按字节扫明文 token 与 `apiServerUrl`，不引 SQLite 驱动）；server 三级兜底（注入 → 本机 → 默认）；注册表第 11 家 + `config.AllProviderIDs`；文档与 wiki 同步、两份 README 改 11 家；真机直连取证通过（`percent=0`、`remaining=100`、`reset_at` 非空）
 
 ### 🔄 进行中
-- 无
+- **Mistral Provider（第 12 家）**：实现与测试已提交（`58f7431`），票 `01-mistral-budget-fetcher` 保持 `claimed`；**卡在动态验收门未过**——r1 判 REJECTED 于 M8 段序变异，已修但未重验
 
 ### 📋 待办
+- **Mistral 动态门重验（唯一卡点，优先）**：派一个独立 verifier 跑 `f30df47..HEAD`，复核 M8 已被杀死、M1–M7 仍被杀死、真机三条复现；过了才把票改 `resolved`
 - **Devin 界面目视（AS-11b，唯一未验项）**：桌面实例已在跑（devin 已启用、凭证留空），看球格是否出现 `DV`、面板日/周数字与 Devin Desktop 的 Usage 页一致
-- **发版 v1.5.0**（目视通过后）：11 家平台，`Remaining` 按「超额金额」口径
+- **Mistral 界面目视**：桌面实例要重启才加载新产物（本会话未重建 exe），看面板是否显示「Mistral · Vibe $x/$150 · API $y/$15」
+- **发版 v1.6.0**（Mistral 动态门过了之后）：12 家平台；v1.5.0/v1.5.1 已发布，Mistral 是唯一未发版的改动
 - 「对端告知」报文待发给 subagent-fallback（必须带上 probe `schema` 1→2）
 - 非阻断清理批次待用户拍板：原有 12 条 + 本轮新增 6 条（见 ROADMAP「Now」/「Later」）
 - 计划级事项见 `ROADMAP.md`
@@ -102,12 +110,13 @@
 
 ## 未完成 & 下一步
 
-1. **Devin 界面目视（AS-11b）**：你本人在桌面上看一眼即可；未验前 Devin 不算交付完成（门与三张票都如实留了这条）
-2. **发版 v1.5.0**：目视通过后 `wails build`（构建前先杀实例）→ 打 tag → Release 附 exe；release notes 按惯例只提「新增第 11 家平台 Devin」与可见行为，不写内部返工细节
-3. **「对端告知」报文**：回 `subagent-fallback` 说明探针就绪并给出二进制名/开关名/构建命令，**必须写明 `schema` 已从 1 升到 2**（新增 `slot` / `sub_label` 两个键，纯增量），否则对端按旧契约解析会对不上
-4. 非阻断清理批次（原有 12 条 + 本轮 6 条）待你拍板；改代码的那几条会作废对应票的 VERIFIED、需重验
-5. Wails 版本升级对齐（go.mod v2.12.0 vs CLI v2.13.0，构建时仍打印该告警）
-6. 前端渲染逻辑的可视化验证缺口仍在（见 2026-10-19 会话「关键上下文」）
+1. **Mistral 动态门重验（唯一阻塞推进的卡点）**：58f7431 已修掉动态门指出的那处测试空转，但没有独立实例复验。下一会话派一个 verifier 跑 `f30df47..HEAD`，过了才把票改 `resolved`；未过前别当它已完成，也别发版
+2. **Devin 界面目视（AS-11b）**：你本人在桌面上看一眼即可；未验前 Devin 不算交付完成（门与三张票都如实留了这条）
+3. **发版 v1.5.0**：目视通过后 `wails build`（构建前先杀实例）→ 打 tag → Release 附 exe；release notes 按惯例只提「新增第 11 家平台 Devin」与可见行为，不写内部返工细节
+4. **「对端告知」报文**：回 `subagent-fallback` 说明探针就绪并给出二进制名/开关名/构建命令，**必须写明 `schema` 已从 1 升到 2**（新增 `slot` / `sub_label` 两个键，纯增量），否则对端按旧契约解析会对不上
+5. 非阻断清理批次（原有 12 条 + 本轮 6 条）待你拍板；改代码的那几条会作废对应票的 VERIFIED、需重验
+6. Wails 版本升级对齐（go.mod v2.12.0 vs CLI v2.13.0，构建时仍打印该告警）
+7. 前端渲染逻辑的可视化验证缺口仍在（见 2026-10-19 会话「关键上下文」）
 
 ---
 
@@ -115,6 +124,8 @@
 
 - Wails CLI 版本 v2.13.0 > go.mod 的 v2.12.0（构建警告，不阻塞；已入 ROADMAP Next）
 - 前端行尾警告：dist/wailsjs 文件 LF→CRLF，git 会提示但不影响构建
+- **Mistral 走的是官方 Beta 路由**（OpenAPI tag `beta.billing`），无稳定性承诺；顶层那四个同名镜像字段是 `api_budget` 的副本，读错会让金额错 10 倍
+- **本机 Go 不在 PATH 上**：`C:\Users\joe\sdk\go1.26.5\bin\go.exe`；`wails.exe` 在 `C:\Users\joe\go\bin\`
 - `build/bin/quota-viewer.exe~` 是运行中构建产生的旧 exe 改名残留，可删
 - Ollama 依赖 ollama.com/settings 页面 HTML 结构（无公开 quota API），页面改版 → "页面结构可能已变化"错误，需更新 `ollama.go` 解析
 - Command Code 依赖官方 CLI 私有 `/alpha/*` API（无公开额度 API），CLI 升级可能改结构 → 需对照官方 cli.mjs 更新 `commandcode.go`；API Key 留空自动读 `~/.commandcode/auth.json`（与本机官方 CLI 复用同一凭证，Key 变更会同时影响两者）
@@ -200,6 +211,7 @@
 | 6 | 10-30 17:45 | Factory Droid 球色口径 | 修 F 灯在 Standard 刷新后仍灰：Core 不再并入球色，真机与截图确认转绿 | 本文 |
 | 7 | 10-30 21:05 | v1.5.0 发版 | 发 v1.5.0（十一家含 Devin，含球灯修复）+ README 换新截图并订正体积 | 本文 |
 | 8 | 11-05 01:45 | Devin 日窗口零值省略修复 | 修日耗尽被误作无窗口：缺席=0剩余镜像官方，发 v1.5.1 | 本文 |
+| 9 | 11-06 16:40 | Mistral Provider（第 12 家） | 真机实测双月预算接口，实现 + 测试 + 静态审查；动态门 REJECTED 于一处测试空转，已修未重验 | 本文 |
 
 ---
 
@@ -437,3 +449,75 @@
 - **诊断手法可复用**：探针源码在 `.scratch/devin-provider/verifier-probes/2026-11-05-daily-exhausted-live-probe.go.txt`——拦 `http.DefaultTransport` 抓真实响应、脱敏打印字段树（深度 5 层），下次接口再变形先跑它再改解析。
 - 桌面实例已重启（PID 33244），`.lnk` → `build/bin/quota-viewer.exe`。
 - Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（25 条）；wiki-meta `synced_commit` 仍为 `63db78c`，但 05 页 Devin 口径已随 `87b6fc1` 同步订正。
+
+---
+
+## 会话记录：2026-11-06 16:40
+
+> **会话摘要**：新增第 12 家 Provider **Mistral**（Education 计划双月预算 Vibe $150 / API $15，官方 Beta 路由 `GET /v1/billing/budget`）——真机实测接口形状、实现 + 测试、静态审查与独立动态门各一轮；动态门判 REJECTED 于一处测试空转，已修但未重新过门，票保持 `claimed`
+> **Git**：`58f7431` on `master`（dirty：`.gitignore` 本地改动未提交，与本次无关）
+> **任务组**：Mistral Provider（第 12 家）
+> **任务组状态**：**未闭合**（实现完成，动态门未过）
+> **路线**：单会话轻量（用户点名「单会话速度完成」），spec 与票在 `.scratch/mistral-provider/`
+
+### 本次完成
+
+- **真机摸清接口**（不是照文档猜）：Mistral 没有「剩余额度」口径，只有每月预算 + 已用百分比。官方 OpenAPI 的 `GET /v1/billing/budget` 用**普通 API Key 走 `x-api-key`** 就能读（security 是 `DashboardContextAuth`「公开 API Key，网关校验后转发用户上下文」，不是 Enterprise 的 Admin Key），一次返回两张独立月预算：`vibe_budget`（$150/月）与 `api_budget`（$15/月），共享 `2026-12-01T00:00:00Z` 重置点。配套的 `/v1/billing/subscription` 返回 `plan_name=EDU`，确认 education plan 被正确识别
+- **实现**（`603a9ed`，7 文件 +549/−11）：新增 `internal/fetcher/mistral.go`(206) 与 `mistral_test.go`(374)；`registry.go` 第 12 家（`MS` / `console.mistral.ai`）；`config.AllProviderIDs` 补 `mistral`；两处既有守护测试随注册表扩到 12 家同步订正（RoundTrip 补行、`AppendedToExistingV2Config` 的「最后一家」由 devin 改 mistral、clamp 用例的 `fk_keep` 挪到 mistral 并断言第 12 个对象被钳制）；`currencySymbol` 补 `EUR → €`
+- **静态审查（compact code-review，1 实例）判 BLOCKING**，三条真问题：① AS-4 要求花费侧恒两位小数、预算侧整数省略，实现把整数裁剪施加到两侧（`$0`/`$6`），而三条测试断言把偏差锁成了期望值——与 spec、票面、四处文档写的 `$0.00` 全面不符；② 花费金额用未夹取的原始百分比，`usage_percentage=137.5` 时面板显示 `$206.25/$150`、与球色的 100% 互相打架，负值还会出负数金额；③ `TestGet_Mistral` 缺失（`Abbr`/`LoginURL`/字段类型改了全套件仍绿）、零预算路径的 clamp 无守护、wiki 未同步
+- **修复**（`862a184` + `0492397`）：`mistralMoney` 加 `trim` 参数区分两侧口径、金额改用夹取后百分比、整数判定换 `math.Trunc`（顺带处理 NaN/Inf）、补 3 个测试（越界金额一致性 / 负百分比不出负数 / 零预算越界夹取）与 `TestGet_Mistral`；wiki 八页同步（`e6de059` 之后）
+- **独立动态验收门判 REJECTED**（1 实例，自建 worktree 独立跑）：全量 `go test ./...` 绿、`go vet` 干净、`gofmt` 对新增两文件逐字节相同、指定变异 M1–M7 全部被杀死、真机三条复现（裸 GET / 生产 `Fetch()` 端到端 `Remaining="Vibe $0.11/$150 · API $0.18/$15"` / 真实 `BuildReport` 信封）、静态 leads L1–L5 全部已处理。**唯一缺口**是自选变异 M8：把 `mistralRemaining` 的 Vibe/API 两段顺序对调，全套件仍绿
+- **补测**（`58f7431`）：`TestMistral_OK_VibeDrivesPercent` 改为整串相等断言 `"Vibe $0.01/$150 · API $0.00/$15"`，`VibeMissing_FallsBackToAPI` 补 `ResetAt` 跟 API 的断言。自检：应用 M8 后该用例变红，恢复后全量绿
+
+### 本次决策
+
+| 决策 | 原因 | 备选方案 |
+|---|---|---|
+| 球色跟 Vibe 预算，不取两张里更紧的 | 用户 2026-11-06 拍板原话「vibe150刀, api就15刀, 跟vibe吧」；两张 10:1，实战里「取更紧」等于「永远只看 Vibe」，还让 15 刀的备用预算有机会抢走球色 | 取两窗口更紧者（Devin/Factory 的通用口径，此处不适用） |
+| 一个监控对象（一颗 `MS` 格），不拆两格 | 两张预算同源、同重置点、同凭证，拆开只多占一个格位 | 拆成 `MS` / `MS2` 两格各跟一张 |
+| `Remaining` 写金额不写百分比 | 这种价位下百分比没有分辨率（$0.0069 已用 = 0.0046%，永远显示 `0.0%`），金额才能看出在动 | 只显示百分比（面板会像死水） |
+| 只读 `vibe_budget` / `api_budget`，不读顶层镜像字段 | 顶层那四个字段是 `api_budget` 的旧版兼容镜像，读了会把 API 预算当总额，EDU 下直接错 10 倍 | 读顶层（老客户端做法） |
+| 不调 `/v1/billing/subscription` | 少一次网络往返、少一个失败面；套餐名也放不进 210px 的球面（与 Devin 同口径） | 一起调，展示套餐名 |
+| 动态门 REJECTED 后不派第三个 verifier | 单会话路线的固定预算是 1+1+1；REJECTED 后的重新验收属下一次严格执行会话，本会话不得宣告通过 | 再派一只绕预算（明令禁止） |
+| 不重新 `wails build`、不发版 | 本会话只做 Provider 接入，未触及前端；发版要等你目视确认球面 | 直接打 tag 发 v1.6.0 |
+
+### 关键文件（≤ 5 个）
+
+| 操作 | 文件路径 | 说明 |
+|------|----------|------|
+| 新增 | `internal/fetcher/mistral.go` | 206 行：`/v1/billing/budget` 请求 + 解析 + Vibe 驱动展示映射 + 金额双口径格式化 |
+| 新增 | `internal/fetcher/mistral_test.go` | 374 行：17 条用例覆盖 AS-1..AS-10 与金额格式化 |
+| 修改 | `internal/fetcher/registry.go` + `internal/config/config.go` | 第 12 家 `mistral`（`MS` / usage / console.mistral.ai）+ `AllProviderIDs` |
+| 修改 | `internal/fetcher/registry_test.go` + `internal/config/config_test.go` | 注册表计数 11→12、clamp 用例随扩到 12 家订正、新增 `TestGet_Mistral` |
+| 修改 | `README.md` + `README.zh-CN.md` + `docs/ADDING_A_PROVIDER.md` + `docs/wiki/` 八页 | 十二家口径、Mistral 专节、特殊说明（顶层镜像坑 / 已用不是剩余 / Beta 路由） |
+
+> 本次变更：`f30df47..58f7431`，15 个文件
+> 变更基准：`git diff --numstat f30df47..58f7431`
+
+### 未完成 & 下一步
+
+- **Mistral 动态门重验（唯一卡点，必做）**：M8 段序变异已修但无独立实例复验。下一会话派一个独立 verifier，范围 `f30df47..HEAD`，重点复核 M8 已被杀死、M1–M7 仍被杀死、真机三条复现。过了才把 `.scratch/mistral-provider/issues/01-mistral-budget-fetcher.md` 改 `resolved`
+- **Mistral 界面目视**：桌面实例要重启才会加载新产物（本会话未重建 exe）；面板应显示「Mistral · Vibe $x/$150 · API $y/$15」与「距Vibe 额度刷新」
+- **发版**：v1.5.1 仍是 Latest；十二家要不要发 v1.6.0 等你决定
+- 「对端告知」报文（持续中，必须带 probe `schema` 1→2 的契约变更）
+- 非阻断清理批次（18 条）与 Devin 界面目视（持续中，见 `ROADMAP.md`「Now」）
+
+### 已知问题 & 注意事项
+
+- **单会话路线的一次流程缺口**：跳过了「实现前审票」（一个 verifier 顺序跑 Fidelity / Repo-fit / Soundness）。后果是 AS-4 的两种小数口径没在写码前被票面钉死到函数级，多绕一轮静态审查。已记进 `.scratch/mistral-provider/review-leads.md`，下一张小 spec 必须补上
+- **`gofmt -l` 在本仓会列出一大堆既有文件**（换行是 CRLF），别把它当成本次改动的问题；本次新增的两个文件是干净的
+- **Go 不在 PATH 上**：`C:\Users\joe\sdk\go1.26.5\bin\go.exe`，`wails.exe` 在 `C:\Users\joe\go\bin\`
+- **Mistral 的 Beta 定位**：`/v1/billing/budget` 是 `beta.billing` tag 的官方路由，无稳定性承诺；失效时对照 OpenAPI 的 `BudgetDetail` 更新 `mistral.go`
+- 真机 Key 存在 `.scratch/mistral-provider/apikey.txt`（`.scratch/` 已 gitignore，不入库）
+- 无 git stash；`.gitignore` 有一处本地未提交改动（`.agents/memory/.backups/`），与本次无关
+
+### 推荐 Skill
+
+- `/wiki-update` —— wiki 八页已随 `0492397` 同步，但 `00-agent-rules.md` 的 `synced_commit` 基线可再推到 `58f7431`
+
+### 关键上下文
+
+- **Mistral 接口事实（2026-11-06 真机，409 字节级响应）**：`GET https://api.mistral.ai/v1/billing/budget` + `x-api-key` → `{"vibe_budget":{"usage_percentage":0.00460872,"initial_budget":150.0,"currency":"USD","reset_at":"2026-12-01T00:00:00Z","payg_enabled":false},"api_budget":{...15.0...},"usage_percentage":0.0,"initial_budget":15.0,"currency":"USD","reset_at":"..."}`。顶层四字段是 `api_budget` 的镜像。`usage_percentage` 是**已用**（0–100，8 位小数），不需要反转
+- **用户套餐**：Mistral Education（`plan_name=EDU`），$5.99/月，给 Vibe $150 + API $15 两张月预算；实测 Vibe 的已用百分比在一次会话内从 0.0046% 涨到 0.0702%（$0.01 → $0.11），说明该字段是实时的
+- **验证手法可复用**：真机 Key 在 `.scratch/mistral-provider/apikey.txt`，探针源码 `probes/remaining-probe.go.txt`（拷进 `cmd/` 临时目录跑、跑完删），动态门的完整报告在 `verifier-probes/verifier-report-r1.md`
+- **票状态**：`.scratch/mistral-provider/issues/01-mistral-budget-fetcher.md` = `claimed`，`## Verdicts` 有 r1 REJECTED 与修复两行；**不得当 VERIFIED 用**

@@ -441,18 +441,20 @@
 
 ### 关键上下文
 
-- **当前线上版本**：**v1.5.1 是 Latest**（2026-11-05 发布，tag 指向 `87b6fc1`），可见变化 = Devin 日额度耗尽时面板显示「日 100.0% 已用」、球灯按日窗口告警（100% 按契约灭灯）、倒计时回落「距日额度刷新」。
-- **Devin 服务端行为（2026-11-05 实测，409,870 字节响应）**：`planStatus` 7 键——`availablePromptCredits`/`dailyQuotaResetAtUnix`/`planEnd`/`planInfo`（24 键，含 `devinInfo` 组织信息与 `billingStrategy`）/`planStart`/`weeklyQuotaRemainingPercent`/`weeklyQuotaResetAtUnix`；`dailyQuotaRemainingPercent`、`overageBalanceMicros`、`hide*Quota` 均因 proto3 零值省略缺席。`BillingStrategy` 枚举：`UNSPECIFIED=0`（省略）/`CREDITS=1`/`QUOTA=2`，官方只在 QUOTA 显示额度条。
-- **诊断手法可复用**：探针源码在 `.scratch/devin-provider/verifier-probes/2026-11-05-daily-exhausted-live-probe.go.txt`——拦 `http.DefaultTransport` 抓真实响应、脱敏打印字段树（深度 5 层），下次接口再变形先跑它再改解析。
-- 桌面实例已重启（PID 33244），`.lnk` → `build/bin/quota-viewer.exe`。
-- Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（25 条）；wiki-meta `synced_commit` 仍为 `63db78c`，但 05 页 Devin 口径已随 `87b6fc1` 同步订正。
+- **当前线上版本**：**v1.6.0 是 Latest**（2026-11-06 发布，tag 指向 `cda7dac`，附 exe 11,695,616 字节）。可见变化 = 第 12 家平台 Mistral：球上多一格 `MS`，面板显示 `Vibe $x.xx/$150 · API $y.yy/$15`，倒计时标 `距Vibe 额度刷新`。上一版 v1.5.1（`87b6fc1`）修的是 Devin 日额度耗尽被误作窗口不可见。
+- **Mistral 接口事实（2026-11-06 真机）**：`GET https://api.mistral.ai/v1/billing/budget` + `x-api-key` → `{"vibe_budget":{"usage_percentage":…,"initial_budget":150.0,"currency":"USD","reset_at":"2026-12-01T00:00:00Z"},"api_budget":{…15.0…},"usage_percentage":0.0,"initial_budget":15.0,"currency":"USD","reset_at":"…"}`。**顶层四字段是 `api_budget` 的旧版镜像，读它会错 10 倍**；`usage_percentage` 是**已用**（0–100，8 位小数），不需要反转。配套 `/v1/billing/subscription` 返回 `plan_name=EDU`（用户是 Education 计划：$5.99/月，Vibe $150 + API $15）。
+- **Mistral 口径决策**：球色跟 Vibe（用户拍板，两张 10:1）；Vibe 缺席退 API 且 `ResetLabel` 同步换；金额两侧格式不同（花费恒两位小数、预算整数省略）——这是静态审查抓出来的真问题，别改回去。
+- **配置覆盖坑（2026-11-06 踩过）**：直接改 `%APPDATA%\quota-viewer\config.json` 时若旧实例还在跑，它退出时会把内存里那份旧配置写回去，覆盖你的修改。正确顺序是**先杀进程、再写配置、再启动**。
+- **诊断手法可复用**：Mistral 探针源码 `.scratch/mistral-provider/probes/remaining-probe.go.txt`（拷进 `cmd/` 临时目录跑、跑完删）；动态门两轮报告 `.scratch/mistral-provider/verifier-probes/verifier-report-r1.md` / `-r2.md`。
+- 桌面实例 PID 5244 正在跑 `build/bin/quota-viewer.exe`，`.lnk` 指向同一路径。
+- Wiki 指针状态：`docs/wiki/` 12 个常规页 + 99 归档页（25 条）；wiki-meta `synced_commit` 已推到 `58f7431`。
 
 ---
 
 ## 会话记录：2026-11-06 20:55
 
 > **会话摘要**：新增第 12 家 Provider **Mistral**（Education 计划双月预算 Vibe $150 / API $15，官方 Beta 路由 `GET /v1/billing/budget`）——真机实测接口形状、实现 + 测试、静态审查一轮 + 独立动态门两轮（r1 REJECTED 于一处测试空转 → 整改 → r2 VERIFIED）；exe 已重建、用户目视确认，票 `resolved`
-> **Git**：`58f7431` on `master`（dirty：`.gitignore` 本地改动未提交，与本次无关）
+> **Git**：`58f7431`→`bbcc7b8` on `master`（tag `v1.6.0`；dirty：`.gitignore` 本地改动未提交，与本次无关）
 > **任务组**：Mistral Provider（第 12 家）
 > **任务组状态**：已完成（动态门 r2 VERIFIED）
 > **路线**：单会话轻量（用户点名「单会话速度完成」），spec 与票在 `.scratch/mistral-provider/`
@@ -490,9 +492,10 @@
 | 修改 | `internal/fetcher/registry.go` + `internal/config/config.go` | 第 12 家 `mistral`（`MS` / usage / console.mistral.ai）+ `AllProviderIDs` |
 | 修改 | `internal/fetcher/registry_test.go` + `internal/config/config_test.go` | 注册表计数 11→12、clamp 用例随扩到 12 家订正、新增 `TestGet_Mistral` |
 | 修改 | `README.md` + `README.zh-CN.md` + `docs/ADDING_A_PROVIDER.md` + `docs/wiki/` 八页 | 十二家口径、Mistral 专节、特殊说明（顶层镜像坑 / 已用不是剩余 / Beta 路由） |
+| 新增 | `.scratch/mistral-provider/release-notes-v1.6.0.md` | 不出库：v1.6.0 release notes 原文（只提第 12 家与可见行为） |
 
-> 本次变更：`f30df47..58f7431`，15 个文件
-> 变更基准：`git diff --numstat f30df47..58f7431`
+> 本次变更：`f30df47..bbcc7b8`，19 个文件，+826/−55 行
+> 变更基准：`git diff --shortstat f30df47..bbcc7b8`
 
 ### 未完成 & 下一步
 
@@ -518,5 +521,7 @@
 
 - **Mistral 接口事实（2026-11-06 真机，409 字节级响应）**：`GET https://api.mistral.ai/v1/billing/budget` + `x-api-key` → `{"vibe_budget":{"usage_percentage":0.00460872,"initial_budget":150.0,"currency":"USD","reset_at":"2026-12-01T00:00:00Z","payg_enabled":false},"api_budget":{...15.0...},"usage_percentage":0.0,"initial_budget":15.0,"currency":"USD","reset_at":"..."}`。顶层四字段是 `api_budget` 的镜像。`usage_percentage` 是**已用**（0–100，8 位小数），不需要反转
 - **用户套餐**：Mistral Education（`plan_name=EDU`），$5.99/月，给 Vibe $150 + API $15 两张月预算；实测 Vibe 的已用百分比在一次会话内从 0.0046% 涨到 0.0702%（$0.01 → $0.11），说明该字段是实时的
-- **验证手法可复用**：真机 Key 在 `.scratch/mistral-provider/apikey.txt`，探针源码 `probes/remaining-probe.go.txt`（拷进 `cmd/` 临时目录跑、跑完删），动态门的完整报告在 `verifier-probes/verifier-report-r1.md`
-- **票状态**：`.scratch/mistral-provider/issues/01-mistral-budget-fetcher.md` = `claimed`，`## Verdicts` 有 r1 REJECTED 与修复两行；**不得当 VERIFIED 用**
+- **验证手法可复用**：真机 Key 在 `.scratch/mistral-provider/apikey.txt`，探针源码 `probes/remaining-probe.go.txt`（拷进 `cmd/` 临时目录跑、跑完删），动态门两轮报告 `verifier-probes/verifier-report-r1.md` 与 `-r2.md`
+- **配置覆盖坑**：直接改 `%APPDATA%\quota-viewer\config.json` 时若旧实例还在跑，它退出时会把内存里那份旧配置写回去盖掉你的修改。正确顺序 = 先杀进程、再写配置、再启动
+- **发版口径**：v1.6.0 的 exe 没有重新 build——`58f7431` 之后只有文档提交，19:21 那次 `wails build` 的产物就是当前代码；回拉核 SHA256 `8038C17D…888B` 一致
+- **票状态**：`.scratch/mistral-provider/issues/01-mistral-budget-fetcher.md` = **`resolved`**，`## Verdicts` 四行（r1 REJECTED → 整改 → r2 VERIFIED → 用户目视转述）；动态门 r2 报告在 `verifier-probes/verifier-report-r2.md`，M8 段序变异已被整串相等断言杀死

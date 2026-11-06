@@ -122,6 +122,8 @@ func currencySymbol(cur string) string {
 		return "¥"
 	case "USD":
 		return "$"
+	case "EUR":
+		return "€"
 	}
 	return ""
 }

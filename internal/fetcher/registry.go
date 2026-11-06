@@ -162,6 +162,19 @@ var registry = []ProviderDef{
 			return NewDevinFetcher(creds["api_key"])
 		},
 	},
+	{
+		ID:          "mistral",
+		DisplayName: "Mistral",
+		Abbr:        "MS",
+		Kind:        KindUsage,
+		LoginURL:    "https://console.mistral.ai",
+		Fields: []CredentialField{
+			{Key: "api_key", Label: "API Key(console.mistral.ai → API Keys)", Type: "password"},
+		},
+		Build: func(creds map[string]string) Fetcher {
+			return NewMistralFetcher(creds["api_key"])
+		},
+	},
 }
 
 // GetAll 返回全部注册 Provider 的副本(固定顺序)。

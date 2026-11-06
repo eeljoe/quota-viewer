@@ -115,13 +115,11 @@ func TestMistral_OK_VibeDrivesPercent(t *testing.T) {
 	if result.ResetLabel != "Vibe 额度" {
 		t.Errorf("ResetLabel: got %q, want Vibe 额度", result.ResetLabel)
 	}
-	// Vibe $0.0069 → $0.01(花费侧恒两位小数);API $0 → $0.00(花费侧不裁整数),
-	// API 预算 $15 → $15(预算侧裁整数)。
-	if !strings.Contains(result.Remaining, "Vibe $0.01/$150") {
-		t.Errorf("Remaining 缺 Vibe 段: %q", result.Remaining)
-	}
-	if !strings.Contains(result.Remaining, "API $0.00/$15") {
-		t.Errorf("Remaining 缺 API 段: %q", result.Remaining)
+	// 整串相等而不是逐段 Contains:段序(Vibe 在前)本身就是 AS-4 的契约,
+	// 只做 Contains 时把两段对调全套件仍然绿(动态门 M8 的存活变异)。
+	want := "Vibe $0.01/$150 · API $0.00/$15"
+	if result.Remaining != want {
+		t.Errorf("Remaining: got %q, want %q", result.Remaining, want)
 	}
 }
 
@@ -161,6 +159,10 @@ func TestMistral_VibeMissing_FallsBackToAPI(t *testing.T) {
 	}
 	if result.ResetLabel != "API 额度" {
 		t.Errorf("ResetLabel: got %q, want API 额度", result.ResetLabel)
+	}
+	// 退 API 时 ResetAt 也必须跟 API 的 reset_at 走,不能留 Vibe 的(缺席时是空串)。
+	if result.ResetAt != "2026-12-01T00:00:00Z" {
+		t.Errorf("ResetAt 应跟 API 走, got %q", result.ResetAt)
 	}
 	if strings.Contains(result.Remaining, "Vibe") {
 		t.Errorf("Vibe 缺席时不得出现 Vibe 段: %q", result.Remaining)

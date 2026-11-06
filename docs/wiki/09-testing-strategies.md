@@ -32,7 +32,7 @@
 ### 约定
 
 - fetcher 测试通过构造参数 `baseURL`/`apiURL` 指向 httptest server，**不发真实网络请求**
-- 新平台抓取器必须带测试（现有 kimi/xfyun/opencode_go/mimo/deepseek/ollama/commandcode/factorydroid/minimax/opendesign/devin 十一家均有）
+- 新平台抓取器必须带测试（现有 kimi/xfyun/opencode_go/mimo/deepseek/ollama/commandcode/factorydroid/minimax/opendesign/devin/mistral 十二家均有）
 - 新增 Provider 时 registry_test 自动校验定义完整性
 - 配置结构变更必须同步 config_test.go（含迁移用例）
 - 余额型 Provider 必须覆盖 ApplyBudget 用例（换算/钳制/no-op 路径）
@@ -45,8 +45,8 @@
 | 文件 | 职责 |
 |---|---|
 | `internal/config/config_test.go` | 配置与 Cookie 解析用例 + 清单同步守护 + 超限钳制 |
-| `internal/fetcher/kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` / `factorydroid_test.go` / `minimax_test.go` / `opendesign_test.go` / `devin_test.go` | 抓取器 httptest 用例 |
-| `internal/fetcher/registry_test.go` | 注册表完整性（11 家、顺序、字段定义、空凭证 Build 不 panic） |
+| `internal/fetcher/kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` / `factorydroid_test.go` / `minimax_test.go` / `opendesign_test.go` / `devin_test.go` / `mistral_test.go` | 抓取器 httptest 用例 |
+| `internal/fetcher/registry_test.go` | 注册表完整性（12 家、顺序、字段定义、空凭证 Build 不 panic） |
 
 ---
 

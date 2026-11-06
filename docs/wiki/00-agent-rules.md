@@ -31,7 +31,7 @@
 | `main.go` | 入口 + Wails 运行时选项 |
 | `workarea_windows.go` | Win32 原生调用（DPI/工作区/窗口子类） |
 | `internal/config/` | 配置持久化（动态 Provider 列表）+ Cookie 解析 |
-| `internal/fetcher/` | Provider 注册表 + 十一家平台抓取器 |
+| `internal/fetcher/` | Provider 注册表 + 十二家平台抓取器 |
 | `internal/probe/` | 无界面探针的 JSON 契约与归一（`--json` 用；不 import wails） |
 | `cmd/quotaviewer/` | 探针的独立 main（console 子系统；`main` 只调 `probe.Run`） |
 | `internal/tray/` | 系统托盘 |
@@ -42,7 +42,7 @@
 
 <!-- wiki-meta: {"synced_commit": "63db78c", "synced_at": "2026-10-30T17:45:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `63db78c`（2026-10-30 17:45），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容：Factory Droid 球色口径修正——Standard 未封顶时 Core 完全不参与（不驱色/不展示/不占倒计时），`Percent` 只由 Standard 三窗口决定；05 的 droid 段改掉 `Percent = max(stdMax, coreMax)` 与「Core 一有消耗即显示」，02 的两条行数与说明刷新（含接管路径 `ResetLabel` 前缀用例）。上一同步点为 `dc127dc`（2026-10-29 02:23，第 11 家 Provider Devin 全量同步）。
+> **Wiki 同步状态**：最后同步于 `e6de059`（2026-11-06 16:40），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容（第 12 家 Provider Mistral 落地）：00/01/02/03/05/07/08/09 八页的口径与清单——平台数 11→12、`AllProviderIDs` 与 `TestConnection` 的 id 清单补 `mistral`、02 新增 `mistral.go`(206) / `mistral_test.go`(374) 两行并把 `registry.go` 由 177 刷到 195、05 新增表格行与「Mistral（第 12 家）」小节（顶层镜像字段是坑 / `usage_percentage` 是已用不是剩余 / Vibe 驱动球色 / 金额两侧不同格式口径）。上一同步点为 `63db78c`（2026-10-30 17:45，Factory Droid 球色口径修正）。
 
 ## Wiki 文件索引
 
@@ -53,7 +53,7 @@
 | 02 | module-catalog | 全部模块职责与行数 |
 | 03 | core-pipeline | 刷新调用链、事件总线契约 |
 | 04 | window-positioning | 窗口定位、DPI、工作区、fitToScreen |
-| 05 | fetching-platforms | 十一家平台抓取器、注册表与 QuotaResult |
+| 05 | fetching-platforms | 十二家平台抓取器、注册表与 QuotaResult |
 | 06 | systray | 系统托盘实现与线程铁律 |
 | 07 | config-model | 动态 Provider 配置模型与旧格式迁移 |
 | 08 | api-contract | Wails 绑定 API（动态配置契约） |
@@ -69,6 +69,6 @@
 - `tray:activate` / `tray:refresh` / `tray:toggle` / `tray:settings` 事件名——托盘与 app.go 两端共用契约
 - `quota:update` / `ui:show-settings` 事件名——后端推给前端的契约
 - `QuotaResult` JSON 字段名（platform/id/abbr/kind/used/total/percent/balance/currency/remaining/reset_at/reset_label/error）——前端渲染依赖（`reset_label` 自 2026-10-19 起，标明 `reset_at` 属于哪个窗口）
-- Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design/devin，共 11 个）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
+- Provider id（kimi/xfyun/opencode-go/mimo/deepseek/ollama/command-code/factory-droid/minimax/open-design/devin/mistral，共 12 个）与注册表字段定义——config 存储、TestConnection 参数、前端绑定共用契约
 - 展示上限普通 3 / 扩展 9 个、下限 1 个 Provider——前后端都钳制（9 = 前端 3×3 球格容量，不等于注册表长度）
 - 配置 JSON 结构（providers 数组）——已迁移用户配置兼容

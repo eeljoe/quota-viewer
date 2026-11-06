@@ -81,6 +81,7 @@ func Get(id string) (ProviderDef, bool)
 | `minimax` | MiniMax | MX | api_key (password, 必须是 `sk-cp-` 开头的 Token Plan 订阅 Key) | `https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains`, Bearer + Referer(私有路由;三主机回退链 api.minimaxi.com → www.minimaxi.com → api.minimax.io) |
 | `open-design` | Open Design | OD | cookie (textarea) | `https://amr-api.open-design.ai/api/v1/workspaces/current` + `/api/v1/workspaces/{id}/billing/coding-plan-usage`, Cookie 头(两步 GET;401/403/302 均按 Cookie 失效) |
 | `devin` | Devin | DV | token (password, 留空自动读本机 Devin Desktop 登录态 `%APPDATA%\Devin\User\globalStorage\state.vscdb`) | `{server}/exa.seat_management_pb.SeatManagementService/GetUserStatus`, CONNECT POST + `metadata.api_key`(私有席位接口,无公开额度 API;server 默认 `https://server.codeium.com`) |
+| `mistral` | Mistral | MS | api_key (password, `mstrl_...`) | `https://api.mistral.ai/v1/billing/budget`, GET + `x-api-key`(官方 Beta 路由;返回 `vibe_budget` / `api_budget` 两张月预算) |
 
 - 每个 fetcher 的 `baseURL`/`apiURL` 可重写（构造时传空用默认）——测试通过该参数注入 httptest server
 - OpenCode Go 走官方 JSON API `GET https://opencode.ai/zen/go/v1/usage`（`Authorization: Bearer <oc_sk_…>`）：响应 `usage.{rolling,weekly,monthly}.{status,percent,resetsAt}`，`percent` 是 **0–100 的百分比**（不再乘 100），重置时间是 **`resetsAt` 绝对时间**（归一为 UTC 秒精度 `…Z`）。选窗取 `percent` 最大者，平手按 rolling > weekly > monthly；`status` 不参与过滤。失败面：401 → `API Key 无效`；403 且 body `error.type=EntitlementError` → `未订阅 OpenCode Go 套餐(或订阅已失效)`；其他 403 → `API Key 无权限`；非 JSON → `无法解析额度数据(响应结构可能已变化)`。**2026-10-13 前的「Dashboard 页面 SSR hydration + data-slot 抓取 + `auth` Cookie」通道已废**——opencode.ai 把 workspace 页面换成了 console，带旧 cookie 与匿名请求同形（302 → `https://opencode.ai/console/login`），旧订阅遗留在 `auth.json` 里的 key 会返 403 EntitlementError。备用 cookie 通道（若 API 再漂移）：`GET https://opencode.ai/console/api/go/status`，cookie **`__Host-console_session`**（`st_` 开头）+ 头 `x-org-id`（缺了返 400），响应是微分字段 `access.meters.{fiveHour,week,month}.{usedMicroCents,limitMicroCents}`
@@ -97,6 +98,14 @@ func Get(id string) (ProviderDef, bool)
 - Devin 响应口径：`userStatus.planStatus` 的 `dailyQuotaRemainingPercent`/`weeklyQuotaRemainingPercent` 是**剩余**百分比，展示前必须 `clampPercent(100 - 剩余)` 反转成已用（照名字直用会让球色刚好反过来，与 MiniMax 同款的语义坑）；`dailyQuotaResetAtUnix`/`weeklyQuotaResetAtUnix`/`overageBalanceMicros` 被 protojson 序列化成**字符串** int64（`"1793260800"` 这种），解析层三种形态都吃下（数字/数字字符串/null，另兼容浮点串），百分比字段也容忍字符串。proto3 JSON 序列化**省略零值字段**（2026-11-05 真机实证）：`*QuotaRemainingPercent` 缺席 = 剩余 0% = 已用 100%（官方前端按 protobuf 默认 0 读），`overageBalanceMicros`/`hide*Quota`/`billingStrategy` 缺席同理只是默认值——字段缺席一律不带「没给这窗口」语义。可见窗口 = `planInfo.hideDailyQuota`/`hideWeeklyQuota` 不为真（hide 为真才算不可见），可见窗口的剩余百分比按 `字段值 ?? 0` 计。套餐是否提供可读额度窗口走配额信号闸：显式 `BILLING_STRATEGY_CREDITS` 一律没有；其余要有 `BILLING_STRATEGY_QUOTA` 标记或至少一项配额数据（任一百分比/任一重置时间）才算有，全无信号（积分套餐/空 `planStatus`）与两侧都被 hide → Error `当前套餐不提供可读的额度窗口`；缺 `userStatus`/`planStatus` → `无法解析额度数据（响应结构可能已变化）`
 - Devin 展示：驱动窗口 = 可见窗口里已用较大者（并列取日，日排在先）；`Total` 恒 100、`Percent`/`Used` 取驱动窗口，`ResetAt`/`ResetLabel`（`日额度`/`周额度`）也跟驱动窗口走，驱动窗口没有 reset 秒数时两者**双留空、不借另一窗口**（借了会把「日额度 3 小时后重置」错标成周的时间；与 Factory Droid 同口径，与 Kimi/Ollama/Command Code 锚 5 小时的口径不同）。`Remaining` 每段一个可见窗口、按已用**降序**拼接（如 `周 42.0% 已用 · 日 7.5% 已用`），`overageBalanceMicros` 只 `> 0` 才在末尾追加 `超额金额 $x.xx`（micros ÷ 1e6），`planInfo.planName` 只解析**不展示**（套餐名不出现在球面）
 - Devin 失败面：401/403 → `Devin token 已失效，请重新登录 Devin Desktop 或更新 token`；其余非 200 透出 `HTTP N`。私有接口无稳定性承诺（字段改名/新增/改形态随时可能发生），失效时对照 Devin Desktop 的 `resources/app/node_modules/@exa/chat-client/index.js` 里 `GetUserStatus` / `PlanStatus` 两个类型定义更新（与官方前端 `tgY`/`tgK` 两个换算函数同口径：已用 = 100 − 可见窗口剩余）
+**Mistral（第 12 家，2026-11-06 真机实测）**
+
+- Mistral 没有「剩余额度」口径，只有**每月预算 + 已用百分比**。`mistral.go` 打官方 Beta 路由 `GET https://api.mistral.ai/v1/billing/budget`，认证是普通 API Key 走 **`x-api-key`** 头（不是 Cookie，也不需要 Enterprise 的 Admin Key——Admin API 只对 Enterprise 开放，这里用不到）。OpenAPI 里它的 security 是 `DashboardContextAuth`（"公开 API Key，网关校验后转发用户上下文"），tag 是 `beta.billing`。
+- 响应给两张独立月预算：`vibe_budget`（CLI/IDE/Web 的编程会话，EDU 计划 $150/月）与 `api_budget`（Studio 模型调用，$15/月），各带 `usage_percentage` / `initial_budget` / `currency` / `reset_at` / `payg_enabled`。**顶层还镜像了一份 `api_budget` 的同名字段**（`usage_percentage` / `initial_budget` / `currency` / `reset_at`），那是给只认顶层的老客户端留的兼容面——只读两个嵌套对象，读顶层会把 API 预算当总额，EDU 下直接错 10 倍。
+- 解析：`usage_percentage` 是**已用**百分比（0–100，实测 8 位小数），**不需要反转**（与 Devin / MiniMax 相反）；全部数值字段用指针，区分"字段缺席"与"值为 0"（服务端省略零值是该团队一贯行为）。`currency` 在 OpenAPI 里声明可空，实测 `USD`。
+- 展示：驱动窗口固定取 **Vibe**（用户 2026-11-06 拍板：两张 10:1，编程套餐真正烧的是 Vibe）；Vibe 不可用（`null` 或没有 `usage_percentage`）时退回 `api_budget`，`ResetLabel` 同时由 `Vibe 额度` 换成 `API 额度`；两张都不可用报 `响应中未找到预算数据`，不返回 0% 假数据。`Total` 恒 100，`Percent`/`Used` = `clampPercent(usage_percentage)`。
+- `Remaining` 写金额不写百分比（这种价位下 $0.0069 已用 = 0.0046%，百分比永远显示 `0.0%`，看不出在动）：`Vibe $0.01/$150 · API $0.00/$15`。**花费侧恒两位小数、预算侧整数省略小数**（两个不同格式化口径，`mistralMoney` 的 `trim` 参数）；花费金额用**夹取后**的百分比计算，否则 `usage_percentage=137.5` 会出现 `$206.25/$150` 与球色的 100% 互相打架。`initial_budget` 缺席或 `<= 0` 时该侧退化为纯百分比 `Vibe 3.2% 已用`。
+- 失败面：401 与 403 都映射成 `API Key 无效或已过期`（403 = 账号没有 `see_org_inference_usage` 权限，对用户的可执行动作与 Key 失效一样）；其余非 200 透出 `HTTP N`。配套的 `GET /v1/billing/subscription`（`plan_name` = FREE/EDU/INDIVIDUAL/TEAM）**不调用**——少一次往返，套餐名也放不进球面。该路由是官方 Beta 接口，无稳定性承诺；失效时对照 `https://docs.mistral.ai/openapi.yaml` 的 `/v1/billing/budget` 与 `BudgetDetail` schema 更新。
 - `format.go` 的 `formatNum` 做千分位展示格式化（仅内部使用）
 
 ### 预算换算（budget.go）
@@ -118,7 +127,7 @@ func Get(id string) (ProviderDef, bool)
 ### 测试模式
 
 全部用 `net/http/httptest` 起假服务，`baseURL` 指向假服务：
-- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` / `factorydroid_test.go` / `minimax_test.go` / `opendesign_test.go` / `devin_test.go` 覆盖成功/失败/异常响应路径
+- `kimi_test.go` / `xfyun_test.go` / `opencode_go_test.go` / `mimo_test.go` / `deepseek_test.go` / `ollama_test.go` / `commandcode_test.go` / `factorydroid_test.go` / `minimax_test.go` / `opendesign_test.go` / `devin_test.go` / `mistral_test.go` 覆盖成功/失败/异常响应路径
 - `registry_test.go` 校验注册表完整性（11 个、顺序、字段定义、Build 可执行；空凭证保持离线）
 
 ---
@@ -129,7 +138,7 @@ func Get(id string) (ProviderDef, bool)
 |---|---|
 | `internal/fetcher/types.go` | QuotaResult + Fetcher 接口 + Kind 常量（契约核心） |
 | `internal/fetcher/registry.go` | ProviderDef + 注册表（新增 Provider 的唯一入口） |
-| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` / `commandcode.go` / `factorydroid.go` / `minimax.go` / `opendesign.go` / `devin.go` | 各平台实现 |
+| `internal/fetcher/kimi.go` / `xfyun.go` / `opencode_go.go` / `mimo.go` / `deepseek.go` / `ollama.go` / `commandcode.go` / `factorydroid.go` / `minimax.go` / `opendesign.go` / `devin.go` / `mistral.go` | 各平台实现 |
 | `internal/fetcher/abbr.go` | 多对象的球格缩写派生 + `SettleIdentity`(缩写/后缀/slot 归一,app.go 与 probe 共用) |
 | `internal/fetcher/format.go` | 千分位格式化 |
 | `internal/fetcher/budget.go` | 余额型预算 → 消耗百分比换算(ApplyBudget) |

@@ -29,7 +29,7 @@
 | 监控对象身份 | `internal/fetcher/abbr.go` | 127 | 球格缩写派生(不重复)、`planAbbrSetter`、`SettleIdentity`(缩写/后缀/slot 归一,app.go 与 probe 共用) |
 | 身份测试 | `internal/fetcher/abbr_test.go` | 129 | SettleIdentity 五种组合 + 缩写派生/去重 + `FetchAll` 兜底用例 |
 | 预算换算 | `internal/fetcher/budget.go` | 24 | 余额型预算 → 消耗百分比(ApplyBudget,默认预算 300) |
-| Provider 注册表 | `internal/fetcher/registry.go` | 177 | 十一家平台元数据 + Build 工厂 |
+| Provider 注册表 | `internal/fetcher/registry.go` | 195 | 十二家平台元数据 + Build 工厂 |
 | 数字格式化 | `internal/fetcher/format.go` | 22 | 千分位 formatNum |
 | Kimi 抓取器 | `internal/fetcher/kimi.go` | 239 | Kimi 开放平台额度 API；Percent 取 5h/7d 窗口较紧张者 |
 | Kimi 测试 | `internal/fetcher/kimi_test.go` | 204 | httptest 用例 |
@@ -53,6 +53,8 @@
 | Open Design 测试 | `internal/fetcher/opendesign_test.go` | 369 | httptest 用例（两步流程/窗口按 durationSeconds 识别/302 与鉴权失效） |
 | Devin 抓取器 | `internal/fetcher/devin.go` | 446 | Devin Desktop 私有席位接口 `GetUserStatus`（CONNECT POST，`metadata.api_key`）：无公开额度 API，v2/v3 consumption 仅 Enterprise 管理员；token 手填优先、留空读本机 `%APPDATA%\Devin\User\globalStorage\state.vscdb` 登录态；响应是**剩余**百分比 → `clampPercent(100-剩余)` 反转；日/周可见窗口里已用较大者驱动 `Percent`/`ResetAt`/`ResetLabel`（并列取日），`Remaining` 按已用降序 + 超额金额 |
 | Devin 测试 | `internal/fetcher/devin_test.go` | 1070 | httptest 用例（本机登录态扫描与体积守卫/server 三级兜底/字符串型 int64/剩余百分比反转/隐藏窗口与缺失窗口/驱动窗口与 ResetLabel/401-403 与 HTTP N 文案） |
+| Mistral 抓取器 | `internal/fetcher/mistral.go` | 206 | 官方 Beta 路由 `GET /v1/billing/budget`（`x-api-key`）：返回 `vibe_budget` / `api_budget` 两张月预算，各带已用百分比/预算额/币种/重置时间；**Vibe 驱动 `Percent`/`ResetAt`/`ResetLabel`**（用户拍板，两张 10:1），Vibe 缺席退 API；金额进 `Remaining`（花费侧恒两位、预算侧整数省略），百分比只驱球色 |
+| Mistral 测试 | `internal/fetcher/mistral_test.go` | 374 | httptest 用例（空凭证零请求/请求头与路径/Vibe 驱动与 API 兜底/双缺失结构错误/401-403 与 HTTP N/越界夹取含金额一致性与负值/零预算退化/金额格式化表驱动/不可达主机） |
 | 注册表测试 | `internal/fetcher/registry_test.go` | 59 | 注册表完整性（离线） |
 | CLI 入口 | `cmd/quotaviewer/main.go` | 10 | 无界面探针的独立 main（console 子系统，不 import wails）；逻辑全在 `internal/probe` |
 | 探针契约 | `internal/probe/probe.go` | 302 | `--json` 的 JSON 契约（`schema: 2`）：顶层 7 键 + **记录 10 键**(新增 `slot`/`sub_label`)、一监控对象一条记录、结果归一（四句 + `def.Kind` 兜底）、`reset_at` 三条规则、失败信封、退出码三分（0/2/1） |

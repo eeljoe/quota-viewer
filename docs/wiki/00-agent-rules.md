@@ -40,9 +40,9 @@
 
 ---
 
-<!-- wiki-meta: {"synced_commit": "63db78c", "synced_at": "2026-10-30T17:45:00+08:00", "synced_files": 11} -->
+<!-- wiki-meta: {"synced_commit": "58f7431", "synced_at": "2026-11-06T19:20:00+08:00", "synced_files": 11} -->
 
-> **Wiki 同步状态**：最后同步于 `e6de059`（2026-11-06 16:40），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容（第 12 家 Provider Mistral 落地）：00/01/02/03/05/07/08/09 八页的口径与清单——平台数 11→12、`AllProviderIDs` 与 `TestConnection` 的 id 清单补 `mistral`、02 新增 `mistral.go`(206) / `mistral_test.go`(374) 两行并把 `registry.go` 由 177 刷到 195、05 新增表格行与「Mistral（第 12 家）」小节（顶层镜像字段是坑 / `usage_percentage` 是已用不是剩余 / Vibe 驱动球色 / 金额两侧不同格式口径）。上一同步点为 `63db78c`（2026-10-30 17:45，Factory Droid 球色口径修正）。
+> **Wiki 同步状态**：最后同步于 `58f7431`（2026-11-06 19:20），共 11 个文件（口径 = `docs/wiki/NN-*.md` 常规页 00–10，不含归档页 99）。本轮同步内容（第 12 家 Provider Mistral 落地）：00/01/02/03/05/07/08/09 八页的口径与清单——平台数 11→12、`AllProviderIDs` 与 `TestConnection` 的 id 清单补 `mistral`、02 新增 `mistral.go`(206) / `mistral_test.go`(374) 两行并把 `registry.go` 由 177 刷到 195、05 新增表格行与「Mistral（第 12 家）」小节（顶层镜像字段是坑 / `usage_percentage` 是已用不是剩余 / Vibe 驱动球色 / 金额两侧不同格式口径）。上一同步点为 `63db78c`（2026-10-30 17:45，Factory Droid 球色口径修正）。
 
 ## Wiki 文件索引
 

@@ -9,32 +9,32 @@
 > 3. 读「会话索引」拿全历史地图（一行一次会话）；索引没点名的内容一律不读
 > 4. 阅读项目根目录 ROADMAP.md 的「Now」栏（只读 Now；Next/Later 属按需层，任务点名才读）
 >    - 注：`ROADMAP.md` 自 2026-10-14 起**仅在本地存在、不入公开仓库**（与 `.scratch/`、`.agents/` 同）；若你拿到的是 clone，此文件缺席属正常，计划内容可临时向维护者索取
-> 5. **直接跳到最新一条「会话记录：2026-11-06 16:40」章节**（用标题搜索定位，不要假设在文件末尾）
+> 5. **直接跳到最新一条「会话记录：2026-11-06 20:55」章节**（用标题搜索定位，不要假设在文件末尾）
 >    - 重点看「未完成 & 下一步」和「关键上下文」
 > 6. 更早内容只经「会话索引」按需回溯（📦 行的章节在 `docs/wiki/99-appendix-legacy-status.md`）；「当前任务进度」「关键文件索引」等常驻节默认不读
 > 7. 给用户一份简短进度汇报（每段 3-5 行，大白话、可读性优先）：**当前进度**（现在在干什么 → 干到哪了 → 下一步是什么 → 有没有卡点）+ **上个会话做了什么**（最新会话章节的摘要、完成与遗留）
 > 8. **严禁在用户给出指示之前修改任何文件或代码**
 > 9. 汇报后等待用户指示，不要主动开始执行任务
 >
-> 📍 最新章节位置：`## 会话记录：2026-11-06 16:40`（搜索定位，可能不在文件末尾）
-> 🔖 对应 commit：`58f7431` on `master`（v1.5.1 仍是线上 Latest，Mistral 未发版）
+> 📍 最新章节位置：`## 会话记录：2026-11-06 20:55`（搜索定位，可能不在文件末尾）
+> 🔖 对应 commit：`cda7dac` on `master`（tag `v1.6.0` 已发布并标 Latest）
 > 📊 累计会话数：主文档 5 条，另有 25 条已归档（docs/wiki/99-appendix-legacy-status.md）
 
 ---
 
 ## 最后更新
 
-<!-- git-meta: {"last_commit": "58f7431", "branch": "master", "dirty": true, "timestamp": "2026-11-06T16:40:00+08:00"} -->
+<!-- git-meta: {"last_commit": "cda7dac", "branch": "master", "dirty": true, "timestamp": "2026-11-06T20:55:00+08:00"} -->
 
-- **日期**：2026-11-06 16:40
-- **会话摘要**：新增第 12 家 Provider **Mistral**（Education 计划双月预算：Vibe $150 / API $15，官方 Beta 路由 `GET /v1/billing/budget`）——真机实测接口形状、实现 + 测试、静态审查一轮 + 动态门两轮（r1 REJECTED 于一处测试空转，整改后 r2 **VERIFIED**）；exe 已重建并跑起来，用户目视确认通过。
+- **日期**：2026-11-06 20:55
+- **会话摘要**：新增第 12 家 Provider **Mistral**（Education 计划双月预算：Vibe $150 / API $15，官方 Beta 路由 `GET /v1/billing/budget`）——真机实测、实现 + 测试、静态审查一轮 + 动态门两轮（r1 REJECTED → 整改 → r2 VERIFIED），重建 exe、用户目视通过，发布 **v1.6.0** 并回拉核验 SHA256 一致。
 
 ---
 
 ## 上下文摘要（TL;DR）
 
 - 项目：Quota Viewer，桌面悬浮球 + AI 平台额度监控工具，Go + Wails v2.12.0 + 原生 HTML/CSS/JS（Vite）
-- 当前阶段：**第 12 家 Provider Mistral 已闭合**（`58f7431`…`cc86de5`）——动态门 r2 VERIFIED、exe 已重建（11,695,616 字节，SHA256 `8038C17D…888B`）、用户目视确认球上 `MS` 绿格与面板 `Vibe $0.22/$150 · API $0.18/$15`。线上 Latest 仍是 **v1.5.1**（`87b6fc1`），Mistral 尚未发版，发不发由用户定
+- 当前阶段：**v1.6.0 已发布并标 Latest**（`cda7dac`，tag `v1.6.0`）——第 12 家 Provider Mistral 全链路闭合：动态门 r2 VERIFIED、用户目视确认球上 `MS` 绿格与面板 `Vibe $0.22/$150 · API $0.18/$15`、release 回拉核 SHA256 一致。桌面实例正在跑这个产物
 - 十二家 Provider 除 DeepSeek（余额型）外均为用量型；状态灯契约 60% 黄 / 80% 红 / 100% 熄灭；usage 型一律「最紧张窗口」驱动 Percent；**一个监控对象 = 一组凭证 × 一张套餐卡**，悬浮球上限按对象数计（普通 9 / 扩展 16，超出显示 `+N`；注意对象数超上限时 `clampEnabled` 会把排在后面的 Provider 静默禁用）
 - Open Design 只能靠浏览器会话 Cookie 读额度（API key `sk-amr-` 一律 401），读法已写进 README 与 `docs/ADDING_A_PROVIDER.md`
 - 下一步：**先给 Mistral 补过动态门**（唯一卡点，M8 段序变异已修但无独立实例复验）；然后目视确认 Devin；「对端告知」报文待发（必须带上 probe `schema` 1→2 的契约变更）；非阻断清理批次待你拍板（原有 12 条 + Devin 组 6 条，见本地 `ROADMAP.md`「Now」/「Later」）
@@ -57,8 +57,10 @@
 ## 当前分支与最近提交
 
 - **分支**：master
-- **HEAD**：`58f7431`
+- **HEAD**：`cda7dac`
 - **最近提交**（Mistral 任务组，按时间倒序）：
+  - `cda7dac` - docs: 记录 Mistral 动态门 r2 VERIFIED 与 exe 重建
+  - `cc86de5` - docs: 记录 Mistral（第 12 家 Provider）会话与未过的动态门
   - `58f7431` - test: 锁住 Mistral Remaining 的段序与 API 兜底的 ResetAt
   - `0492397` - docs: wiki 同步第 12 家 Provider Mistral
   - `862a184` - fix: 订正 Mistral 花费金额的小数口径并夹取越界百分比
@@ -75,7 +77,7 @@
   - `9848208` - feat: Devin 凭证留空自动读本机 Desktop 登录态
   - `ce19008` - test: 补 Devin 三条口径断言（并列取日 / null 容错 / 单侧缺百分比）
   - `69a0f3e` - feat: 新增 Devin Provider 手填 token 全链路
-- **Release**：v1.5.1（2026-11-05，Latest）← v1.5.0（2026-10-30）← v1.4.1 ← v1.4.0 ← v1.3.0 ← v1.2.0 ← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0
+- **Release**：v1.6.0（2026-11-06，Latest，附 exe）← v1.5.1（2026-11-05）← v1.5.0（2026-10-30）← v1.4.1 ← v1.4.0 ← v1.3.0 ← v1.2.0 ← v1.1.2 ← v1.1.1 ← v1.1.0 ← v1.0.0
 
 ---
 
@@ -95,11 +97,10 @@
 - **Devin Provider（第 11 家）**（10/29，`69a0f3e`…`dc127dc`）：`devin.go` 走 Devin Desktop 的 `SeatManagementService/GetUserStatus`（CONNECT POST，`metadata.api_key`），日/周**剩余**百分比反转成已用、单球由最紧张窗口驱动；凭证手填优先、留空自动读 `%APPDATA%\Devin\User\globalStorage\state.vscdb`（按字节扫明文 token 与 `apiServerUrl`，不引 SQLite 驱动）；server 三级兜底（注入 → 本机 → 默认）；注册表第 11 家 + `config.AllProviderIDs`；文档与 wiki 同步、两份 README 改 11 家；真机直连取证通过（`percent=0`、`remaining=100`、`reset_at` 非空）
 
 ### 🔄 进行中
-- 无（Mistral 任务组已闭合：动态门 r2 VERIFIED、票 `resolved`）
+- 无（Mistral 任务组已闭合：动态门 r2 VERIFIED、票 `resolved`、v1.6.0 已发版）
 
 ### 📋 待办
 - **Devin 界面目视（AS-11b，唯一未验项）**：桌面实例已在跑（devin 已启用、凭证留空），看球格是否出现 `DV`、面板日/周数字与 Devin Desktop 的 Usage 页一致
-- **发版 v1.6.0**（Mistral 动态门过了之后）：12 家平台；v1.5.0/v1.5.1 已发布，Mistral 是唯一未发版的改动
 - 「对端告知」报文待发给 subagent-fallback（必须带上 probe `schema` 1→2）
 - 非阻断清理批次待用户拍板：原有 12 条 + 本轮新增 6 条（见 ROADMAP「Now」/「Later」）
 - 计划级事项见 `ROADMAP.md`
@@ -109,11 +110,10 @@
 ## 未完成 & 下一步
 
 1. **Devin 界面目视（AS-11b）**：你本人在桌面上看一眼即可；未验前 Devin 不算交付完成（门与三张票都如实留了这条）
-2. **发版 v1.6.0（等你决定）**：Mistral 已闭合、exe 已重建并在桌面跑着，剩下只是打 tag 发 Release（release notes 只提「新增第 12 家平台 Mistral」与可见行为，不写内部返工细节）。不发也不影响使用
-3. **「对端告知」报文**：回 `subagent-fallback` 说明探针就绪并给出二进制名/开关名/构建命令，**必须写明 `schema` 已从 1 升到 2**（新增 `slot` / `sub_label` 两个键，纯增量），否则对端按旧契约解析会对不上
-4. 非阻断清理批次（原有 12 条 + 本轮 6 条）待你拍板；改代码的那几条会作废对应票的 VERIFIED、需重验
-5. Wails 版本升级对齐（go.mod v2.12.0 vs CLI v2.13.0，构建时仍打印该告警）
-6. 前端渲染逻辑的可视化验证缺口仍在（见 2026-10-19 会话「关键上下文」）
+2. **「对端告知」报文**：回 `subagent-fallback` 说明探针就绪并给出二进制名/开关名/构建命令，**必须写明 `schema` 已从 1 升到 2**（新增 `slot` / `sub_label` 两个键，纯增量），否则对端按旧契约解析会对不上
+3. 非阻断清理批次（原有 12 条 + 本轮 6 条）待你拍板；改代码的那几条会作废对应票的 VERIFIED、需重验
+4. Wails 版本升级对齐（go.mod v2.12.0 vs CLI v2.13.0，构建时仍打印该告警）
+5. 前端渲染逻辑的可视化验证缺口仍在（见 2026-10-19 会话「关键上下文」）
 
 ---
 
@@ -208,7 +208,7 @@
 | 6 | 10-30 17:45 | Factory Droid 球色口径 | 修 F 灯在 Standard 刷新后仍灰：Core 不再并入球色，真机与截图确认转绿 | 本文 |
 | 7 | 10-30 21:05 | v1.5.0 发版 | 发 v1.5.0（十一家含 Devin，含球灯修复）+ README 换新截图并订正体积 | 本文 |
 | 8 | 11-05 01:45 | Devin 日窗口零值省略修复 | 修日耗尽被误作无窗口：缺席=0剩余镜像官方，发 v1.5.1 | 本文 |
-| 9 | 11-06 16:40 | Mistral Provider（第 12 家） | 真机实测双月预算接口，实现 + 测试 + 静态审查；动态门 REJECTED 于一处测试空转，已修未重验 | 本文 |
+| 9 | 11-06 20:55 | Mistral Provider（第 12 家） | 第 12 家 Mistral 落地：双月预算接口、动态门两轮过门、发 v1.6.0 | 本文 |
 
 ---
 
@@ -449,7 +449,7 @@
 
 ---
 
-## 会话记录：2026-11-06 16:40
+## 会话记录：2026-11-06 20:55
 
 > **会话摘要**：新增第 12 家 Provider **Mistral**（Education 计划双月预算 Vibe $150 / API $15，官方 Beta 路由 `GET /v1/billing/budget`）——真机实测接口形状、实现 + 测试、静态审查一轮 + 独立动态门两轮（r1 REJECTED 于一处测试空转 → 整改 → r2 VERIFIED）；exe 已重建、用户目视确认，票 `resolved`
 > **Git**：`58f7431` on `master`（dirty：`.gitignore` 本地改动未提交，与本次无关）
@@ -467,6 +467,7 @@
 - **补测**（`58f7431`）：`TestMistral_OK_VibeDrivesPercent` 改为整串相等断言 `"Vibe $0.01/$150 · API $0.00/$15"`，`VibeMissing_FallsBackToAPI` 补 `ResetAt` 跟 API 的断言。自检：应用 M8 后该用例变红，恢复后全量绿
 - **动态门 r2 重验通过**（`cc86de5`）：独立实例先把 M8 段序变异亲手施加一遍——`TestMistral_OK_VibeDrivesPercent` 变红，确认整改真的锁住了段序而不是换了个写法；M1–M7 复跑全部仍被杀死；它另加的 N1–N4 四个变异也全部变红。全量 `go test ./...` 绿、vet 与 gofmt 干净；真机三条（裸 GET / `Fetch()` 端到端 / `--json` 信封 `percent=0.244545252` 与 `vibe_budget.usage_percentage` 一致）对账通过 ⇒ **VERIFIED**，票改 `resolved`，报告在 `.scratch/mistral-provider/verifier-probes/verifier-report-r2.md`
 - **重建 exe 并真机确认**：杀实例 → `wails build`（41s，11,695,616 字节，比上版多 10,240）→ `git checkout -- frontend/`（wails 会把 9 个前端产物改成 CRLF，按惯例还原）→ 重启用。**踩到一个坑**：首次重启后 mistral 变回未启用——上一轮我直接改 `config.json` 时旧实例还在内存里握着它那份（不认识 mistral 的）配置，退出时写了回去；改成「先杀进程、再写配置、再启动」后稳定。用户本人在桌面上确认通过：球上绿色 `MS` 格、面板 `Mistral  Vibe $0.22/$150 · API $0.18/$15`、倒计时 `距Vibe 额度刷新: 24天12时`
+- **发版 v1.6.0**：`git push origin master`（`f30df47..cda7dac`，7 个提交）→ `git tag -a v1.6.0` 推送 → `gh release create v1.6.0` 附 exe（notes 只提第 12 家 Mistral 与可见行为，末尾一句「修复了一些简单的小问题」，不写内部返工）→ `gh release download` 回拉核验：11,695,616 字节、SHA256 `8038C17D…888B` 与本地一致 → 已标 Latest。未重新 build：`58f7431` 之后只有文档提交，现有 exe 就是当前代码产物
 
 ### 本次决策
 
@@ -495,7 +496,6 @@
 
 ### 未完成 & 下一步
 
-- **发版 v1.6.0（等你决定）**：Mistral 已闭合、exe 已重建并在桌面跑着，剩下只是打 tag 发 Release。不做也不影响使用
 - **视觉已确认**（2026-11-06 用户本人）：球上绿色 `MS` 格、面板 `Mistral  Vibe $0.22/$150 · API $0.18/$15`、倒计时 `距Vibe 额度刷新: 24天12时`
 - **发版**：v1.5.1 仍是 Latest；十二家要不要发 v1.6.0 等你决定
 - 「对端告知」报文（持续中，必须带 probe `schema` 1→2 的契约变更）

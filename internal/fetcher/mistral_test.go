@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -114,11 +115,12 @@ func TestMistral_OK_VibeDrivesPercent(t *testing.T) {
 	if result.ResetLabel != "Vibe 额度" {
 		t.Errorf("ResetLabel: got %q, want Vibe 额度", result.ResetLabel)
 	}
-	// Vibe $0.0069 → $0.01(两位小数);API $0 → $0(整数不带小数)
+	// Vibe $0.0069 → $0.01(花费侧恒两位小数);API $0 → $0.00(花费侧不裁整数),
+	// API 预算 $15 → $15(预算侧裁整数)。
 	if !strings.Contains(result.Remaining, "Vibe $0.01/$150") {
 		t.Errorf("Remaining 缺 Vibe 段: %q", result.Remaining)
 	}
-	if !strings.Contains(result.Remaining, "API $0/$15") {
+	if !strings.Contains(result.Remaining, "API $0.00/$15") {
 		t.Errorf("Remaining 缺 API 段: %q", result.Remaining)
 	}
 }
@@ -163,7 +165,7 @@ func TestMistral_VibeMissing_FallsBackToAPI(t *testing.T) {
 	if strings.Contains(result.Remaining, "Vibe") {
 		t.Errorf("Vibe 缺席时不得出现 Vibe 段: %q", result.Remaining)
 	}
-	if !strings.Contains(result.Remaining, "API $6/$15") {
+	if !strings.Contains(result.Remaining, "API $6.00/$15") {
 		t.Errorf("API 段金额错: %q", result.Remaining)
 	}
 }
@@ -270,26 +272,84 @@ func TestMistral_ZeroBudget_ShowsPercentOnly(t *testing.T) {
 	}
 }
 
-// 纯函数:金额格式化(整数不带小数、两位小数、未知币种、EUR 符号、负零)。
+// 纯函数:金额格式化。trim=true 走预算侧(整数省略小数),trim=false 走花费侧(恒两位)。
 func TestMistralMoney(t *testing.T) {
 	cases := []struct {
 		v        float64
 		currency string
+		trim     bool
 		want     string
 	}{
-		{150, "USD", "$150"},
-		{0, "USD", "$0"},
-		{0.0069, "USD", "$0.01"},
-		{12.345, "USD", "$12.35"},
-		{150, "EUR", "€150"},
-		{150, "CNY", "¥150"},
-		{150, "GBP", "150"},
-		{-0.001, "USD", "$0"},
+		// 花费侧:恒两位小数,即使是 0 与整数
+		{0, "USD", false, "$0.00"},
+		{6, "USD", false, "$6.00"},
+		{0.0069, "USD", false, "$0.01"},
+		{12.345, "USD", false, "$12.35"},
+		{206.25, "USD", false, "$206.25"},
+		// 预算侧:整数省略小数
+		{150, "USD", true, "$150"},
+		{15, "USD", true, "$15"},
+		{0.5, "USD", true, "$0.50"},
+		{150, "EUR", true, "€150"},
+		{150, "CNY", true, "¥150"},
+		{150, "GBP", true, "150"},
+		// NaN / Inf 不产出 "$NaN"
+		{math.NaN(), "USD", false, "$0.00"},
+		{math.Inf(1), "USD", true, "$0.00"},
 	}
 	for _, c := range cases {
-		if got := mistralMoney(c.v, c.currency); got != c.want {
-			t.Errorf("mistralMoney(%v, %q): got %q, want %q", c.v, c.currency, got, c.want)
+		if got := mistralMoney(c.v, c.currency, c.trim); got != c.want {
+			t.Errorf("mistralMoney(%v, %q, %v): got %q, want %q", c.v, c.currency, c.trim, got, c.want)
 		}
+	}
+}
+
+// 越界百分比:球色与面板金额必须给出一致读数(金额用夹取后的百分比算)。
+func TestMistral_OutOfRangePercent_SpentAmountClamped(t *testing.T) {
+	body := `{"vibe_budget": {"usage_percentage": 137.5, "initial_budget": 150.0, "currency": "USD"}}`
+	f, _ := mistralFetcher(t, 200, body)
+	result := f.Fetch()
+
+	if result.Percent != 100 {
+		t.Fatalf("Percent: got %v, want 100", result.Percent)
+	}
+	// 未夹取会算出 $206.25,超出预算本身
+	if !strings.Contains(result.Remaining, "Vibe $150.00/$150") {
+		t.Errorf("越界时金额必须按夹取后的百分比算: %q", result.Remaining)
+	}
+	if strings.Contains(result.Remaining, "206.25") {
+		t.Errorf("越界金额泄漏进面板: %q", result.Remaining)
+	}
+}
+
+// 负百分比同理:不得出现 "$-4.50" 这种负数金额。
+func TestMistral_NegativePercent_NoNegativeAmount(t *testing.T) {
+	body := `{"vibe_budget": {"usage_percentage": -3.0, "initial_budget": 150.0, "currency": "USD"}}`
+	f, _ := mistralFetcher(t, 200, body)
+	result := f.Fetch()
+
+	if result.Percent != 0 {
+		t.Errorf("Percent: got %v, want 0", result.Percent)
+	}
+	if strings.Contains(result.Remaining, "-") {
+		t.Errorf("不得出现负数金额: %q", result.Remaining)
+	}
+	if !strings.Contains(result.Remaining, "Vibe $0.00/$150") {
+		t.Errorf("Remaining: %q", result.Remaining)
+	}
+}
+
+// 零预算退化路径同样要夹取(AS-9 + AS-10 的交叉点)。
+func TestMistral_ZeroBudget_OutOfRangePercentClamped(t *testing.T) {
+	body := `{"vibe_budget": {"usage_percentage": 137.5, "initial_budget": 0, "currency": "USD"}}`
+	f, _ := mistralFetcher(t, 200, body)
+	result := f.Fetch()
+
+	if result.Percent != 100 {
+		t.Errorf("Percent: got %v, want 100", result.Percent)
+	}
+	if !strings.Contains(result.Remaining, "Vibe 100% 已用") {
+		t.Errorf("零预算退化路径必须夹取: %q", result.Remaining)
 	}
 }
 

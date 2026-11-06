@@ -3,6 +3,7 @@ package fetcher
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -176,30 +177,30 @@ func mistralRemaining(vibe, api *mistralBudgetDetail) string {
 
 // mistralBudgetText 生成单张预算的文本:有预算金额时是 "$0.01/$150",否则退百分比。
 func mistralBudgetText(d *mistralBudgetDetail) string {
+	// 夹取后再算金额:球色用的是夹取后的百分比,金额若用原始值,
+	// usage_percentage=137.5 时面板会显示 $206.25/$150,与球色的 100% 互相打架。
+	pct := clampPercent(*d.UsagePercentage)
 	if d.InitialBudget != nil && *d.InitialBudget > 0 {
-		spent := *d.UsagePercentage / 100 * *d.InitialBudget
-		return mistralMoney(spent, d.currency()) + "/" + mistralMoney(*d.InitialBudget, d.currency())
+		spent := pct / 100 * *d.InitialBudget
+		return mistralMoney(spent, d.currency(), false) + "/" + mistralMoney(*d.InitialBudget, d.currency(), true)
 	}
 	// 没有预算金额时百分比是唯一可读的量(与 Kimi 的退化展示同口径)。
-	return kimiFormatPercent(clampPercent(*d.UsagePercentage)) + "% 已用"
+	return kimiFormatPercent(pct) + "% 已用"
 }
 
-// mistralMoney 格式化金额:整数不带小数,其余保留两位;未知币种只显示数值。
-func mistralMoney(v float64, currency string) string {
-	v = clampNegativeZero(v)
+// mistralMoney 格式化金额。
+//
+// trim 为真时整数省略小数(预算侧:"$150");为假时恒两位小数(花费侧:"$0.00")。
+// 花费侧不做整数裁剪是有意的:花费几乎总是小数,$0 会让人以为根本没在计费。
+func mistralMoney(v float64, currency string, trim bool) string {
 	var num string
-	if v == float64(int64(v)) {
+	switch {
+	case math.IsNaN(v) || math.IsInf(v, 0):
+		num = "0.00"
+	case trim && math.Trunc(v) == v:
 		num = strconv.FormatInt(int64(v), 10)
-	} else {
+	default:
 		num = strconv.FormatFloat(v, 'f', 2, 64)
 	}
 	return currencySymbol(currency) + num
-}
-
-// clampNegativeZero 把"四舍五入后是 -0"的小负数归零,避免面板出现 "$-0.00"。
-func clampNegativeZero(v float64) float64 {
-	if v > -0.005 && v < 0 {
-		return 0
-	}
-	return v
 }

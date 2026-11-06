@@ -66,6 +66,39 @@ func TestGet_KnownAndUnknown(t *testing.T) {
 	}
 }
 
+// TestGet_Mistral 第 12 家的定义契约（AS-11）。
+// 与 TestGet_Devin 对称：只断通用非空会让 Abbr / LoginURL / 字段类型改了全套件仍绿。
+func TestGet_Mistral(t *testing.T) {
+	d, ok := Get("mistral")
+	if !ok {
+		t.Fatal("expected Get('mistral') to succeed")
+	}
+	if d.DisplayName != "Mistral" {
+		t.Errorf("DisplayName: got %q, want Mistral", d.DisplayName)
+	}
+	if d.Abbr != "MS" {
+		t.Errorf("Abbr: got %q, want MS", d.Abbr)
+	}
+	if d.Kind != KindUsage {
+		t.Errorf("Kind: got %q, want %q", d.Kind, KindUsage)
+	}
+	if d.LoginURL != "https://console.mistral.ai" {
+		t.Errorf("LoginURL: got %q, want https://console.mistral.ai", d.LoginURL)
+	}
+	if len(d.Fields) != 1 {
+		t.Fatalf("凭证字段数: got %d, want 恰好 1 个", len(d.Fields))
+	}
+	if d.Fields[0].Key != "api_key" || d.Fields[0].Type != "password" {
+		t.Errorf("凭证字段: got %+v, want api_key/password", d.Fields[0])
+	}
+	if d.Fields[0].Label == "" {
+		t.Error("凭证字段 Label 不得为空")
+	}
+	if f, ok := d.Build(map[string]string{"api_key": " mstrl_x "}).(*MistralFetcher); !ok || f.apiKey != "mstrl_x" {
+		t.Errorf("Build 应返回 apiKey 已去空白的 *MistralFetcher, got %T", d.Build(map[string]string{"api_key": " mstrl_x "}))
+	}
+}
+
 // TestGet_Devin 第 11 家的定义契约(票 01 AS-10)。
 func TestGet_Devin(t *testing.T) {
 	d, ok := Get("devin")
